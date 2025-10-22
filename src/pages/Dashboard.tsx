@@ -8,18 +8,18 @@ import WalletSection from "../sections/WalletSection";
 import ReportsSection from "../sections/ReportsSection";
 // import UsersSection from "../sections/UsersSection"; // create this if not yet
 // import SettingsSection from "../sections/SettingsSection"; // create this if not yet
-import { useAuth } from "../hooks/useAuth";
-import { useQuery } from "convex/react";
-import { api } from "../../convex/_generated/api";
+// import { useAuth } from "../hooks/useAuth";
+// import { useQuery } from "convex/react";
+// import { api } from "../../convex/_generated/api";
 
 export default function DashboardPage() {
   const [activeItem, setActiveItem] = useState("dashboard");
-  const { user } = useAuth();
+  // const { user } = useAuth();
 
-  const campaigns = useQuery(
-    api.campaign.getCampaignsByPartner,
-    user ? { partner_id: user._id } : "skip"
-  );
+  // const campaigns = useQuery(
+  //   api.campaign.getCampaignsByPartner,
+  //   user ? { partner_id: user._id } : "skip"
+  // );
 
   // ✅ Map sidebar IDs to page sections
   const sectionMap: Record<string, React.ReactNode> = {

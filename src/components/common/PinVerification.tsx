@@ -124,7 +124,9 @@ export function PinVerificationDialog({
               type="password"
               maxLength={1}
               value={digit}
-              ref={(el) => (inputRefs.current[i] = el)}
+              ref={(el) => {
+                inputRefs.current[i] = el;
+              }}
               onChange={(e) => handleChange(i, e.target.value)}
               className="w-12 h-12 text-center text-xl font-bold tracking-widest"
             />
