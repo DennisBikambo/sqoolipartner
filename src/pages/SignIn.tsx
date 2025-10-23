@@ -8,6 +8,8 @@ import { handleLogin, validateLoginData } from '../utils/handleLogin';
 import type { LoginFormData, LoginValidationErrors } from '../types/auth.types';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
+import { HeroHeader } from '../components/layout/HeroHeader';
+import discussion from "../assets/discussion.webp";
 
 export default function SignIn() {
   const [showPassword, setShowPassword] = React.useState(false);
@@ -95,6 +97,8 @@ export default function SignIn() {
   };
 
   return (
+    <>
+    <HeroHeader/>
     <div className="min-h-screen bg-background flex">
       {/* Left Side */}
       <div className="hidden lg:block lg:w-1/2 relative overflow-hidden rounded-r-3xl">
@@ -108,11 +112,28 @@ export default function SignIn() {
             </p>
           </div>
 
-          <div className="flex-1 flex items-center justify-center">
-            <div className="w-full max-w-sm aspect-[3/4] bg-white/10 backdrop-blur-sm rounded-2xl flex items-center justify-center text-white/50 text-sm">
-              [Your Image Here]
+      <div className="flex-1 flex items-center justify-center">
+        <div className="relative w-full max-w-sm aspect-[3/4] rounded-2xl overflow-hidden shadow-xl bg-card border border-border">
+            <img
+              src={discussion}
+              alt="Student discussion"
+              className="object-cover w-full h-full opacity-90 mix-blend-multiply dark:mix-blend-normal"
+            />
+
+            {/* Decorative target lines */}
+            <div className="absolute inset-0 pointer-events-none">
+              <div className="absolute top-1/3 left-1/3 w-1/3 h-1/3 border border-primary/30 rounded-full" />
+              <div className="absolute top-1/2 left-0 w-1/4 h-px bg-primary/30" />
+              <div className="absolute top-1/2 right-0 w-1/4 h-px bg-primary/30" />
+              <div className="absolute top-0 left-1/2 h-1/4 w-px bg-primary/30" />
+              <div className="absolute bottom-0 left-1/2 h-1/4 w-px bg-primary/30" />
             </div>
+
+            {/* Gradient overlay */}
+            <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent" />
           </div>
+        </div>
+
 
           <div className="h-20" />
         </div>
@@ -232,5 +253,6 @@ export default function SignIn() {
         </div>
       </div>
     </div>
+    </>
   );
 }

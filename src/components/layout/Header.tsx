@@ -15,8 +15,8 @@ import {
   DropdownMenuTrigger,
 } from '../ui/dropdown-menu';
 import { useAuth } from '../../hooks/useAuth';
-import { Sun, Moon } from 'lucide-react';
 import { useTheme } from '../../hooks/useTheme';
+import ThemeButton from '../common/ThemeButton';
 
 interface HeaderProps {
   title?: string;
@@ -83,9 +83,7 @@ export function Header({
           <Button variant="ghost" size="icon" className="relative">
             <Bell className="h-5 w-5" />
           </Button>
-          <Button variant="ghost" size="icon" className="round-full" onClick={()=>setTheme(theme === 'light' ? 'dark' : 'light')}>
-            {theme === 'light' ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
-          </Button>
+          <ThemeButton theme={theme} setTheme={setTheme} />
 
           {/* User Menu Dropdown */}
           <DropdownMenu>

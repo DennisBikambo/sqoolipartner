@@ -70,7 +70,7 @@ export default function Wallet({ activeItem, setActiveItem }: {activeItem: strin
             <div className="mt-4 rounded-xl p-3 bg-muted/30">
               <p className="text-sm font-medium flex items-center gap-2">
                 {wallet.withdrawal_method === "mpesa" && (
-                  <img src="../../public/mpesa.svg" alt="mpesa" className="h-12 w-12" />
+                  <img src="/mpesa.svg" alt="mpesa" className="h-12 w-12" />
                 )}
                 Saved Method:
                 <span className="capitalize ml-1">

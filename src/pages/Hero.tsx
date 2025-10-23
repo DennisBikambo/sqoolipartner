@@ -3,6 +3,8 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Building2, Users, GraduationCap, Rocket, CheckCircle2, Handshake, TrendingUp } from 'lucide-react';
 import { HeroHeader } from '../components/layout/HeroHeader';
+import homework from "../assets/homeWork.webp";
+import studying from "../assets/studying.webp";
 
 export default function Hero() {
   const [formData, setFormData] = React.useState({
@@ -39,18 +41,29 @@ export default function Hero() {
                 Become a Partner
               </Button>
             </div>
-            <div className="relative h-[400px] lg:h-[500px]">
-              <div className="absolute inset-0 bg-gradient-to-br from-chart-3/20 via-chart-5/20 to-primary/20 rounded-3xl"></div>
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center">
-                <div className="bg-card border-2 border-border rounded-2xl p-8 shadow-xl">
-                  <h3 className="text-2xl font-bold text-foreground mb-2">The Future of Learning</h3>
-                  <div className="flex gap-4 mt-6">
-                    <div className="w-24 h-32 bg-gradient-to-br from-chart-3 to-chart-5 rounded-xl"></div>
-                    <div className="w-24 h-32 bg-gradient-to-br from-primary to-secondary rounded-xl"></div>
-                  </div>
+            <div className="relative aspect-square w-full max-w-md mx-auto">
+              <div className="relative overflow-hidden rounded-2xl shadow-xl bg-card border border-border">
+                <img
+                  src={homework}
+                  alt="Partner"
+                  className="object-cover w-full h-full opacity-90 mix-blend-multiply dark:mix-blend-normal"
+                />
+
+                {/* Decorative target lines */}
+                <div className="absolute inset-0 pointer-events-none">
+                  <div className="absolute top-1/3 left-1/3 w-1/3 h-1/3 border border-primary/30 rounded-full" />
+                  <div className="absolute top-1/2 left-0 w-1/4 h-px bg-primary/30" />
+                  <div className="absolute top-1/2 right-0 w-1/4 h-px bg-primary/30" />
+                  <div className="absolute top-0 left-1/2 h-1/4 w-px bg-primary/30" />
+                  <div className="absolute bottom-0 left-1/2 h-1/4 w-px bg-primary/30" />
                 </div>
+
+                {/* Gradient overlay */}
+                <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent" />
               </div>
             </div>
+
+
           </div>
         </div>
       </section>
@@ -321,18 +334,26 @@ export default function Hero() {
                 <div className="relative w-full h-full max-w-md">
                   <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-96 bg-gradient-to-br from-primary/10 to-secondary/10 rounded-3xl"></div>
                   <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
-                    <div className="w-64 h-80 bg-card border border-border rounded-2xl shadow-2xl overflow-hidden">
-                      <div className="h-full flex items-center justify-center p-8">
-                        <div className="text-center space-y-4">
-                          <div className="w-32 h-40 mx-auto bg-gradient-to-br from-chart-3 via-primary to-chart-5 rounded-xl"></div>
-                          <p className="text-sm font-medium text-muted-foreground">Building the future together</p>
-                        </div>
+                    <div className="relative overflow-hidden w-64 h-80 bg-card border border-border rounded-2xl shadow-2xl">
+                      <img
+                        src={studying}
+                        alt="Studying Image"
+                        className="object-cover w-full h-full opacity-90 mix-blend-multiply dark:mix-blend-normal"
+                      />
+                      <div className="absolute inset-0 pointer-events-none">
+                        <div className="absolute top-1/3 left-1/3 w-1/3 h-1/3 border border-primary/30 rounded-full" />
+                        <div className="absolute top-1/2 left-0 w-1/4 h-px bg-primary/30" />
+                        <div className="absolute top-1/2 right-0 w-1/4 h-px bg-primary/30" />
+                        <div className="absolute top-0 left-1/2 h-1/4 w-px bg-primary/30" />
+                        <div className="absolute bottom-0 left-1/2 h-1/4 w-px bg-primary/30" />
                       </div>
+                      <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent" />
                     </div>
                   </div>
                 </div>
               </div>
             </div>
+
           </div>
         </div>
       </section>
