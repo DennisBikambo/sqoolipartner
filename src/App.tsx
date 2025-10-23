@@ -1,6 +1,8 @@
 import { useAuth } from './hooks/useAuth'
 import './App.css'
 import DashboardPage from './pages/Dashboard'
+import {Route, Routes } from 'react-router-dom'
+import  Hero  from './pages/Hero'
 
 function App() {
   const { partners } = useAuth()
@@ -8,9 +10,18 @@ function App() {
   if(partners){
     console.log(partners)
   }
+
+  const routes =[
+    {path:"/", element:<Hero />},
+    {path:'dashboard', element:<DashboardPage />}
+  ]
   return (
     <>
-      <DashboardPage />
+      <Routes>
+        {routes.map((route) => (
+          <Route key={route.path} path={route.path} element={route.element} />
+        ))}
+      </Routes>
     </>
   )
 }
