@@ -4,6 +4,8 @@ import { Input } from '../components/ui/input';
 import { Eye, EyeOff, Loader2, CheckCircle2, XCircle } from 'lucide-react';
 import { handleRegister, validateRegistrationData, getPasswordStrength } from '../utils/handleRegister';
 import type { RegisterFormData, ValidationErrors } from '../types/auth.types';
+import { useNavigate } from 'react-router-dom';
+import {  toast } from 'sonner';
 
 export default function SignUpPage() {
   const [showPassword, setShowPassword] = React.useState(false);
@@ -11,7 +13,8 @@ export default function SignUpPage() {
   const [isLoading, setIsLoading] = React.useState(false);
   const [touchedFields, setTouchedFields] = React.useState<Set<keyof RegisterFormData>>(new Set());
   const [errors, setErrors] = React.useState<ValidationErrors>({});
-  
+  const navigate = useNavigate();
+
   const [signupData, setSignupData] = React.useState<RegisterFormData>({
     firstName: '',
     lastName: '',
@@ -22,31 +25,26 @@ export default function SignUpPage() {
     confirmPassword: ''
   });
 
-  // Validate single field
   const validateSingleField = (field: keyof RegisterFormData, value: string) => {
     const tempData = { ...signupData, [field]: value };
     const allErrors = validateRegistrationData(tempData);
     return allErrors[field];
   };
 
-  // Handle field blur (when user leaves field)
   const handleBlur = (field: keyof RegisterFormData) => {
     setTouchedFields(prev => new Set(prev).add(field));
     const error = validateSingleField(field, signupData[field]);
     setErrors(prev => ({ ...prev, [field]: error }));
   };
 
-  // Handle field change with real-time validation for touched fields
   const handleChange = (field: keyof RegisterFormData, value: string) => {
     setSignupData(prev => ({ ...prev, [field]: value }));
-    
-    // Only validate if field has been touched
+
     if (touchedFields.has(field)) {
       const error = validateSingleField(field, value);
       setErrors(prev => ({ ...prev, [field]: error }));
     }
 
-    // Special case: if confirm password is touched and password changes, revalidate confirm
     if (field === 'password' && touchedFields.has('confirmPassword')) {
       const tempData = { ...signupData, password: value };
       const allErrors = validateRegistrationData(tempData);
@@ -54,22 +52,20 @@ export default function SignUpPage() {
     }
   };
 
-  // Check if form is valid
   const isFormValid = () => {
     const allErrors = validateRegistrationData(signupData);
     return Object.keys(allErrors).length === 0;
   };
 
   const handleSubmit = async () => {
-    // Mark all fields as touched
     const allFields = new Set(Object.keys(signupData) as (keyof RegisterFormData)[]);
     setTouchedFields(allFields);
 
-    // Validate all fields
     const newErrors = validateRegistrationData(signupData);
     setErrors(newErrors);
 
     if (Object.keys(newErrors).length > 0) {
+      toast.error('Please fill in all required fields correctly.');
       return;
     }
 
@@ -79,16 +75,18 @@ export default function SignUpPage() {
       const result = await handleRegister(signupData);
 
       if (!result.success) {
-        alert(result.message);
+        toast.error(result.message || 'Registration failed. Please try again.');
         return;
       }
 
-      alert(result.message || 'Registration successful! You can now sign in.');
-      // Redirect to login or handle success
-      // window.location.href = '/login';
+      toast.success(result.message || 'Registration successful! You can now sign in.');
+
+      // Redirect after short delay
+      setTimeout(() => navigate('/signIn'), 1500);
+
     } catch (error) {
       console.error('Registration error:', error);
-      alert('An unexpected error occurred. Please try again.');
+      toast.error('An unexpected error occurred. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -99,10 +97,10 @@ export default function SignUpPage() {
 
   return (
     <div className="min-h-screen bg-background flex">
+
       {/* Left Side - Image */}
       <div className="hidden lg:block lg:w-1/2 relative overflow-hidden rounded-r-3xl">
-        <div className="absolute inset-0 bg-gradient-to-br from-[#5a9c92] to-[#4a8c82]"></div>
-        
+        <div className="absolute inset-0 bg-gradient-to-br from-[#5a9c92] to-[#4a8c82]" />
         <div className="relative h-full flex flex-col justify-between p-12">
           <div className="text-white text-center space-y-2">
             <h1 className="text-3xl font-bold">Welcome to Sqooli</h1>
@@ -118,12 +116,16 @@ export default function SignUpPage() {
             </div>
           </div>
 
-          <div className="h-20"></div>
+          <div className="h-20" />
         </div>
 
         <div className="absolute bottom-0 left-0 right-0">
           <svg viewBox="0 0 1200 120" className="w-full h-24 opacity-20">
-            <path d="M0,64 C150,100 350,0 600,64 C850,128 1050,0 1200,64 L1200,120 L0,120 Z" fill="currentColor" className="text-white/20"></path>
+            <path
+              d="M0,64 C150,100 350,0 600,64 C850,128 1050,0 1200,64 L1200,120 L0,120 Z"
+              fill="currentColor"
+              className="text-white/20"
+            />
           </svg>
         </div>
       </div>
@@ -153,11 +155,10 @@ export default function SignUpPage() {
             </div>
 
             <div className="space-y-4">
+              {/* First/Last Name */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-sm font-medium text-foreground mb-2 block">
-                    First Name
-                  </label>
+                  <label className="text-sm font-medium text-foreground mb-2 block">First Name</label>
                   <Input
                     type="text"
                     placeholder="John"
@@ -171,9 +172,7 @@ export default function SignUpPage() {
                   )}
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-foreground mb-2 block">
-                    Last Name
-                  </label>
+                  <label className="text-sm font-medium text-foreground mb-2 block">Last Name</label>
                   <Input
                     type="text"
                     placeholder="Doe"
@@ -188,10 +187,9 @@ export default function SignUpPage() {
                 </div>
               </div>
 
+              {/* Email */}
               <div>
-                <label className="text-sm font-medium text-foreground mb-2 block">
-                  Email Address
-                </label>
+                <label className="text-sm font-medium text-foreground mb-2 block">Email Address</label>
                 <Input
                   type="email"
                   placeholder="name@schoolmail.com"
@@ -205,10 +203,9 @@ export default function SignUpPage() {
                 )}
               </div>
 
+              {/* Phone */}
               <div>
-                <label className="text-sm font-medium text-foreground mb-2 block">
-                  Phone Number
-                </label>
+                <label className="text-sm font-medium text-foreground mb-2 block">Phone Number</label>
                 <Input
                   type="tel"
                   placeholder="+254 700 000000"
@@ -222,10 +219,9 @@ export default function SignUpPage() {
                 )}
               </div>
 
+              {/* Username */}
               <div>
-                <label className="text-sm font-medium text-foreground mb-2 block">
-                  Username
-                </label>
+                <label className="text-sm font-medium text-foreground mb-2 block">Username</label>
                 <Input
                   type="text"
                   placeholder="johndoe"
@@ -239,13 +235,12 @@ export default function SignUpPage() {
                 )}
               </div>
 
+              {/* Password */}
               <div>
-                <label className="text-sm font-medium text-foreground mb-2 block">
-                  Password
-                </label>
+                <label className="text-sm font-medium text-foreground mb-2 block">Password</label>
                 <div className="relative">
                   <Input
-                    type={showPassword ? "text" : "password"}
+                    type={showPassword ? 'text' : 'password'}
                     placeholder="••••••••"
                     value={signupData.password}
                     onChange={(e) => handleChange('password', e.target.value)}
@@ -269,9 +264,7 @@ export default function SignUpPage() {
                       {[...Array(5)].map((_, i) => (
                         <div
                           key={i}
-                          className={`h-1 flex-1 rounded-full ${
-                            i < passwordStrength.score ? passwordStrength.color : 'bg-muted'
-                          }`}
+                          className={`h-1 flex-1 rounded-full ${i < passwordStrength.score ? passwordStrength.color : 'bg-muted'}`}
                         />
                       ))}
                     </div>
@@ -282,13 +275,12 @@ export default function SignUpPage() {
                 )}
               </div>
 
+              {/* Confirm Password */}
               <div>
-                <label className="text-sm font-medium text-foreground mb-2 block">
-                  Confirm Password
-                </label>
+                <label className="text-sm font-medium text-foreground mb-2 block">Confirm Password</label>
                 <div className="relative">
                   <Input
-                    type={showConfirmPassword ? "text" : "password"}
+                    type={showConfirmPassword ? 'text' : 'password'}
                     placeholder="••••••••"
                     value={signupData.confirmPassword}
                     onChange={(e) => handleChange('confirmPassword', e.target.value)}
@@ -323,6 +315,7 @@ export default function SignUpPage() {
                 )}
               </div>
 
+              {/* Submit Button */}
               <Button
                 onClick={handleSubmit}
                 disabled={!isFormValid() || isLoading}
@@ -338,10 +331,14 @@ export default function SignUpPage() {
                 )}
               </Button>
 
+              {/* Sign In Link */}
               <div className="text-center pt-2">
                 <p className="text-sm text-muted-foreground">
                   Already have an account?{' '}
-                  <a href="#login" className="text-primary hover:underline font-medium">
+                  <a
+                    onClick={() => navigate('/signIn')}
+                    className="text-primary hover:underline font-medium cursor-pointer"
+                  >
                     Sign In
                   </a>
                 </p>

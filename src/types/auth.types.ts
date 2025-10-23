@@ -56,3 +56,10 @@ export interface LoginValidationErrors {
   email?: string;
   password?: string;
 }
+
+
+export interface AuthenticatedUser {
+  id: number;
+  name: string;
+  email: string;
+}

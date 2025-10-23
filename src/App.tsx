@@ -3,8 +3,9 @@ import './App.css'
 import DashboardPage from './pages/Dashboard'
 import {Route, Routes } from 'react-router-dom'
 import  Hero  from './pages/Hero'
-import SignIn from './pages/SIgnIn'
+import SignIn from './pages/SignIn'
 import SignUp from './pages/SignUp'
+import { ProtectedRoute } from './components/Protected'
 
 function App() {
   const { partners } = useAuth()
@@ -17,7 +18,7 @@ function App() {
     {path:"/", element:<Hero />},
     {path:'signIn', element:<SignIn />},
     {path:'signUp',element:<SignUp />},
-    {path:'dashboard', element:<DashboardPage />}
+    {path:'dashboard', element:<ProtectedRoute><DashboardPage /></ProtectedRoute>}
   ]
   return (
     <>

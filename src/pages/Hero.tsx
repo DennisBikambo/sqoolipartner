@@ -2,6 +2,7 @@ import React from 'react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Building2, Users, GraduationCap, Rocket, CheckCircle2, Handshake, TrendingUp } from 'lucide-react';
+import { HeroHeader } from '../components/layout/HeroHeader';
 
 export default function Hero() {
   const [formData, setFormData] = React.useState({
@@ -18,7 +19,10 @@ export default function Hero() {
   };
 
   return (
+    <>
+    
     <div className="min-h-screen bg-background">
+      <HeroHeader />
       {/* Hero Section */}
       <section className="relative overflow-hidden bg-gradient-to-br from-primary/5 via-secondary/5 to-chart-5/5">
         <div className="container mx-auto px-6 py-20 lg:py-32">
@@ -333,5 +337,6 @@ export default function Hero() {
         </div>
       </section>
     </div>
+    </>
   );
 }
