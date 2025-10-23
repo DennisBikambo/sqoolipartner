@@ -179,16 +179,16 @@ export default function Hero() {
             <p className="text-sm text-muted-foreground mb-2">Join 100+ of our amazing partners</p>
             <div className="flex flex-wrap justify-center items-center gap-8 mt-8">
               <div className="px-6 py-3 bg-background rounded-xl border border-border">
-                <span className="text-lg font-semibold text-foreground">BobahIt</span>
+                <span className="text-lg font-semibold text-foreground">Boltshift</span>
               </div>
               <div className="px-6 py-3 bg-background rounded-xl border border-border">
-                <span className="text-lg font-semibold text-foreground">Lightborn</span>
+                <span className="text-lg font-semibold text-foreground">Lightbox</span>
               </div>
               <div className="px-6 py-3 bg-background rounded-xl border border-border">
                 <span className="text-lg font-semibold text-foreground">FeatherDev</span>
               </div>
               <div className="px-6 py-3 bg-background rounded-xl border border-border">
-                <span className="text-lg font-semibold text-foreground">Schemde</span>
+                <span className="text-lg font-semibold text-foreground">Spherule</span>
               </div>
               <div className="px-6 py-3 bg-background rounded-xl border border-border">
                 <span className="text-lg font-semibold text-foreground">GlobalBank</span>
