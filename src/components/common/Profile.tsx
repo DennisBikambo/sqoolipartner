@@ -4,18 +4,17 @@ import { Avatar, AvatarFallback } from "../ui/avatar";
 import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
 import { useAuth } from "../../hooks/useAuth";
+import { getDisplayName, getUserInitials } from "../../types/auth.types";
 import CreateCampaignWizard from "./CreateCampaign";
 
 export default function Profile() {
-  const { user } = useAuth();
+  const { user, partner } = useAuth();
   const [showWizard, setShowWizard] = useState(false);
 
-  const getInitials = (name = "") =>
-    name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase();
+  // Get display name and initials using helper functions
+  const displayName = getDisplayName(partner || user);
+  const initials = getUserInitials(partner || user);
+  const partnerId = partner?._id;
 
   return (
     <>
@@ -23,11 +22,11 @@ export default function Profile() {
         <CardContent>
           <div className="flex items-center gap-4">
             <Avatar className="h-14 w-14">
-              <AvatarFallback>{getInitials(user?.name || "U")}</AvatarFallback>
+              <AvatarFallback>{initials || "U"}</AvatarFallback>
             </Avatar>
             <div>
               <h3 className="text-lg font-semibold text-foreground">
-                {user?.name || "Partner"}
+                {displayName || "Partner"}
               </h3>
               <Badge variant="outline" className="text-primary">
                 Media Partner
@@ -40,6 +39,7 @@ export default function Profile() {
               className="w-full"
               variant="default"
               onClick={() => setShowWizard(true)}
+              disabled={!partnerId}
             >
               Create Campaign Link
             </Button>
@@ -48,15 +48,13 @@ export default function Profile() {
       </Card>
 
       {/* Dialog-based wizard modal */}
-      <div>
-          {user?._id && (
-            <CreateCampaignWizard
-              partnerId={user._id}
-              open = {showWizard}
-              onClose={() => setShowWizard(false)}
-            />
-          )}
-     </div>
+      {partnerId && (
+        <CreateCampaignWizard
+          partnerId={partnerId}
+          open={showWizard}
+          onClose={() => setShowWizard(false)}
+        />
+      )}
     </>
   );
 }

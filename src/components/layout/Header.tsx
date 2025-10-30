@@ -23,7 +23,7 @@ interface HeaderProps {
 }
 
 export function Header({ title = 'Dashboard' }: HeaderProps) {
-  const { user, loading } = useAuth();
+  const { user, loading,partner } = useAuth();
   const { setTheme, theme } = useTheme();
   const navigate = useNavigate();
 
@@ -60,7 +60,7 @@ export function Header({ title = 'Dashboard' }: HeaderProps) {
   const fullName =
     'first_name' in user && 'last_name' in user
       ? `${user.first_name || ''} ${user.last_name || ''}`.trim()
-      : user.name;
+      : partner?.name;
 
   const email = 'email' in user ? user.email : '';
   const avatarUrl ='avatar' in user && typeof user.avatar === 'string' ? user.avatar : '';

@@ -37,7 +37,7 @@ export function CampaignDetailDialog({
   onCopy,
 }: CampaignDetailDialogProps) {
 
-   const {user} = useAuth();
+   const {partner} = useAuth();
 
   // Fetch enrollments for this campaign to get actual engagement numbers
   const enrollments = useQuery(
@@ -182,7 +182,7 @@ export function CampaignDetailDialog({
                 <div>
                   <div className="text-muted-foreground mb-1">Created By:</div>
                   <div className="font-semibold text-foreground">
-                    {user?.name || "Loading..."}
+                    {partner?.name || "Loading..."}
                   </div>
                 </div>
 

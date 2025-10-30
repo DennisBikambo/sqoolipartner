@@ -3,6 +3,7 @@
 
 import { useState, useEffect } from "react";
 import { useAuth } from "../hooks/useAuth";
+import { getDisplayName } from "../types/auth.types";
 import { api } from "../../convex/_generated/api";
 import { useQuery, useConvex } from "convex/react";
 import type {
@@ -27,87 +28,89 @@ import CreateCampaignWizard from "../components/common/CreateCampaign";
 import { ChevronDown } from "lucide-react";
 import { LineChart, Line, XAxis, ResponsiveContainer } from "recharts";
 
-
-
-export default function DashboardSection( { activeItem, setActiveItem }: {activeItem: string; setActiveItem: (item: string) => void } ) {
-  const { user } = useAuth();
+export default function DashboardSection({ 
+  activeItem, 
+  setActiveItem 
+}: {
+  activeItem: string; 
+  setActiveItem: (item: string) => void;
+}) {
+  const { user, partner } = useAuth();
   const convex = useConvex();
   const [showCreateWizard, setShowCreateWizard] = useState(false);
   const [allEnrollments, setAllEnrollments] = useState<DashboardEnrollment[]>([]);
   const [earningsData, setEarningsData] = useState<DashboardEarnings[]>([]);
-  
 
-  const campaigns =
-    useQuery(api.campaign.getCampaignsByPartner, user?._id ? { partner_id: user._id } : "skip") as
-      | DashboardCampaign[]
-      | undefined;
-
+  // Use partner._id for queries (Convex partner ID)
+  const campaigns = useQuery(
+    api.campaign.getCampaignsByPartner,
+    partner?._id ? { partner_id: partner._id } : "skip"
+  ) as DashboardCampaign[] | undefined;
 
   useEffect(() => {
-      if (!campaigns?.length) return;
+    if (!campaigns?.length) return;
 
-      async function fetchEnrollments() {
-        const safeCampaigns = campaigns ?? [];
+    async function fetchEnrollments() {
+      const safeCampaigns = campaigns ?? [];
 
-        if (safeCampaigns.length === 0) {
-          setAllEnrollments([]);
-          return;
-        }
-
-        const results = await Promise.all(
-          safeCampaigns.map((c) =>
-            convex.query(api.program_enrollments.listByCampaign, {
-              campaignId: c._id,
-            })
-          )
-        );
-        setAllEnrollments(results.flat());
+      if (safeCampaigns.length === 0) {
+        setAllEnrollments([]);
+        return;
       }
 
-      async function fetchEarnings() {
-        const safeCampaigns = campaigns ?? [];
+      const results = await Promise.all(
+        safeCampaigns.map((c) =>
+          convex.query(api.program_enrollments.listByCampaign, {
+            campaignId: c._id,
+          })
+        )
+      );
+      setAllEnrollments(results.flat());
+    }
 
-        // Flatten all enrollments across campaigns
-        const enrollments = await Promise.all(
-          safeCampaigns.map((c) =>
-            convex.query(api.program_enrollments.listByCampaign, {
-              campaignId: c._id,
-            })
-          )
-        );
+    async function fetchEarnings() {
+      const safeCampaigns = campaigns ?? [];
 
-        const flatEnrollments = enrollments.flat();
+      // Flatten all enrollments across campaigns
+      const enrollments = await Promise.all(
+        safeCampaigns.map((c) =>
+          convex.query(api.program_enrollments.listByCampaign, {
+            campaignId: c._id,
+          })
+        )
+      );
 
-        // Group earnings by date
-        const earningsMap: Record<string, number> = {};
+      const flatEnrollments = enrollments.flat();
 
-        flatEnrollments.forEach((e) => {
-          const date = new Date(e._creationTime).toLocaleDateString("en-GB", {
-            day: "2-digit",
-            month: "short",
-          });
+      // Group earnings by date
+      const earningsMap: Record<string, number> = {};
 
-          // Assuming each enrollment = one lesson at KES 200
-          earningsMap[date] = (earningsMap[date] || 0) + 200;
+      flatEnrollments.forEach((e) => {
+        const date = new Date(e._creationTime).toLocaleDateString("en-GB", {
+          day: "2-digit",
+          month: "short",
         });
 
-        const formatted = Object.entries(earningsMap).map(([date, amount]) => ({
-          date,
-          amount,
-        }));
+        // Assuming each enrollment = one lesson at KES 200
+        earningsMap[date] = (earningsMap[date] || 0) + 200;
+      });
 
-        // Sort by date ascending
-        formatted.sort(
-          (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
-        );
+      const formatted = Object.entries(earningsMap).map(([date, amount]) => ({
+        date,
+        amount,
+      }));
 
-        setEarningsData(formatted);
-      }
+      // Sort by date ascending
+      formatted.sort(
+        (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+      );
 
-      fetchEnrollments();
-      fetchEarnings();
-    }, [campaigns, convex]);
+      setEarningsData(formatted);
+    }
 
+    fetchEnrollments();
+    fetchEarnings();
+  }, [campaigns, convex]);
 
   const metrics: DashboardMetrics = {
     totalCampaigns: campaigns?.length || 0,
@@ -135,6 +138,9 @@ export default function DashboardSection( { activeItem, setActiveItem }: {active
       year: "numeric",
     });
 
+  // Get display name using helper function
+  const displayName = getDisplayName(partner || user);
+
   return (
     <div className="space-y-6">
       {/* HEADER */}
@@ -142,17 +148,21 @@ export default function DashboardSection( { activeItem, setActiveItem }: {active
         <div>
           <h1 className="text-2xl font-semibold text-foreground">Dashboard Overview</h1>
           <p className="text-sm text-muted-foreground">
-            Welcome back{user?.name ? `, ${user.name}` : ""}
+            Welcome back{displayName ? `, ${displayName}` : ""}
           </p>
         </div>
-        <Button onClick={() => setShowCreateWizard(true)} className="text-primary" variant="outline">
+        <Button 
+          onClick={() => setShowCreateWizard(true)} 
+          className="text-primary" 
+          variant="outline"
+        >
           + New Campaign
         </Button>
       </div>
 
-      {showCreateWizard && user?._id && (
+      {showCreateWizard && partner?._id && (
         <CreateCampaignWizard
-          partnerId={user._id}
+          partnerId={partner._id}
           open={showCreateWizard}
           onClose={() => setShowCreateWizard(false)}
         />
@@ -165,7 +175,7 @@ export default function DashboardSection( { activeItem, setActiveItem }: {active
           {/* LEFT */}
           <aside className="md:col-span-3 space-y-6">
             {/* Profile */}
-            <Profile/>
+            <Profile />
             {/* Wallet */}
             <Wallet activeItem={activeItem} setActiveItem={setActiveItem} />
           </aside>
@@ -204,7 +214,7 @@ export default function DashboardSection( { activeItem, setActiveItem }: {active
                 <div className="mt-6 h-64 text-primary">
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={earningsData}>
-                      <XAxis dataKey="date" stroke="var(--chart-1)"/>
+                      <XAxis dataKey="date" stroke="var(--chart-1)" />
                       <Line
                         type="monotone"
                         dataKey="amount"
@@ -247,7 +257,7 @@ export default function DashboardSection( { activeItem, setActiveItem }: {active
             </Card>
 
             {/* Recent Activity */}
-            <Card   className="border border-muted">
+            <Card className="border border-muted">
               <CardHeader>
                 <CardTitle>Recent Signups</CardTitle>
               </CardHeader>
@@ -270,7 +280,6 @@ export default function DashboardSection( { activeItem, setActiveItem }: {active
                           </p>
                         </div>
                       </div>
-                      
                     </div>
                   ))
                 ) : (

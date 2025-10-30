@@ -42,20 +42,21 @@ export default function WalletSection({
   activeItem: string;
   setActiveItem: (item: string) => void;
 }) {
-  const { user } = useAuth();
+  const { user,partner } = useAuth();
+  console.log(user)
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState<"payments" | "withdrawals">("payments");
   const [isWalletOpen, setIsWalletOpen] = useState(false);
 
   const campaigns = useQuery(
     api.campaign.getCampaignsByPartner,
-    user?._id ? { partner_id: user._id } : "skip"
+    partner?._id ? { partner_id: partner._id } : "skip"
   );
 
   // Fetch all transactions
   const transactions = useQuery(
     api.transactions.getTransactionsByPartner,
-    user?._id ? { partner_id: user._id } : "skip"
+    partner?._id ? { partner_id: partner._id } : "skip"
   );
 
   // Filter transactions based on search query

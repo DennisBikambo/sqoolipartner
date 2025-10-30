@@ -24,7 +24,6 @@ export const createCampaign = mutation({
   handler: async (ctx, args) => {
     const partner = await ctx.db.get(args.partner_id);
     if (!partner) throw new Error("Partner not found");
-    if (partner.status !== "approved") throw new Error("Partner not approved");
 
     const program = await ctx.db.get(args.program_id);
     if (!program) throw new Error("Program not found");

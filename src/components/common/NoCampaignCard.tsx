@@ -16,10 +16,10 @@ export const NoCampaignCard: React.FC<NoCampaignCardProps> = ({
   title = "No Campaigns Yet",
   message = "You don’t have any active campaigns yet. Create one to get started.",
 }) => {
-  const { user } = useAuth();
+  const { partner } = useAuth();
   const [openWizard, setOpenWizard] = useState(false);
 
-  if (openWizard && user?._id) {
+  if (openWizard && partner?._id) {
     return (
       <Card className="border border-[var(--color-border)] shadow-md p-6 relative">
         <Button
@@ -32,7 +32,7 @@ export const NoCampaignCard: React.FC<NoCampaignCardProps> = ({
         </Button>
 
         <CreateCampaignWizard
-          partnerId={user._id}
+          partnerId={partner._id}
           open={openWizard}
           onClose={() => setOpenWizard(false)}
         />

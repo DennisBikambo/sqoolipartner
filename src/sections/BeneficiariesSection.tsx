@@ -3,17 +3,20 @@ import { useQuery } from "convex/react";
 import { NoCampaignCard } from "../components/common/NoCampaignCard";
 import { api } from "../../convex/_generated/api";
 
-
 export default function BeneficiariesSection() {
-    const { user } = useAuth();
+  const {  partner } = useAuth();
+  
+  
+  const partnerId = partner?._id;
 
   const campaigns = useQuery(
     api.campaign.getCampaignsByPartner,
-    user?._id ? { partner_id: user._id } : "skip"
+    partnerId ? { partner_id: partnerId } : "skip"
   );
+
   return (
     <div>
-      {user && (!campaigns || campaigns.length === 0) && <NoCampaignCard />}
+      {partner && (!campaigns || campaigns.length === 0) && <NoCampaignCard />}
     </div>
   );
 }

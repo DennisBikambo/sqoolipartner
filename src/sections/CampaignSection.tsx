@@ -47,10 +47,10 @@ export default function CampaignSection() {
   const [loading, setLoading] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
 
-  const { user } = useAuth();
+  const { partner } = useAuth();
   const campaigns = useQuery(
     api.campaign.getCampaignsByPartner,
-    user?._id ? { partner_id: user._id } : "skip"
+    partner?._id ? { partner_id: partner._id } : "skip"
   );
 
   const updateCampaignStatus = useMutation(api.campaign.updateCampaignStatus);

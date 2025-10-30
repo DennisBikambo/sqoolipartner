@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
-import type { AuthenticatedUser } from "../types/auth.types";
+import type { AuthenticatedUser, ConvexPartner, UseAuthReturn } from "../types/auth.types";
 import handleAuthenticated from "../utils/handleAuthenticated";
 
-export function useAuth() {
+export function useAuth(): UseAuthReturn {
   const [laravelUser, setLaravelUser] = useState<AuthenticatedUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -36,7 +36,7 @@ export function useAuth() {
   const convexPartner = useQuery(
     api.partner.getByEmail,
     laravelUser?.email ? { email: laravelUser.email } : "skip"
-  );
+  ) as ConvexPartner | undefined | null;
 
   // ✅ Step 3: If laravelUserId = 0 in Convex, update it with the real Laravel ID
   useEffect(() => {
@@ -52,7 +52,7 @@ export function useAuth() {
 
       // Check if laravelUserId needs updating
       if (convexPartner.laravelUserId === 0 && laravelUser.id !== 0) {
-
+        console.log("🛠 Updating Convex laravelUserId from 0 to", laravelUser.id);
 
         try {
           await updateLaravelUserId({
@@ -60,6 +60,7 @@ export function useAuth() {
             laravelUserId: laravelUser.id,
           });
 
+          console.log("✅ Laravel user ID synced successfully");
           setSyncAttempted(true);
         } catch (err) {
           console.error("❌ Failed to sync Laravel user ID:", err);

@@ -47,7 +47,6 @@ export default function CreateCampaignWizard({
   const { track } = useActivityTracker(partnerId);
   const programs = useQuery(api.program.listPrograms);
 
-
   const [step, setStep] = useState<number>(0);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -208,13 +207,13 @@ export default function CreateCampaignWizard({
   const finalPromoCode = state.auto_promo ? autoPromoCode : state.promo_code;
 
   return (
-    <div className="fixed inset-0 z-100 flex items-center justify-center bg-black/50 p-4">
-      <Card className="w-full max-w-4xl max-h-[90vh]  overflow-hidden flex flex-col">
-        <CardHeader className="bg-gradient-to-r  from-blue-600 to-indigo-600 text-white">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4">
+      <Card className="w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+        <CardHeader className="bg-gradient-to-r from-primary to-accent text-primary-foreground">
           <div className="flex items-center justify-between mb-4">
             <div>
               <CardTitle className="text-2xl">Create New Campaign</CardTitle>
-              <CardDescription className="text-blue-100">
+              <CardDescription className="text-primary-foreground/80">
                 Step {step + 1} of {steps.length}
               </CardDescription>
             </div>
@@ -222,7 +221,7 @@ export default function CreateCampaignWizard({
               variant="ghost"
               size="icon"
               onClick={() => { resetWizard(); onClose?.(); }}
-              className="text-white hover:bg-white/20"
+              className="text-primary-foreground hover:bg-primary-foreground/20"
             >
               <X className="h-5 w-5" />
             </Button>
@@ -240,10 +239,10 @@ export default function CreateCampaignWizard({
                     <div
                       className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
                         isCompleted
-                          ? "bg-white text-blue-600"
+                          ? "bg-primary-foreground text-primary"
                           : isCurrent
-                          ? "bg-blue-500 text-white ring-4 ring-blue-300"
-                          : "bg-blue-700/50 text-blue-200"
+                          ? "bg-accent text-accent-foreground ring-4 ring-accent/30"
+                          : "bg-primary/50 text-primary-foreground/60"
                       }`}
                     >
                       {isCompleted ? <Check className="h-5 w-5" /> : <Icon className="h-5 w-5" />}
@@ -255,7 +254,7 @@ export default function CreateCampaignWizard({
                   
                   {idx < steps.length - 1 && (
                     <div className={`h-0.5 flex-1 transition-all ${
-                      isCompleted ? "bg-white" : "bg-blue-700/50"
+                      isCompleted ? "bg-primary-foreground" : "bg-primary/50"
                     }`} />
                   )}
                 </div>
@@ -267,7 +266,7 @@ export default function CreateCampaignWizard({
         <CardContent className="flex-1 overflow-y-auto p-6">
           <div className="mb-6">
             <div className="flex items-center gap-2 mb-2">
-              <StepIcon className="h-6 w-6 text-blue-600" />
+              <StepIcon className="h-6 w-6 text-primary" />
               <h3 className="text-xl font-semibold">{currentStep.title}</h3>
             </div>
             <p className="text-sm text-muted-foreground">{currentStep.description}</p>
@@ -286,7 +285,7 @@ export default function CreateCampaignWizard({
                   htmlFor={p._id}
                   className={`flex items-start p-4 rounded-lg border-2 cursor-pointer transition-all ${
                     state.program_id === p._id
-                      ? "border-blue-500 bg-blue-50"
+                      ? "border-primary bg-accent/10"
                       : "border-border hover:border-muted-foreground"
                   }`}
                 >
@@ -298,7 +297,7 @@ export default function CreateCampaignWizard({
                     </div>
                   </div>
                   {state.program_id === p._id && (
-                    <Check className="h-5 w-5 text-blue-600" />
+                    <Check className="h-5 w-5 text-primary" />
                   )}
                 </Label>
               ))}
@@ -376,9 +375,9 @@ export default function CreateCampaignWizard({
               </div>
 
               {calculations && (
-                <Alert className="bg-blue-50 border-blue-200">
-                  <DollarSign className="h-4 w-4 text-blue-600" />
-                  <AlertDescription className="text-blue-900">
+                <Alert className="bg-accent/10 border-accent">
+                  <DollarSign className="h-4 w-4 text-primary" />
+                  <AlertDescription className="text-foreground">
                     <div className="space-y-1 text-sm">
                       <div className="flex justify-between">
                         <span>Campaign Duration:</span>
@@ -388,12 +387,12 @@ export default function CreateCampaignWizard({
                         <span>Daily Target:</span>
                         <strong>{calculations.dailyTarget} signups/day</strong>
                       </div>
-                      <Separator className="my-2 bg-blue-200" />
+                      <Separator className="my-2" />
                       <div className="flex justify-between">
                         <span>Revenue Projection:</span>
                         <strong>KES {calculations.revenueProjection.toLocaleString()}</strong>
                       </div>
-                      <div className="flex justify-between text-green-700">
+                      <div className="flex justify-between text-secondary">
                         <span>Your Share (20%):</span>
                         <strong>KES {calculations.partnerShare.toLocaleString()}</strong>
                       </div>
@@ -429,13 +428,13 @@ export default function CreateCampaignWizard({
                   </div>
 
                   {state.auto_promo ? (
-                    <div className="p-4 bg-green-50 border-2 border-green-200 rounded-lg">
+                    <div className="p-4 bg-secondary/10 border-2 border-secondary rounded-lg">
                       <div className="flex items-center justify-between">
                         <div>
                           <div className="text-sm text-muted-foreground mb-1">Generated Code</div>
-                          <div className="text-2xl font-bold text-green-700">{autoPromoCode || "—"}</div>
+                          <div className="text-2xl font-bold text-secondary">{autoPromoCode || "—"}</div>
                         </div>
-                        <Check className="h-8 w-8 text-green-600" />
+                        <Check className="h-8 w-8 text-secondary" />
                       </div>
                     </div>
                   ) : (
@@ -469,9 +468,9 @@ export default function CreateCampaignWizard({
           {/* Step 3: Assets preview */}
           {step === 3 && (
             <div className="space-y-4">
-              <Alert className="bg-blue-50 border-blue-200">
-                <Sparkles className="h-4 w-4 text-blue-600" />
-                <AlertDescription className="text-blue-900">
+              <Alert className="bg-accent/10 border-accent">
+                <Sparkles className="h-4 w-4 text-primary" />
+                <AlertDescription className="text-foreground">
                   The following marketing assets will be automatically generated when you create this campaign
                 </AlertDescription>
               </Alert>
@@ -480,7 +479,7 @@ export default function CreateCampaignWizard({
                 <Card>
                   <CardHeader className="pb-3">
                     <CardTitle className="text-sm flex items-center gap-2">
-                      <Check className="h-4 w-4 text-green-600" />
+                      <Check className="h-4 w-4 text-secondary" />
                       WhatsApp Click-to-Chat Link
                     </CardTitle>
                   </CardHeader>
@@ -494,7 +493,7 @@ export default function CreateCampaignWizard({
                 <Card>
                   <CardHeader className="pb-3">
                     <CardTitle className="text-sm flex items-center gap-2">
-                      <Check className="h-4 w-4 text-green-600" />
+                      <Check className="h-4 w-4 text-secondary" />
                       QR Code
                     </CardTitle>
                   </CardHeader>
@@ -508,7 +507,7 @@ export default function CreateCampaignWizard({
                 <Card>
                   <CardHeader className="pb-3">
                     <CardTitle className="text-sm flex items-center gap-2">
-                      <Check className="h-4 w-4 text-green-600" />
+                      <Check className="h-4 w-4 text-secondary" />
                       Campaign Flyer
                     </CardTitle>
                   </CardHeader>
@@ -522,7 +521,7 @@ export default function CreateCampaignWizard({
                 <Card>
                   <CardHeader className="pb-3">
                     <CardTitle className="text-sm flex items-center gap-2">
-                      <Check className="h-4 w-4 text-green-600" />
+                      <Check className="h-4 w-4 text-secondary" />
                       How to Pay Card
                     </CardTitle>
                   </CardHeader>
@@ -605,9 +604,9 @@ export default function CreateCampaignWizard({
                         <span className="font-semibold">KES {calculations.revenueProjection.toLocaleString()}</span>
                       </div>
                       <Separator />
-                      <div className="flex justify-between py-2 bg-green-50 -mx-4 px-4 rounded">
-                        <span className="text-green-700 font-medium">Your Share (20%):</span>
-                        <span className="font-bold text-green-700">KES {calculations.partnerShare.toLocaleString()}</span>
+                      <div className="flex justify-between py-2 bg-secondary/10 -mx-4 px-4 rounded">
+                        <span className="text-secondary font-medium">Your Share (20%):</span>
+                        <span className="font-bold text-secondary">KES {calculations.partnerShare.toLocaleString()}</span>
                       </div>
                     </>
                   )}
@@ -619,9 +618,9 @@ export default function CreateCampaignWizard({
                 </CardContent>
               </Card>
 
-              <Alert className="bg-yellow-50 border-yellow-200">
-                <AlertCircle className="h-4 w-4 text-yellow-600" />
-                <AlertDescription className="text-yellow-900">
+              <Alert className="bg-accent/10 border-accent">
+                <AlertCircle className="h-4 w-4 text-primary" />
+                <AlertDescription className="text-foreground">
                   Your campaign will be submitted for review. Once approved by Sqooli Admin, 
                   you'll receive a notification and can start promoting with your generated assets.
                 </AlertDescription>
@@ -635,9 +634,9 @@ export default function CreateCampaignWizard({
               )}
 
               {success && (
-                <Alert className="border-green-500 bg-green-50">
-                  <Check className="h-4 w-4 text-green-600" />
-                  <AlertDescription className="text-green-800">{success}</AlertDescription>
+                <Alert className="border-secondary bg-secondary/10">
+                  <Check className="h-4 w-4 text-secondary" />
+                  <AlertDescription className="text-secondary-foreground">{success}</AlertDescription>
                 </Alert>
               )}
             </div>

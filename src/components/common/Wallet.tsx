@@ -16,13 +16,13 @@ export default function Wallet({
   activeItem: string;
   setActiveItem: (item: string) => void;
 }) {
-  const { user } = useAuth();
+  const { user,partner } = useAuth();
   const [showSetupDialog, setShowSetupDialog] = useState(false);
   const [showBalance, setShowBalance] = useState(false);
   const [pinDialogOpen, setPinDialogOpen] = useState(false);
 
   
-  const partnerId = user?._id as Id<"partners"> | undefined;
+  const partnerId = partner?._id as Id<"partners"> | undefined;
   const wallet = useQuery(
     api.wallet.getWalletByPartnerId,
     partnerId ? { partner_id: partnerId } : "skip"
@@ -139,7 +139,7 @@ export default function Wallet({
           open={pinDialogOpen}
           onClose={() => setPinDialogOpen(false)}
           correctPin={wallet.pin}
-          userId={user._id as Id<"partners">}
+          userId={partner?._id as Id<"partners">}
           onSuccess={() => setShowBalance(true)}
         />
       )}
@@ -148,7 +148,7 @@ export default function Wallet({
         <WalletSetupDialog
           open={showSetupDialog}
           onClose={() => setShowSetupDialog(false)}
-          partnerId={user._id as Id<"partners">}
+          partnerId={partner?._id as Id<"partners">}
         />
       )}
     </>

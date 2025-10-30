@@ -100,7 +100,6 @@ export interface LoginResponse {
 
 /**
  * Authenticated user data from Laravel API
- * Combines Laravel user fields with optional Convex partner fields
  */
 export interface AuthenticatedUser {
   // Laravel user fields (snake_case from API)
@@ -113,16 +112,31 @@ export interface AuthenticatedUser {
   email_verified_at: string | null;
   created_at: string;
   updated_at: string;
+}
 
-  // Optional Convex partner fields
+/**
+ * Convex Partner data (from partners table)
+ */
+export interface ConvexPartner {
+  _id: Id<"partners">;
+  _creationTime: number;
+  name: string;
+  laravelUserId: number;
+  email: string;
+  phone: string;
+  username: string;
+}
+
+/**
+ * Combined user type for components that need access to both
+ */
+export type CombinedUser = AuthenticatedUser & {
+  // Add Convex partner fields as optional
   _id?: Id<"partners">;
   _creationTime?: number;
+  name?: string; // Convex uses 'name', Laravel uses 'first_name' + 'last_name'
   laravelUserId?: number;
-  status?: "pending" | "approved" | "declined" | "suspended";
-  profile_completed?: boolean;
-  remarks?: string;
-  isAuthenticated?: boolean;
-}
+};
 
 /**
  * Password strength result
@@ -146,8 +160,51 @@ export interface LogoutResponse {
  */
 export interface UseAuthReturn {
   user: AuthenticatedUser | null;
-  partner: AuthenticatedUser | null;
+  partner: ConvexPartner | null;
   loading: boolean;
   error: string | null;
   refetch?: () => void | Promise<void>;
+}
+
+/**
+ * Helper function to get display name from either user type
+ */
+export function getDisplayName(user: AuthenticatedUser | ConvexPartner | null): string {
+  if (!user) return "";
+  
+  // Check if it's a Convex partner (has 'name' field)
+  if ('name' in user) {
+    return user.name;
+  }
+  
+  // It's a Laravel user (has 'first_name' and 'last_name')
+  if ('first_name' in user && 'last_name' in user) {
+    return `${user.first_name} ${user.last_name}`.trim();
+  }
+  
+  return "";
+}
+
+/**
+ * Helper function to get user initials
+ */
+export function getUserInitials(user: AuthenticatedUser | ConvexPartner | null): string {
+  if (!user) return "";
+  
+  // Check if it's a Convex partner
+  if ('name' in user) {
+    return user.name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2);
+  }
+  
+  // It's a Laravel user
+  if ('first_name' in user && 'last_name' in user) {
+    return `${user.first_name[0] || ""}${user.last_name[0] || ""}`.toUpperCase();
+  }
+  
+  return "";
 }
