@@ -29,7 +29,7 @@ export const handleGetCSRF = async (): Promise<void> => {
   if (!response.ok) throw new Error('Failed to fetch CSRF cookie')
 }
 
-const getCookie = (name: string): string | null => {
+export const getCookie = (name: string): string | null => {
   const cookies = document.cookie.split('; ')
   for (const cookie of cookies) {
     const [key, value] = cookie.split('=')
@@ -45,9 +45,6 @@ export const handleLogin = async (data: LoginFormData) => {
   }
 
   try {
-    await handleGetCSRF()
-    await new Promise((resolve) => setTimeout(resolve, 300))
-
     const xsrfToken = getCookie('XSRF-TOKEN')
 
     const response = await fetch('/login', {
@@ -55,6 +52,7 @@ export const handleLogin = async (data: LoginFormData) => {
       credentials: 'include',
       headers: {
         'Content-Type': 'application/json',
+        'Accept': 'application/json', 
         'X-XSRF-TOKEN': xsrfToken ?? '',
       },
       body: JSON.stringify({
@@ -63,12 +61,32 @@ export const handleLogin = async (data: LoginFormData) => {
       }),
     })
 
+ 
+
     if (response.status === 419) {
       return { success: false, message: 'CSRF token mismatch (419)' }
     }
 
-    if (response.status >= 200 && response.status < 300) {
-      return { success: true, message: 'Login successful!' }
+    // Laravel returns 204 No Content on successful login
+    if (response.status === 204 ) {
+
+      
+      // Verify user is authenticated
+      const userRes = await fetch('/api/user', {
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+          'Accept': 'application/json',
+        },
+      })
+
+      if (!userRes.ok) {
+        return { success: false, message: 'Login succeeded but user verification failed' }
+      }
+
+      const userData = await userRes.json()
+      
+      return { success: true, message: 'Login successful!', user: userData }
     }
 
     return { success: false, message: `Login failed: ${response.status}` }

@@ -2,13 +2,7 @@ import type { AuthenticatedUser } from "../types/auth.types";
 
 export default async function handleAuthenticated(): Promise<AuthenticatedUser | null> {
   try {
-    // 1. FIRST: Get CSRF cookie from Sanctum
-    await fetch("/sanctum/csrf-cookie", {
-      method: "GET",
-      credentials: "include",
-    });
 
-    // 2. THEN: Check authentication with the cookie
     const xsrfToken = getCookieValue("XSRF-TOKEN");
 
     const response = await fetch("/api/user", {
@@ -22,7 +16,7 @@ export default async function handleAuthenticated(): Promise<AuthenticatedUser |
     });
 
     if (!response.ok) {
-      console.warn("⚠️ Not authenticated. Status:", response.status);
+
       return null;
     }
 

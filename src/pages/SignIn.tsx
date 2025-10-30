@@ -12,13 +12,17 @@ import { HeroHeader } from '../components/layout/HeroHeader';
 import discussion from "../assets/discussion.webp";
 import { useAuth } from '../hooks/useAuth';
 
+
 export default function SignIn() {
-  const { user } = useAuth();
+  const { user, } = useAuth();
   const [showPassword, setShowPassword] = React.useState(false);
   const [isLoading, setIsLoading] = React.useState(false);
   const [touchedFields, setTouchedFields] = React.useState<Set<keyof LoginFormData>>(new Set());
   const [errors, setErrors] = React.useState<LoginValidationErrors>({});
   const navigate = useNavigate();
+
+
+ 
 
   const [loginData, setLoginData] = React.useState<LoginFormData>({
     email: '',
@@ -75,7 +79,6 @@ export default function SignIn() {
         toast.error(result?.message || 'Invalid email or password')
         return
       }
-
       toast.success('Login successful! 🎉')
       navigate('/dashboard')
     } catch (error) {

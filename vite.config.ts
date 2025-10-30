@@ -11,25 +11,46 @@ export default defineConfig({
         target: "https://api.sqooli.com",
         changeOrigin: true,
         secure: true,
-        cookieDomainRewrite: "localhost", 
+        cookieDomainRewrite: {
+          "sqooli.com": "localhost",
+          ".sqooli.com": "localhost"
+        },
       },
       "/login": {
         target: "https://api.sqooli.com",
         changeOrigin: true,
         secure: true,
-        cookieDomainRewrite: "localhost",
+        cookieDomainRewrite: {
+          "sqooli.com": "localhost",
+          ".sqooli.com": "localhost"
+        },
+      },
+      "/register": {
+        target: "https://api.sqooli.com",
+        changeOrigin: true,
+        secure: true,
+        cookieDomainRewrite: {
+          "sqooli.com": "localhost",
+          ".sqooli.com": "localhost"
+        },
       },
       "/logout": {
         target: "https://api.sqooli.com",
         changeOrigin: true,
         secure: true,
-        cookieDomainRewrite: "localhost",
+        cookieDomainRewrite: {
+          "sqooli.com": "localhost",
+          ".sqooli.com": "localhost"
+        },
       },
       "/api": {
         target: "https://api.sqooli.com",
         changeOrigin: true,
         secure: true,
-        cookieDomainRewrite: "localhost",
+        cookieDomainRewrite: {
+          "sqooli.com": "localhost",
+          ".sqooli.com": "localhost"
+        },
       },
     },
     cors: {

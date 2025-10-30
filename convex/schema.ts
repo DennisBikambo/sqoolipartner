@@ -10,14 +10,9 @@ export default defineSchema({
   partners: defineTable({
     name: v.string(),
     laravelUserId: v.number(),
-    status: v.union(
-      v.literal("pending"),
-      v.literal("approved"),
-      v.literal("declined"),
-      v.literal("suspended")
-    ),
-    remarks: v.optional(v.string()),
-    profile_completed: v.boolean(),
+    email: v.string(),
+    phone: v.string(),
+    username: v.string(),
   }),
 
   /**
