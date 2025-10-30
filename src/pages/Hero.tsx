@@ -5,6 +5,7 @@ import { Building2, Users, GraduationCap, Rocket, CheckCircle2, Handshake, Trend
 import { HeroHeader } from '../components/layout/HeroHeader';
 import homework from "../assets/homeWork.webp";
 import studying from "../assets/studying.webp";
+import { useNavigate } from 'react-router-dom';
 
 export default function Hero() {
   const [formData, setFormData] = React.useState({
@@ -19,6 +20,8 @@ export default function Hero() {
     console.log('Form submitted:', formData);
     // Handle form submission
   };
+
+  const navigate = useNavigate();
 
   return (
     <>
@@ -37,7 +40,7 @@ export default function Hero() {
               <p className="text-lg text-muted-foreground max-w-xl">
                 Whether you're a content creator, media hub, or corporate donor — Sqooli gives you a way to make education accessible and rewarding for everyone.
               </p>
-              <Button size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground">
+              <Button size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground" onClick={()=>navigate('/signIn')}>
                 Become a Partner
               </Button>
             </div>

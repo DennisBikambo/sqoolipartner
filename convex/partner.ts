@@ -16,11 +16,11 @@ export const getAllPartners = query({
  * CHECK if user exists in partners table (basic auth simulation)
  */
 export const authenticateUser = query({
-  args: { user_name: v.string() },
+  args: { laravelUserId: v.number() },
   handler: async (ctx, args) => {
     const partner = await ctx.db
       .query("partners")
-      .filter((q) => q.eq(q.field("name"), args.user_name))
+      .filter((q) => q.eq(q.field("laravelUserId"), args.laravelUserId))
       .first();
 
     if (!partner) {

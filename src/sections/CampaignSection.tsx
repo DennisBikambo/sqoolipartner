@@ -50,7 +50,7 @@ export default function CampaignSection() {
   const { user } = useAuth();
   const campaigns = useQuery(
     api.campaign.getCampaignsByPartner,
-    user ? { partner_id: user._id } : "skip"
+    user?._id ? { partner_id: user._id } : "skip"
   );
 
   const updateCampaignStatus = useMutation(api.campaign.updateCampaignStatus);

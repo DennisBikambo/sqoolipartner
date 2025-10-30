@@ -49,13 +49,13 @@ export default function WalletSection({
 
   const campaigns = useQuery(
     api.campaign.getCampaignsByPartner,
-    user ? { partner_id: user._id } : "skip"
+    user?._id ? { partner_id: user._id } : "skip"
   );
 
   // Fetch all transactions
   const transactions = useQuery(
     api.transactions.getTransactionsByPartner,
-    user ? { partner_id: user._id } : "skip"
+    user?._id ? { partner_id: user._id } : "skip"
   );
 
   // Filter transactions based on search query

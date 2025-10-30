@@ -1,3 +1,5 @@
+import type { Id } from "../../convex/_generated/dataModel";
+
 export interface RegisterFormData {
   firstName: string;
   lastName: string;
@@ -58,8 +60,20 @@ export interface LoginValidationErrors {
 }
 
 
+
+
 export interface AuthenticatedUser {
-  id: number;
+  id: number; // Laravel user ID
   name: string;
   email: string;
+
+  // Optional Convex partner fields
+  _id?: Id<"partners">;
+  _creationTime?: number;
+  laravelUserId?: number;
+  status?: "pending" | "approved" | "declined" | "suspended";
+  profile_completed?: boolean;
+  remarks?: string;
 }
+
+

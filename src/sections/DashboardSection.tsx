@@ -38,7 +38,7 @@ export default function DashboardSection( { activeItem, setActiveItem }: {active
   
 
   const campaigns =
-    useQuery(api.campaign.getCampaignsByPartner, user ? { partner_id: user._id } : "skip") as
+    useQuery(api.campaign.getCampaignsByPartner, user?._id ? { partner_id: user._id } : "skip") as
       | DashboardCampaign[]
       | undefined;
 

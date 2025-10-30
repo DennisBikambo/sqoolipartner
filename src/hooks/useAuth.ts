@@ -1,33 +1,58 @@
+import { useEffect, useState } from "react";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
-
+import type { AuthenticatedUser } from "../types/auth.types";
+import handleAuthenticated from "../utils/handleAuthenticated";
 
 export function useAuth() {
-  // Only run authentication query if user_id is provided
+  const [laravelUser, setLaravelUser] = useState<AuthenticatedUser | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const auth = useQuery(
+  // Step 1️⃣: Fetch Laravel-authenticated user
+  useEffect(() => {
+    const checkLaravelAuth = async () => {
+      try {
+        const authenticatedUser = await handleAuthenticated();
+        if (!authenticatedUser) {
+          setError("Not authenticated");
+        } else {
+          setLaravelUser(authenticatedUser);
+        }
+      } catch {
+        setError("Authentication check failed");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkLaravelAuth();
+  }, []);
+
+  // Step 2️⃣: Use the Laravel user's ID to query Convex
+  const convexAuth = useQuery(
     api.partner.authenticateUser,
-    {user_name:"Azhar Ahmed"}
-  );
-
-  // Only fetch partners if authentication succeeded
-  const partners = useQuery(
-    api.partner.getAllPartners,
-    auth?.authenticated ? {} : "skip"
+    laravelUser?.id ? { laravelUserId: laravelUser.id } : "skip"
   );
 
 
-  if (auth === undefined) {
-    return { loading: true, error: null, partners: null };
+  // Step 3️⃣: Handle Convex states
+  if (loading || convexAuth === undefined) {
+    return { user: null, partner: null, loading: true, error: null };
   }
 
-  if (!auth?.authenticated) {
-    return { loading: false, error: "User not authenticated", partners: null };
+  if (error) {
+    return { user: null, partner: null, loading: false, error };
   }
 
-  if (partners === undefined) {
-    return { loading: true, error: null, partners: null };
+  if (!convexAuth?.authenticated) {
+    return { user: laravelUser, partner: null, loading: false, error: "Partner not found in Convex" };
   }
+  
 
-  return { loading: false, error: null, partners, user: auth.partner,role:"partner" };
+  return {
+    user: convexAuth.partner,       
+    loading: false,
+    error: null,
+  };
 }

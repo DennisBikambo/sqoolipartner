@@ -9,7 +9,7 @@ export default function BeneficiariesSection() {
 
   const campaigns = useQuery(
     api.campaign.getCampaignsByPartner,
-    user ? { partner_id: user._id } : "skip"
+    user?._id ? { partner_id: user._id } : "skip"
   );
   return (
     <div>

@@ -5,22 +5,30 @@ import { Eye, EyeOff } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
 import { api } from "../../../convex/_generated/api";
 import { useQuery } from "convex/react";
-import type { Doc } from "../../../convex/_generated/dataModel";
+import type { Doc, Id } from "../../../convex/_generated/dataModel";
 import { WalletSetupDialog } from "./WalletSetUp";
 import { PinVerificationDialog } from "./PinVerification";
 
-export default function Wallet({ activeItem, setActiveItem }: {activeItem: string; setActiveItem: (item: string) => void }) {
+export default function Wallet({
+  activeItem,
+  setActiveItem,
+}: {
+  activeItem: string;
+  setActiveItem: (item: string) => void;
+}) {
   const { user } = useAuth();
   const [showSetupDialog, setShowSetupDialog] = useState(false);
   const [showBalance, setShowBalance] = useState(false);
   const [pinDialogOpen, setPinDialogOpen] = useState(false);
 
+  
+  const partnerId = user?._id as Id<"partners"> | undefined;
   const wallet = useQuery(
     api.wallet.getWalletByPartnerId,
-    user ? { partner_id: user._id } : "skip"
+    partnerId ? { partner_id: partnerId } : "skip"
   ) as Doc<"wallets"> | undefined;
 
-  // Auto-hide after 3min
+  // Auto-hide balance after 3 minutes
   useEffect(() => {
     if (showBalance) {
       const timer = setTimeout(() => setShowBalance(false), 3 * 60 * 1000);
@@ -56,7 +64,7 @@ export default function Wallet({ activeItem, setActiveItem }: {activeItem: strin
               <Button
                 size="icon"
                 variant="ghost"
-                className="text-muted-foreground "
+                className="text-muted-foreground"
                 onClick={handleShowBalance}
               >
                 {showBalance ? (
@@ -131,7 +139,7 @@ export default function Wallet({ activeItem, setActiveItem }: {activeItem: strin
           open={pinDialogOpen}
           onClose={() => setPinDialogOpen(false)}
           correctPin={wallet.pin}
-          userId={user._id}
+          userId={user._id as Id<"partners">}
           onSuccess={() => setShowBalance(true)}
         />
       )}
@@ -140,7 +148,7 @@ export default function Wallet({ activeItem, setActiveItem }: {activeItem: strin
         <WalletSetupDialog
           open={showSetupDialog}
           onClose={() => setShowSetupDialog(false)}
-          partnerId={user._id}
+          partnerId={user._id as Id<"partners">}
         />
       )}
     </>

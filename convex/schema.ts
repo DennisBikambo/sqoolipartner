@@ -9,6 +9,7 @@ export default defineSchema({
    */
   partners: defineTable({
     name: v.string(),
+    laravelUserId: v.number(),
     status: v.union(
       v.literal("pending"),
       v.literal("approved"),
