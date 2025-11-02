@@ -17,7 +17,7 @@ export default function Hero() {
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    console.log('Form submitted:', formData);
+
     // Handle form submission
   };
 

@@ -6,6 +6,7 @@ import { useAuth } from "../hooks/useAuth";
 import { getDisplayName } from "../types/auth.types";
 import { api } from "../../convex/_generated/api";
 import { useQuery, useConvex } from "convex/react";
+import { Loading } from "../components/common/Loading";
 import type {
   DashboardCampaign,
   DashboardEnrollment,
@@ -46,6 +47,8 @@ export default function DashboardSection({
     api.campaign.getCampaignsByPartner,
     partner?._id ? { partner_id: partner._id } : "skip"
   ) as DashboardCampaign[] | undefined;
+
+  
 
   useEffect(() => {
     if (!campaigns?.length) return;
@@ -141,6 +144,8 @@ export default function DashboardSection({
   // Get display name using helper function
   const displayName = getDisplayName(partner || user);
 
+
+
   return (
     <div className="space-y-6">
       {/* HEADER */}
@@ -168,9 +173,13 @@ export default function DashboardSection({
         />
       )}
 
-      {!campaigns?.length ? (
-        <NoCampaignCard />
-      ) : (
+          {!partner ? (
+              <Loading message="Loading your dashboard..." size="lg" />
+            ) : campaigns === undefined ? (
+              <Loading message="Loading your campaigns..." size="lg" />
+            ) : !campaigns?.length ? (
+              <NoCampaignCard />
+            ) : (
         <div className="grid grid-cols-1 gap-6 md:grid-cols-12">
           {/* LEFT */}
           <aside className="md:col-span-3 space-y-6">

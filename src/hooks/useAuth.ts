@@ -52,7 +52,7 @@ export function useAuth(): UseAuthReturn {
 
       // Check if laravelUserId needs updating
       if (convexPartner.laravelUserId === 0 && laravelUser.id !== 0) {
-        console.log("🛠 Updating Convex laravelUserId from 0 to", laravelUser.id);
+
 
         try {
           await updateLaravelUserId({
@@ -60,7 +60,7 @@ export function useAuth(): UseAuthReturn {
             laravelUserId: laravelUser.id,
           });
 
-          console.log("✅ Laravel user ID synced successfully");
+
           setSyncAttempted(true);
         } catch (err) {
           console.error("❌ Failed to sync Laravel user ID:", err);

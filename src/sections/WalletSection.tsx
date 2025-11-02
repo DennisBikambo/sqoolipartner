@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { useAuth } from "../hooks/useAuth";
 import { useQuery } from "convex/react";
-import { NoCampaignCard } from "../components/common/NoCampaignCard";
+import { Loading } from "../components/common/Loading";
 import { api } from "../../convex/_generated/api";
 import Wallet from "../components/common/Wallet";
 import { Card, CardContent } from "../components/ui/card";
@@ -42,8 +42,7 @@ export default function WalletSection({
   activeItem: string;
   setActiveItem: (item: string) => void;
 }) {
-  const { user,partner } = useAuth();
-  console.log(user)
+  const { partner } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState<"payments" | "withdrawals">("payments");
   const [isWalletOpen, setIsWalletOpen] = useState(false);
@@ -109,15 +108,17 @@ export default function WalletSection({
     }
   };
 
+  // Show loading state
+  if (!partner) {
+    return <Loading message="Loading your wallet..." size="lg" />;
+  }
+
+  if (campaigns === undefined || transactions === undefined) {
+    return <Loading message="Loading transactions..." size="lg" />;
+  }
+
   return (
     <div className="min-h-screen bg-background">
-      {/* Show empty state if no campaigns */}
-      {user && (!campaigns || campaigns.length === 0) && (
-        <div className="p-4 lg:p-6">
-          <NoCampaignCard />
-        </div>
-      )}
-
       {/* Main Layout */}
       <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 p-4 lg:p-6">
         {/* Mobile Wallet Toggle */}
@@ -174,7 +175,7 @@ export default function WalletSection({
                 </TabsList>
 
                 <TabsContent value="payments" className="mt-0">
-                  {!transactions || filteredTransactions.length === 0 ? (
+                  {filteredTransactions.length === 0 ? (
                     <div className="text-center py-8 lg:py-12">
                       <div className="flex flex-col items-center gap-4">
                         <div className="w-20 h-20 lg:w-24 lg:h-24 rounded-full bg-muted flex items-center justify-center">

@@ -6,6 +6,7 @@ import DashboardSection from "../sections/DashboardSection";
 import CampaignSection from "../sections/CampaignSection";
 import WalletSection from "../sections/WalletSection";
 import ReportsSection from "../sections/ReportsSection";
+import { UserSection } from "../sections/UserSection";
 // import UsersSection from "../sections/UsersSection"; // create this if not yet
 // import SettingsSection from "../sections/SettingsSection"; // create this if not yet
 // import { useAuth } from "../hooks/useAuth";
@@ -27,7 +28,7 @@ export default function DashboardPage() {
     campaigns: <CampaignSection />,
     wallet: <WalletSection activeItem={activeItem} setActiveItem={setActiveItem} />,
     reports: <ReportsSection />,
-    // users: <UsersSection />,
+    users: <UserSection />,
     // settings: <SettingsSection />,
   };
 

@@ -1,4 +1,4 @@
-import { mutation } from "./_generated/server";
+import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 
 export const logRevenue = mutation({
@@ -20,5 +20,29 @@ export const logRevenue = mutation({
       gross_amount: args.gross_amount,
       split_timestamp: timestamp, 
     });
+  },
+});
+
+export const getByCampaign = query({
+  args: {
+    campaignId: v.id("campaigns"),
+  },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("partner_revenue_logs")
+      .withIndex("by_campaign_id", (q) => q.eq("campaign_id", args.campaignId))
+      .collect();
+  },
+});
+
+export const getByPartner = query({
+  args: {
+    partnerId: v.id("partners"),
+  },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("partner_revenue_logs")
+      .withIndex("by_partner_id", (q) => q.eq("partner_id", args.partnerId))
+      .collect();
   },
 });

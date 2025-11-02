@@ -4,6 +4,7 @@ import Profile from "../components/common/Profile";
 import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
+import { Loading } from "../components/common/Loading";
 import {
   Search,
   Eye,
@@ -122,9 +123,10 @@ export default function CampaignSection() {
 
   if (!campaigns) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <div className="text-muted-foreground">Loading campaigns...</div>
-      </div>
+      <Loading 
+        message="Loading your campaigns..." 
+        size="md"
+      />
     );
   }
 
