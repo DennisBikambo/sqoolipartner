@@ -7,6 +7,8 @@ import type {
   ValidationErrors,
 } from "../types/auth.types";
 
+
+const API_URL = import.meta.env.VITE_API_URL;
 export const validateRegistrationData = (data: RegisterFormData): ValidationErrors => {
   const errors: ValidationErrors = {};
 
@@ -77,7 +79,7 @@ export const handleRegister = async (
       return { success: false, message: "Please fix the validation errors" };
     }
 
-    await fetch("/sanctum/csrf-cookie", {
+    await fetch(`${API_URL}/sanctum/csrf-cookie`, {
       method: "GET",
       credentials: "include",
     });
@@ -94,7 +96,7 @@ export const handleRegister = async (
       password_confirmation: data.confirmPassword,
     };
 
-    const response = await fetch("/register", {
+    const response = await fetch(`${API_URL}/register`, {
       method: "POST",
       credentials: "include",
       headers: {

@@ -1,5 +1,6 @@
 import type { LoginFormData, LoginValidationErrors } from '../types/auth.types'
 
+// const API_URL = import.meta.env.VITE_API_URL;
 export const validateLoginData = (data: LoginFormData): LoginValidationErrors => {
   const errors: LoginValidationErrors = {}
 
@@ -21,7 +22,7 @@ export const validateLoginData = (data: LoginFormData): LoginValidationErrors =>
 }
 
 export const handleGetCSRF = async (): Promise<void> => {
-  const response = await fetch('/sanctum/csrf-cookie', {
+  const response = await fetch(`/sanctum/csrf-cookie`, {
     method: 'GET',
     credentials: 'include',
   })
@@ -47,7 +48,7 @@ export const handleLogin = async (data: LoginFormData) => {
   try {
     const xsrfToken = getCookie('XSRF-TOKEN')
 
-    const response = await fetch('/login', {
+    const response = await fetch(`/login`, {
       method: 'POST',
       credentials: 'include',
       headers: {
@@ -72,7 +73,7 @@ export const handleLogin = async (data: LoginFormData) => {
 
       
       // Verify user is authenticated
-      const userRes = await fetch('/api/user', {
+      const userRes = await fetch(`/api/user`, {
         method: 'GET',
         credentials: 'include',
         headers: {

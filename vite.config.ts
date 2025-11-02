@@ -3,9 +3,11 @@ import tailwindcss from "@tailwindcss/vite"
 import react from "@vitejs/plugin-react"
 import { defineConfig } from "vite"
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   plugins: [react(), tailwindcss()],
-  server: {
+  
+  // Only use proxy in development mode
+  server: mode === 'development' ? {
     proxy: {
       "/sanctum/csrf-cookie": {
         target: "https://api.sqooli.com",
@@ -57,10 +59,27 @@ export default defineConfig({
       origin: "http://localhost:5173",
       credentials: true,
     },
-  },
+  } : undefined,
+  
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
   },
-})
+
+  
+  // Production build settings
+  build: {
+    outDir: 'dist',
+    sourcemap: false,
+    minify: 'esbuild',
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor': ['react', 'react-dom'],
+          'convex': ['convex/react'],
+        }
+      }
+    }
+  }
+}))
