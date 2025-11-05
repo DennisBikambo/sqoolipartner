@@ -12,13 +12,14 @@ export function useAuth(): UseAuthReturn {
 
   const updateLaravelUserId = useMutation(api.partner.updateLaravelUserId);
 
-  // ✅ Step 1: Get Laravel user (from Laravel session)
+  // ✅ Step 1: Fetch Laravel-authenticated user
   useEffect(() => {
     const checkLaravelAuth = async () => {
       try {
         const authenticatedUser = await handleAuthenticated();
         if (!authenticatedUser) {
           setError("Not authenticated");
+          setLaravelUser(null);
         } else {
           setLaravelUser(authenticatedUser);
         }
@@ -32,35 +33,24 @@ export function useAuth(): UseAuthReturn {
     checkLaravelAuth();
   }, []);
 
-  // ✅ Step 2: Check Convex partner using email (more reliable than Laravel ID when it's 0)
+  // ✅ Step 2: Fetch matching Convex partner record
   const convexPartner = useQuery(
     api.partner.getByEmail,
     laravelUser?.email ? { email: laravelUser.email } : "skip"
   ) as ConvexPartner | undefined | null;
 
-  // ✅ Step 3: If laravelUserId = 0 in Convex, update it with the real Laravel ID
+  // ✅ Step 3: Sync Laravel user ID into Convex if needed
   useEffect(() => {
     const syncLaravelIdIfNeeded = async () => {
-      // Only attempt sync once per session
       if (syncAttempted) return;
-      
-      // Wait until we have both Laravel user and Convex partner
-      if (!laravelUser || convexPartner === undefined) return;
+      if (!laravelUser || convexPartner === undefined || !convexPartner) return;
 
-      // If partner not found in Convex, nothing to update
-      if (!convexPartner) return;
-
-      // Check if laravelUserId needs updating
       if (convexPartner.laravelUserId === 0 && laravelUser.id !== 0) {
-
-
         try {
           await updateLaravelUserId({
             email: laravelUser.email,
             laravelUserId: laravelUser.id,
           });
-
-
           setSyncAttempted(true);
         } catch (err) {
           console.error("❌ Failed to sync Laravel user ID:", err);
@@ -72,28 +62,36 @@ export function useAuth(): UseAuthReturn {
     syncLaravelIdIfNeeded();
   }, [laravelUser, convexPartner, updateLaravelUserId, syncAttempted]);
 
-  // ✅ Step 4: Handle return states
+  // ✅ Step 4: Derive `isFirstLogin` from Convex (source of truth)
+  const isFirstLogin = convexPartner?.is_first_login ?? false;
+
+  // ✅ Step 5: Handle loading & error states cleanly
   if (loading || convexPartner === undefined) {
-    return { user: null, partner: null, loading: true, error: null };
-  }
-
-  if (error && !laravelUser) {
-    return { user: null, partner: null, loading: false, error };
-  }
-
-  if (!convexPartner) {
     return {
-      user: laravelUser,
+      user: null,
       partner: null,
-      loading: false,
-      error: "Partner not found in Convex",
+      loading: true,
+      error: null,
+      isFirstLogin: false,
     };
   }
 
+  if (error && !laravelUser) {
+    return {
+      user: null,
+      partner: null,
+      loading: false,
+      error,
+      isFirstLogin: false,
+    };
+  }
+
+  // ✅ Step 6: Return unified auth data
   return {
     user: laravelUser,
     partner: convexPartner,
     loading: false,
     error: null,
+    isFirstLogin,
   };
 }

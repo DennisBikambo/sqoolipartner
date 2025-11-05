@@ -75,6 +75,7 @@ export const register = mutation({
       email: args.email,
       phone: args.phone,
       username: args.username,
+      is_first_login: true,
     });
 
     return {
@@ -120,5 +121,12 @@ export const updateLaravelUserId = mutation({
 
     await ctx.db.patch(partner._id, { laravelUserId });
     return { success: true };
+  },
+});
+
+export const completeOnboarding = mutation({
+  args: { partnerId: v.id("partners") },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.partnerId, { is_first_login: false });
   },
 });

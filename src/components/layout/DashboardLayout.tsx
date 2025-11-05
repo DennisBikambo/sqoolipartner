@@ -2,8 +2,7 @@
 'use client';
 import { AppSidebar } from './Sidebar';
 import { Header } from './Header';
-import { cn } from '../../lib/utils';
-import { SidebarProvider } from '../ui/sidebar';
+import { SidebarProvider, SidebarInset } from '../ui/sidebar';
 
 interface User {
   name: string;
@@ -28,26 +27,24 @@ export function DashboardLayout({
   onSelect,   
 }: DashboardLayoutProps) {
 
-
   return (
-    
-    <div className="flex h-screen overflow-hidden bg-background">
-      {/* Sidebar */}
-      <SidebarProvider>
+    <SidebarProvider defaultOpen={false}>
       <AppSidebar 
         activeItem={activeItem} 
         onSelect={onSelect}   
       />
-      <div className="flex flex-col flex-1 overflow-hidden">
-        <Header title={title}  />
-        <main className={cn("flex-1 overflow-y-auto bg-muted/30 transition-all duration-300")}>
-          <div className="container mx-auto p-6">
+      
+      <SidebarInset className="flex flex-col">
+        {/* Header */}
+        <Header title={title} />
+
+        {/* Main */}
+        <main className="flex-1 overflow-y-auto bg-muted/30 p-6">
+          <div className="w-full">
             {children}
           </div>
         </main>
-      </div>
-      </SidebarProvider>
-    </div>
-    
+      </SidebarInset>
+    </SidebarProvider>
   );
 }

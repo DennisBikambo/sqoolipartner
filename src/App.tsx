@@ -8,6 +8,7 @@ import NotFound from './components/common/PageNotFound'
 import { ProtectedRoute } from './components/Protected'
 import { handleGetCSRF } from './utils/handleLogin'
 import { useEffect, useState, useRef } from 'react'
+import OnboardingPage from './pages/Onboarding'
 
 function App() {
   const [csrfReady, setCsrfReady] = useState(false)
@@ -37,6 +38,7 @@ function App() {
     {path:"/", element:<Hero />},
     {path:'signIn', element:<SignIn />},
     {path:'signUp',element:<SignUp />},
+    {path:'onboarding', element:<ProtectedRoute><OnboardingPage /></ProtectedRoute>},
     {path:'dashboard', element:<ProtectedRoute><DashboardPage /></ProtectedRoute>},
     {path: '*', element: <NotFound />}
   ]

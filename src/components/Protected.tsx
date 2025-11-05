@@ -1,35 +1,41 @@
 'use client';
-import type {ReactNode} from "react"
-import {  useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import handleAuthenticated from '../utils/handleAuthenticated';
-import type { AuthenticatedUser } from '../types/auth.types';
+import type { ReactNode } from "react";
+import { useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
+import { useAuth } from '../hooks/useAuth';
 
 interface ProtectedRouteProps {
   children: ReactNode;
 }
 
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
-  const [user, setUser] = useState<AuthenticatedUser | null>(null);
-  const [loading, setLoading] = useState(true);
-  const router = useNavigate();
+  const { user, loading, isFirstLogin } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation(); // 👈 get current route path
 
   useEffect(() => {
-    const checkAuth = async () => {
-      const authenticatedUser = await handleAuthenticated();
+  if (!loading) {
+    // 1️⃣ Not logged in
+    if (!user) {
+      navigate('/signIn');
+      return;
+    }
 
-      if (!authenticatedUser) {
-        router('/signIn');
-      } else {
-        setUser(authenticatedUser);
-      }
+    // 2️⃣ First-time users should *always* be on onboarding
+    if (isFirstLogin && location.pathname !== '/onboarding') {
+      navigate('/onboarding');
+      return;
+    }
 
-      setLoading(false);
-    };
+    // 3️⃣ Completed onboarding should not revisit onboarding
+    if (!isFirstLogin && location.pathname === '/onboarding') {
+      navigate('/dashboard');
+      return;
+    }
+  }
+}, [user, loading, isFirstLogin, navigate, location]);
 
-    checkAuth();
-  }, [router]);
 
   if (loading) {
     return (

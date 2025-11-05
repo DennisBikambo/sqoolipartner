@@ -102,3 +102,13 @@ export const updateWalletBalance = mutation({
     return { success: true, new_balance: newBalance };
   },
 });
+
+export const getWalletByPartner = query({
+  args: { partnerId: v.id("partners") },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("wallets")
+      .withIndex("by_user_id", (q) => q.eq("user_id", args.partnerId))
+      .first();
+  },
+});

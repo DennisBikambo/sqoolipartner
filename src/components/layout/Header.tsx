@@ -91,7 +91,7 @@ export function Header({ title = 'Dashboard' }: HeaderProps) {
   const avatarUrl = 'avatar' in user && typeof user.avatar === 'string' ? user.avatar : '';
 
   return (
-    <header className="sticky top-0 z-50 w-full bg-background border-b border-border">
+    <header className="sticky top-0 z-0 w-full bg-background border-b border-border shrink-0">
       <div className="flex h-14 sm:h-16 items-center justify-between px-4 sm:px-6 gap-2">
         {/* Logo */}
         <div className="flex items-center gap-2">

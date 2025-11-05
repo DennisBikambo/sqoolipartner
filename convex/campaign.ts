@@ -184,3 +184,13 @@ export const getCampaignByPromoCode = query({
       .first();
   },
 });
+
+export const getCampaignByPartner = query({
+  args: { partnerId: v.id("partners") },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("campaigns")
+      .withIndex("by_partner_id", (q) => q.eq("partner_id", args.partnerId))
+      .first();
+  },
+});

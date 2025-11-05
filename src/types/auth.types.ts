@@ -112,6 +112,7 @@ export interface AuthenticatedUser {
   email_verified_at: string | null;
   created_at: string;
   updated_at: string;
+    is_first_login: boolean;
 }
 
 /**
@@ -124,6 +125,7 @@ export interface ConvexPartner {
   laravelUserId: number;
   email: string;
   phone: string;
+  is_first_login: boolean;
   username: string;
 }
 
@@ -163,6 +165,7 @@ export interface UseAuthReturn {
   partner: ConvexPartner | null;
   loading: boolean;
   error: string | null;
+  isFirstLogin: boolean;
   refetch?: () => void | Promise<void>;
 }
 
