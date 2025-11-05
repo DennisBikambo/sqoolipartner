@@ -165,11 +165,21 @@ export default function WalletSection({
           <Card className="border-border">
             <CardContent className="p-4 lg:pt-6">
               <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)}>
-                <TabsList className="mb-4 lg:mb-6 w-full grid grid-cols-2 lg:w-auto lg:inline-flex">
-                  <TabsTrigger value="payments" className="text-xs sm:text-sm">
+                  <TabsList className="mb-4 flex space-x-4 bg-transparent p-0">
+                  <TabsTrigger
+                    value="payments"
+                    className={`text-sm font-medium p-2 ${
+                      activeTab === "payments" ? "text-primary" : "text-muted-foreground"
+                    } hover:text-primary bg-transparent`}
+                  >
                     Payments
                   </TabsTrigger>
-                  <TabsTrigger value="withdrawals" className="text-xs sm:text-sm">
+                  <TabsTrigger
+                    value="withdrawals"
+                    className={`text-sm font-medium p-2 ${
+                      activeTab === "withdrawals" ? "text-primary" : "text-muted-foreground"
+                    } hover:text-primary bg-transparent`}
+                  >
                     Withdrawals
                   </TabsTrigger>
                 </TabsList>

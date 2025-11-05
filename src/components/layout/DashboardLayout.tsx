@@ -1,22 +1,11 @@
-// components/layout/DashboardLayout.tsx
 'use client';
 import { AppSidebar } from './Sidebar';
 import { Header } from './Header';
-import { SidebarProvider, SidebarInset } from '../ui/sidebar';
-
-interface User {
-  name: string;
-  email?: string;
-  avatar?: string;
-  role: string;
-}
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
   activeItem?: string;
   title?: string;
-  subtitle?: string;
-  user?: User;
   onSelect?: (id: string) => void;   
 }
 
@@ -28,23 +17,23 @@ export function DashboardLayout({
 }: DashboardLayoutProps) {
 
   return (
-    <SidebarProvider defaultOpen={false}>
-      <AppSidebar 
-        activeItem={activeItem} 
-        onSelect={onSelect}   
-      />
+    <div className="min-h-screen flex flex-col bg-background">
+      {/* Header - Full Width at Top */}
+      <Header title={title} />
       
-      <SidebarInset className="flex flex-col">
-        {/* Header */}
-        <Header title={title} />
-
-        {/* Main */}
-        <main className="flex-1 overflow-y-auto bg-muted/30 p-6">
-          <div className="w-full">
-            {children}
-          </div>
+      {/* Content Area with Sidebar */}
+      <div className="flex flex-1 overflow-hidden">
+        {/* Sidebar */}
+        <AppSidebar 
+          activeItem={activeItem} 
+          onSelect={onSelect}   
+        />
+        
+        {/* Main Content */}
+        <main className="flex-1 overflow-y-auto bg-muted/30">
+          {children}
         </main>
-      </SidebarInset>
-    </SidebarProvider>
+      </div>
+    </div>
   );
 }

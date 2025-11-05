@@ -72,3 +72,32 @@ export interface DashboardWallet {
 }
 
 
+export type CampaignProps = {
+  _id: Id<"campaigns">;
+  _creationTime: number;
+  name: string;
+  program_id: string;
+  partner_id: string;
+  promo_code: string;
+  target_signups: number;
+  daily_target: number;
+  bundled_offers: {
+    min_lessons: number;
+    total_price: number;
+  };
+  discount_rule: {
+    price_per_lesson: number;
+    min_amount?: number;
+  };
+  revenue_projection: number;
+  revenue_share: {
+    partner_percentage: number;
+    sqooli_percentage: number;
+  };
+  whatsapp_number: string;
+  duration_start: string;
+  duration_end: string;
+  status: "draft" | "active" | "expired";
+};
+
+

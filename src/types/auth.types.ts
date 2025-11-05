@@ -127,6 +127,7 @@ export interface ConvexPartner {
   phone: string;
   is_first_login: boolean;
   username: string;
+  role: string
 }
 
 /**

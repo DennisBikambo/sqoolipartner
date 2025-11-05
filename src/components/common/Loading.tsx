@@ -1,5 +1,8 @@
-import { Card, CardContent } from "../ui/card";
+'use client';
+
 import { Loader2 } from "lucide-react";
+import { cn } from "../../lib/utils";
+import { motion } from "framer-motion";
 
 interface LoadingProps {
   message?: string;
@@ -19,38 +22,66 @@ export function Loading({
   };
 
   const iconSizes = {
-    sm: "h-8 w-8",
-    md: "h-12 w-12",
-    lg: "h-16 w-16",
+    sm: "h-6 w-6",
+    md: "h-10 w-10",
+    lg: "h-14 w-14",
   };
 
   return (
-    <div className={`flex items-center justify-center ${sizeClasses[size]} p-6 ${className}`}>
-      <Card className="max-w-md w-full border border-muted shadow-sm">
-        <CardContent className="pt-12 pb-12 px-8 text-center">
-          {/* Animated loader with gradient background */}
-          <div className="mb-6 flex justify-center">
-            <div className="relative">
-              <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-chart-1/20 rounded-full blur-xl animate-pulse" />
-              <div className="relative">
-                <Loader2 className={`${iconSizes[size]} text-primary animate-spin`} />
-              </div>
-            </div>
-          </div>
+    <div
+      className={cn(
+        "flex flex-col items-center justify-center text-center space-y-4",
+        sizeClasses[size],
+        className
+      )}
+    >
+      <motion.div
+        initial={{ opacity: 0, scale: 0.8 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.4 }}
+      >
+        <Loader2
+          className={cn(
+            "animate-spin text-primary",
+            iconSizes[size]
+          )}
+        />
+      </motion.div>
 
-          {/* Loading message */}
-          <p className="text-muted-foreground text-base">
-            {message}
-          </p>
+      <motion.p
+        className="text-sm text-muted-foreground tracking-wide"
+        initial={{ opacity: 0, y: 4 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1, duration: 0.3 }}
+      >
+        {message}
+      </motion.p>
 
-          {/* Animated dots */}
-          <div className="flex items-center justify-center gap-2 mt-4">
-            <span className="h-2 w-2 rounded-full bg-primary animate-bounce [animation-delay:-0.3s]" />
-            <span className="h-2 w-2 rounded-full bg-chart-1 animate-bounce [animation-delay:-0.15s]" />
-            <span className="h-2 w-2 rounded-full bg-chart-2 animate-bounce" />
-          </div>
-        </CardContent>
-      </Card>
+      <motion.div
+        className="flex gap-1 mt-1"
+        initial="hidden"
+        animate="visible"
+        variants={{
+          visible: {
+            transition: {
+              staggerChildren: 0.15,
+              repeat: Infinity,
+              repeatType: "reverse",
+            },
+          },
+        }}
+      >
+        {[0, 1, 2].map((i) => (
+          <motion.span
+            key={i}
+            className="h-1.5 w-1.5 rounded-full bg-primary/70"
+            variants={{
+              hidden: { opacity: 0.2, y: 0 },
+              visible: { opacity: 1, y: -3 },
+            }}
+          />
+        ))}
+      </motion.div>
     </div>
   );
 }

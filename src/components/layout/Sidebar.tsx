@@ -4,20 +4,14 @@ import {
   Home, 
   Megaphone, 
   Wallet, 
-  FileText, 
   Users, 
   Settings,
+  Menu,
+  X,
+  LayoutGrid,
 } from 'lucide-react';
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarFooter,
-  SidebarHeader,
-} from '../ui/sidebar';
 import { cn } from '../../lib/utils';
+import { useState } from 'react';
 
 interface NavItem {
   id: string;
@@ -33,66 +27,82 @@ interface AppSidebarProps {
 const navigationItems: NavItem[] = [
   { id: 'dashboard', label: 'Dashboard', icon: Home },
   { id: 'campaigns', label: 'Campaigns', icon: Megaphone },
+  { id: 'programs', label: 'Programs', icon: LayoutGrid },
   { id: 'wallet', label: 'Wallet', icon: Wallet },
-  { id: 'reports', label: 'Reports', icon: FileText },
   { id: 'users', label: 'Users', icon: Users },
+  { id: 'settings', label: 'Settings', icon: Settings },
 ];
 
 export function AppSidebar({ 
   activeItem = 'dashboard',
   onSelect
 }: AppSidebarProps) {
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  const handleSelect = (id: string) => {
+    onSelect?.(id);
+    setIsMobileMenuOpen(false);
+  };
 
   return (
-    <Sidebar
-      collapsible="icon"
-      className={cn(
-        "border-r border-sidebar-border transition-all duration-300",
-        "w-[72px] min-w-[72px]" 
+    <>
+      {/* Mobile Menu Button - Fixed at top-left below header */}
+      <button
+        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+        className="lg:hidden fixed top-20 left-4 z-50 p-2 rounded-lg bg-background border border-border shadow-lg"
+      >
+        {isMobileMenuOpen ? (
+          <X className="h-5 w-5 text-foreground" />
+        ) : (
+          <Menu className="h-5 w-5 text-foreground" />
+        )}
+      </button>
+
+      {/* Mobile Overlay */}
+      {isMobileMenuOpen && (
+        <div
+          className="lg:hidden fixed inset-0 bg-black/50 z-40"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
       )}
-    >
-      <SidebarHeader className="border-b border-sidebar-border p-4" />
 
-      <SidebarContent className="px-2 py-4">
-        <SidebarMenu className="space-y-6 items-center">
-          {navigationItems.map(({ id, label, icon: Icon }) => {
-            const isActive = id === activeItem;
-            return (
-              <SidebarMenuItem key={id}>
-                <SidebarMenuButton
-                  onClick={() => onSelect?.(id)}
-                  isActive={isActive}
-                  tooltip={label}
-                  className={cn(
-                    "h-10 w-full justify-center",
-                    isActive && "bg-primary text-primary-foreground hover:bg-primary/90"
-                  )}
-                >
-                  <Icon className="h-5 w-5 shrink-0" />
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            );
-          })}
-        </SidebarMenu>
-      </SidebarContent>
-
-      <SidebarFooter className="border-t border-sidebar-border p-2">
-        <SidebarMenu className="space-y-2 items-center">
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              onClick={() => onSelect?.('settings')}
-              isActive={activeItem === 'settings'}
-              tooltip="Settings"
-              className={cn(
-                "h-10 w-full justify-center",
-                activeItem === 'settings' && "bg-primary text-primary-foreground hover:bg-primary/90"
-              )}
-            >
-              <Settings className="h-5 w-5 shrink-0" />
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarFooter>
-    </Sidebar>
+      {/* Sidebar */}
+      <aside
+        className={cn(
+          " border-r border-sidebar-border z-40 w-[110px] fixed top-0 left-0 h-screen overflow-hidden transition-transform duration-300",
+          // Mobile styles
+          "lg:relative",
+          isMobileMenuOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+        )}
+      >
+        <div className="flex flex-col h-full p-3">
+          <nav className="flex flex-col flex-1 justify-between">
+            <div className="space-y-4">
+              {navigationItems.map(({ id, label, icon: Icon }) => {
+                const isActive = id === activeItem;
+                return (
+                  <button
+                    key={id}
+                    onClick={() => handleSelect(id)}
+                    className={cn(
+                      "flex flex-col items-center justify-center gap-1.5 w-full py-2.5 px-2 rounded-md transition-all",
+                      isActive
+                        ? "text-primary bg-primary/5"
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                    )}
+                    title={label}
+                  >
+                    <Icon className="h-5 w-5 shrink-0" />
+                    <span className="text-[10px] font-medium leading-tight text-center">
+                      {label}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </nav>
+        </div>
+      </aside>
+    </>
   );
 }

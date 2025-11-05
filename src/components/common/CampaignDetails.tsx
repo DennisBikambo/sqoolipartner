@@ -23,7 +23,7 @@ import { ConfirmDialog } from "./ConfirmationDialog";
 import { CampaignAssets } from "./CampaignAssets";
 import { useState, useMemo } from "react";
 import { CartesianGrid, Line, LineChart as RechartsLineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-
+import { toast } from "sonner";
 
 interface CampaignDetailDialogProps {
   campaign: Doc<"campaigns"> | null;
@@ -142,6 +142,7 @@ export function CampaignDetailDialog({
 
   const handleCopy = () => {
     if (onCopy) {
+      toast.success('Promo code copied to clipboard');
       onCopy(campaign.promo_code);
     } else {
       navigator.clipboard.writeText(campaign.promo_code);

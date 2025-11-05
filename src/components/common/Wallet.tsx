@@ -1,13 +1,16 @@
+'use client';
+
 import { useState, useEffect } from "react";
 import { Card } from "../ui/card";
 import { Button } from "../ui/button";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, Edit } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
 import { api } from "../../../convex/_generated/api";
 import { useQuery } from "convex/react";
 import type { Doc, Id } from "../../../convex/_generated/dataModel";
 import { WalletSetupDialog } from "./WalletSetUp";
 import { PinVerificationDialog } from "./PinVerification";
+// import { cn } from "../../lib/utils";
 
 export default function Wallet({
   activeItem,
@@ -27,7 +30,6 @@ export default function Wallet({
     partnerId ? { partner_id: partnerId } : "skip"
   ) as Doc<"wallets"> | undefined;
 
-  // Auto-hide balance after 3 minutes
   useEffect(() => {
     if (showBalance) {
       const timer = setTimeout(() => setShowBalance(false), 3 * 60 * 1000);
@@ -45,108 +47,115 @@ export default function Wallet({
     else setActiveItem("wallet");
   }
 
-  // Show loading state while wallet is being fetched
+  // Skeleton loading
   if (partner && wallet === undefined) {
     return (
-      <Card className="border border-muted p-4 sm:p-6 rounded-2xl">
-        <div className="space-y-4">
-          <div className="flex justify-between items-center">
-            <div className="space-y-2 flex-1">
-              <div className="h-4 w-24 bg-muted animate-pulse rounded" />
-              <div className="h-8 w-32 bg-muted animate-pulse rounded" />
-            </div>
-            <div className="h-10 w-10 bg-muted animate-pulse rounded-full" />
-          </div>
-          <div className="h-20 bg-muted animate-pulse rounded-xl" />
-          <div className="flex gap-2">
-            <div className="h-10 flex-1 bg-muted animate-pulse rounded" />
-            <div className="h-10 flex-1 bg-muted animate-pulse rounded" />
-          </div>
-        </div>
+      <Card className="rounded-xl p-6 space-y-4 border border-border bg-card">
+        <div className="h-5 w-24 bg-muted animate-pulse rounded" />
+        <div className="h-8 w-32 bg-muted animate-pulse rounded" />
+        <div className="h-20 bg-muted animate-pulse rounded-xl" />
       </Card>
     );
   }
 
   return (
     <>
-      <Card className="border border-muted p-4 sm:p-6 rounded-2xl">
+      <Card className="rounded-2xl overflow-hidden border-0 shadow-sm  text-primary-foreground animate-fadeIn">
         {wallet && wallet.is_setup_complete ? (
           <>
-            <div className="flex justify-between items-start gap-2">
-              <div className="flex-1 min-w-0">
-                <p className="text-xs sm:text-sm opacity-80">Wallet Balance</p>
-                <p className="text-2xl sm:text-3xl font-bold mt-1 select-none truncate">
-                  {showBalance
-                    ? `KES ${wallet.balance.toLocaleString()}`
-                    : "KES ••••••••"}
+            {/* --- Top Section (Blue Area) --- */}
+            <div className="p-6 pb-8 bg-gradient-to-br from-primary via-primary/90 to-primary/70 text-primary-foreground rounded-t-2xl relative">
+              {/* Curved divider at bottom */}
+              <div className="absolute bottom-0 left-0 w-full h-10 bg-gradient-to-t from-primary/40 to-transparent rounded-t-[2rem]" />
+
+              <div className="relative z-10">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className="text-sm opacity-90">Wallet Balance</p>
+                    <p className="text-3xl font-semibold mt-1 select-none">
+                      {showBalance
+                        ? `KES ${wallet.balance.toLocaleString()}`
+                        : "KES ••••••••"}
+                    </p>
+                  </div>
+
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    onClick={handleShowBalance}
+                    className="text-primary-foreground/80 hover:bg-primary-foreground/20 rounded-full"
+                  >
+                    {showBalance ? (
+                      <EyeOff className="h-5 w-5" />
+                    ) : (
+                      <Eye className="h-5 w-5" />
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            {/* --- Bottom Section (Lighter Area) --- */}
+            <div className="bg-background/90 text-foreground/90 p-6 space-y-10">
+              {/* Saved Method Section */}
+              <div className="bg-muted/50 backdrop-blur-sm border border-border/50 rounded-xl p-4 space-y-1 shadow-inner">
+                <div className="flex items-center gap-2">
+                  {wallet.withdrawal_method === "mpesa" && (
+                    <img
+                      src="/mpesa.svg"
+                      alt="Mpesa"
+                      className="h-5 w-5 rounded"
+                    />
+                  )}
+                  <p className="text-sm font-medium">Saved Method:</p>
+                </div>
+                {wallet.withdrawal_method === "paybill" && (
+                  <p className="text-sm">
+                    Paybill:{" "}
+                    <span className="font-semibold">
+                      {wallet.paybill_number
+                        ? wallet.paybill_number.replace(
+                            /^(.{1})(.*)(.{1})$/,
+                            (_, a, b, c) =>
+                              `${a}${"*".repeat(b.length)}${c}`
+                          )
+                        : "—"}
+                    </span>
+                  </p>
+                )}
+                <p className="text-sm">
+                  Account No:{" "}
+                  <span className="font-semibold">
+                    {wallet.account_number.replace(
+                      /^(.{2})(.*)(.{4})$/,
+                      (_, a, b, c) => `${a}${"*".repeat(b.length)}${c}`
+                    )}
+                  </span>
                 </p>
               </div>
 
-              <Button
-                size="icon"
-                variant="ghost"
-                className="text-muted-foreground shrink-0 h-8 w-8 sm:h-10 sm:w-10"
-                onClick={handleShowBalance}
-              >
-                {showBalance ? (
-                  <EyeOff className="h-4 w-4 sm:h-5 sm:w-5" />
-                ) : (
-                  <Eye className="h-4 w-4 sm:h-5 sm:w-5" />
-                )}
-              </Button>
-            </div>
-
-            <div className="mt-4 rounded-xl p-3 bg-muted/30">
-              <p className="text-xs sm:text-sm font-medium flex items-center gap-2 flex-wrap">
-                {wallet.withdrawal_method === "mpesa" && (
-                  <img src="/mpesa.svg" alt="mpesa" className="h-8 w-8 sm:h-12 sm:w-12" />
-                )}
-                Saved Method:
-                <span className="capitalize ml-1">
-                  {wallet.withdrawal_method}
-                </span>
-              </p>
-
-              <p className="text-xs sm:text-sm mt-2 break-all">
-                {wallet.withdrawal_method === "paybill" && (
-                  <>
-                    Paybill:{" "}
-                    <span className="font-semibold">
-                      {wallet.paybill_number || "—"}
-                    </span>
-                    <br />
-                  </>
-                )}
-                Account No:{" "}
-                <span className="font-semibold">
-                  {wallet.account_number.replace(
-                    /^(.{2})(.*)(.{4})$/,
-                    (_, a, b, c) => `${a}${"*".repeat(b.length)}${c}`
-                  )}
-                </span>
-              </p>
-            </div>
-
-            <div className="flex flex-col sm:flex-row gap-2 mt-4">
-              <Button className="flex-1 bg-background text-primary hover:bg-muted text-sm sm:text-base">
-                Withdraw
-              </Button>
-              <Button
-                className="flex-1 bg-muted text-destructive hover:bg-destructive/90 text-sm sm:text-base"
-                onClick={setUpWallet}
-              >
-                Edit
-              </Button>
+              {/* Actions */}
+              <div className="flex gap-3">
+                <Button className="flex-1 bg-primary text-primary-foreground font-medium rounded-lg hover:bg-primary/90">
+                  Withdraw
+                </Button>
+                <Button
+                  variant="outline"
+                  className="flex-1 border-primary text-primary font-medium rounded-lg hover:bg-primary/10"
+                  onClick={setUpWallet}
+                >
+                  <Edit className="h-4 w-4 mr-2" /> Edit
+                </Button>
+              </div>
             </div>
           </>
         ) : (
-          <div className="text-center py-4 sm:py-6">
-            <p className="text-xs sm:text-sm text-muted-foreground px-2">
+          <div className="p-6 text-center space-y-4">
+            <p className="text-sm text-primary-foreground/80">
               Setup wallet to withdraw your earnings
             </p>
             <Button
-              className="mt-3 bg-muted text-destructive hover:bg-destructive/90 text-sm sm:text-base"
-              variant="outline"
+              className="bg-background text-primary hover:bg-muted rounded-lg font-medium"
               onClick={setUpWallet}
             >
               Setup Wallet
@@ -155,6 +164,7 @@ export default function Wallet({
         )}
       </Card>
 
+      {/* Dialogs */}
       {wallet && user && (
         <PinVerificationDialog
           open={pinDialogOpen}

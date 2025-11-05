@@ -3,7 +3,6 @@
 
 import { useState, useEffect } from "react";
 import { useAuth } from "../hooks/useAuth";
-import { getDisplayName } from "../types/auth.types";
 import { api } from "../../convex/_generated/api";
 import { useQuery, useConvex } from "convex/react";
 import { Loading } from "../components/common/Loading";
@@ -20,13 +19,10 @@ import {
   CardTitle,
 } from "../components/ui/card";
 import { Button } from "../components/ui/button";
-import { Badge } from "../components/ui/badge";
-import Profile from "../components/common/Profile";
 import Wallet from "../components/common/Wallet";
 import { Avatar, AvatarFallback } from "../components/ui/avatar";
 import { NoCampaignCard } from "../components/common/NoCampaignCard";
 import CreateCampaignWizard from "../components/common/CreateCampaign";
-import { ChevronDown } from "lucide-react";
 import { LineChart, Line, XAxis, ResponsiveContainer } from "recharts";
 
 export default function DashboardSection({ 
@@ -36,7 +32,7 @@ export default function DashboardSection({
   activeItem: string; 
   setActiveItem: (item: string) => void;
 }) {
-  const { user, partner } = useAuth();
+  const {  partner } = useAuth();
   const convex = useConvex();
   const [showCreateWizard, setShowCreateWizard] = useState(false);
   const [allEnrollments, setAllEnrollments] = useState<DashboardEnrollment[]>([]);
@@ -139,25 +135,23 @@ export default function DashboardSection({
       year: "numeric",
     });
 
-  // Get display name using helper function
-  const displayName = getDisplayName(partner || user);
+
+
+  // Check if we have enough data for the chart
+  const hasEnoughData = earningsData.length > 0;
 
   return (
-    <div className="space-y-4 lg:space-y-6 p-4 lg:p-6">
+    <div className="space-y-6 p-6">
       {/* HEADER */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-        <div className="flex-1 min-w-0">
-          <h1 className="text-xl sm:text-2xl font-semibold text-foreground truncate">
-            Dashboard Overview
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold text-foreground">
+            Dashboard
           </h1>
-          <p className="text-sm text-muted-foreground truncate">
-            Welcome back{displayName ? `, ${displayName}` : ""}
-          </p>
         </div>
         <Button 
           onClick={() => setShowCreateWizard(true)} 
-          className="text-primary w-full sm:w-auto text-sm sm:text-base" 
-          variant="outline"
+          className="bg-primary text-primary-foreground hover:bg-primary/90"
         >
           + New Campaign
         </Button>
@@ -178,244 +172,188 @@ export default function DashboardSection({
       ) : !campaigns?.length ? (
         <NoCampaignCard />
       ) : (
-        <div className="space-y-6">
-          {/* Mobile/Tablet: Stack everything vertically */}
-          <div className="lg:hidden space-y-4">
-            {/* Profile & Wallet */}
-            <Profile />
-            <Wallet activeItem={activeItem} setActiveItem={setActiveItem} />
-
-            {/* Insights Card */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* LEFT - Main Content (2 columns on desktop) */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Single Metrics Card */}
             <Card className="border border-muted">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-                <CardTitle className="text-base sm:text-lg">Insights</CardTitle>
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <Badge variant="outline" className="text-xs">Last 30 Days</Badge>
-                  <ChevronDown className="w-4 h-4" />
-                </div>
-              </CardHeader>
-
-              <CardContent className="space-y-4">
-                {/* Metrics */}
-                <div className="grid grid-cols-2 gap-3">
-                  {[
-                    { label: "Total Campaigns", value: metrics.totalCampaigns },
-                    { label: "Ongoing", value: metrics.ongoingCampaigns },
-                    { label: "Total Signups", value: metrics.totalSignups },
-                    {
-                      label: "Earnings",
-                      value: `KES ${metrics.totalEarnings.toLocaleString()}`,
-                    },
-                  ].map((m, i) => (
-                    <div key={i} className="p-3 bg-muted rounded-lg">
-                      <p className="text-xs text-muted-foreground line-clamp-1">{m.label}</p>
-                      <p className="mt-1 text-sm font-semibold text-foreground truncate">{m.value}</p>
+              <CardContent className="p-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-6">
+                  <div>
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="h-10 w-10 rounded-lg bg-orange-100 flex items-center justify-center">
+                        <span className="text-lg">💰</span>
+                      </div>
                     </div>
-                  ))}
-                </div>
+                    <p className="text-xs text-muted-foreground mb-1">Total Earnings</p>
+                    <p className="text-2xl font-bold text-foreground">
+                      KES {metrics.totalEarnings.toFixed(2)}
+                    </p>
+                  </div>
 
-                {/* Chart */}
-                <div className="h-48 sm:h-64 text-primary">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={earningsData}>
-                      <XAxis 
-                        dataKey="date" 
-                        stroke="var(--chart-1)"
-                        tick={{ fontSize: 10 }}
-                      />
-                      <Line
-                        type="monotone"
-                        dataKey="amount"
-                        stroke="currentColor"
-                        strokeWidth={2}
-                        dot={false}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
+                  <div>
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="h-10 w-10 rounded-lg bg-orange-100 flex items-center justify-center">
+                        <span className="text-lg">📊</span>
+                      </div>
+                    </div>
+                    <p className="text-xs text-muted-foreground mb-1">Total Campaigns</p>
+                    <p className="text-2xl font-bold text-foreground">
+                      {metrics.totalCampaigns}
+                    </p>
+                  </div>
+
+                  <div>
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="h-10 w-10 rounded-lg bg-green-100 flex items-center justify-center">
+                        <span className="text-lg">🎯</span>
+                      </div>
+                    </div>
+                    <p className="text-xs text-muted-foreground mb-1">Ongoing Campaigns</p>
+                    <p className="text-2xl font-bold text-foreground">
+                      {metrics.ongoingCampaigns}
+                    </p>
+                  </div>
+
+                  <div>
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="h-10 w-10 rounded-lg bg-blue-100 flex items-center justify-center">
+                        <span className="text-lg">📈</span>
+                      </div>
+                    </div>
+                    <p className="text-xs text-muted-foreground mb-1">Engagements</p>
+                    <p className="text-2xl font-bold text-foreground">
+                      {metrics.totalSignups}
+                    </p>
+                  </div>
                 </div>
               </CardContent>
             </Card>
+
+            {/* Second Row Metrics */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <Card className="border border-muted">
+                <CardContent className="p-6">
+                  <p className="text-xs text-muted-foreground mb-1">Earnings</p>
+                  <p className="text-xl font-bold text-foreground">
+                    KES {metrics.totalEarnings.toFixed(2)}
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card className="border border-muted">
+                <CardContent className="p-6">
+                  <p className="text-xs text-muted-foreground mb-1">Withdrawals</p>
+                  <p className="text-xl font-bold text-foreground">
+                    KES 0.00
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card className="border border-muted">
+                <CardContent className="p-6">
+                  <p className="text-xs text-muted-foreground mb-1">Engagements</p>
+                  <p className="text-xl font-bold text-foreground">
+                    {metrics.totalSignups}
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Chart */}
+            <Card className="border border-muted">
+              <CardContent className="p-6">
+                {hasEnoughData ? (
+                  <div className="h-64 text-primary">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={earningsData}>
+                        <XAxis 
+                          dataKey="date" 
+                          stroke="var(--chart-1)"
+                        />
+                        <Line
+                          type="monotone"
+                          dataKey="amount"
+                          stroke="currentColor"
+                          strokeWidth={2}
+                          dot={false}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                ) : (
+                  <div className="h-64 text-muted-foreground flex items-center justify-center">
+                    <p className="text-sm">Not enough data to show trend</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* RIGHT - Sidebar (1 column on desktop) */}
+          <div className="space-y-6">
+            {/* Wallet */}
+            <Wallet activeItem={activeItem} setActiveItem={setActiveItem} />
 
             {/* Upcoming Campaigns */}
             <Card className="border border-muted">
               <CardHeader className="pb-3">
-                <CardTitle className="text-base sm:text-lg">Upcoming Campaigns</CardTitle>
+                <div className="flex items-center gap-2">
+                  <span className="text-lg">⏰</span>
+                  <CardTitle className="text-base">Upcoming Campaigns</CardTitle>
+                </div>
               </CardHeader>
               <CardContent>
-                {campaigns.slice(0, 3).map((c) => (
-                  <div
-                    key={c._id}
-                    className="flex items-start justify-between py-3 border-b last:border-0 border-border gap-2"
-                  >
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-foreground truncate">{c.name}</p>
-                      <p className="text-xs text-muted-foreground truncate">
+                {campaigns.length > 0 ? (
+                  campaigns.slice(0, 3).map((c) => (
+                    <div
+                      key={c._id}
+                      className="py-3 border-b last:border-0 border-border"
+                    >
+                      <p className="text-sm font-medium text-foreground mb-1">{c.name}</p>
+                      <p className="text-xs text-muted-foreground">
                         {c.duration_start} — {c.duration_end}
                       </p>
                     </div>
-                    <Badge variant="outline" className="text-xs capitalize shrink-0">
-                      {c.status}
-                    </Badge>
-                  </div>
-                ))}
+                  ))
+                ) : (
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    No upcoming campaigns
+                  </p>
+                )}
               </CardContent>
             </Card>
 
-            {/* Recent Signups */}
+            {/* Recent Activity */}
             <Card className="border border-muted">
               <CardHeader className="pb-3">
-                <CardTitle className="text-base sm:text-lg">Recent Signups</CardTitle>
+                <CardTitle className="text-base">Recent Activity</CardTitle>
               </CardHeader>
               <CardContent>
                 {recentActivity.length > 0 ? (
                   <div className="space-y-3">
                     {recentActivity.map((a) => (
-                      <div key={a._id} className="flex items-center gap-3 py-2 border-b last:border-0 border-border">
-                        <Avatar className="h-8 w-8 sm:h-9 sm:w-9 shrink-0">
+                      <div key={a._id} className="flex items-center gap-3 py-2">
+                        <Avatar className="h-8 w-8 shrink-0">
                           <AvatarFallback className="text-xs">{getInitials(a._id)}</AvatarFallback>
                         </Avatar>
                         
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-foreground truncate">{a._id}</p>
-                          <div className="flex items-center gap-2 mt-1">
-                            <Badge variant="outline" className="text-xs capitalize">
-                              {a.status || "pending"}
-                            </Badge>
-                            <p className="text-xs text-muted-foreground">
-                              {formatDate(new Date(a._creationTime))}
-                            </p>
-                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            {formatDate(new Date(a._creationTime))}
+                          </p>
                         </div>
                       </div>
                     ))}
                   </div>
                 ) : (
                   <p className="text-sm text-muted-foreground text-center py-4">
-                    No recent signups yet.
+                    No recent activity
                   </p>
                 )}
               </CardContent>
             </Card>
-          </div>
-
-          {/* Desktop: Original 3-column layout */}
-          <div className="hidden lg:grid lg:grid-cols-12 gap-6">
-            {/* LEFT */}
-            <aside className="lg:col-span-3 space-y-6">
-              {/* Profile */}
-              <Profile />
-              {/* Wallet */}
-              <Wallet activeItem={activeItem} setActiveItem={setActiveItem} />
-            </aside>
-
-            {/* MIDDLE */}
-            <main className="lg:col-span-6">
-              <Card className="border border-muted">
-                <CardHeader className="flex items-center justify-between">
-                  <CardTitle>Insights</CardTitle>
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <Badge variant="outline">Last 30 Days</Badge>
-                    <ChevronDown className="w-4 h-4" />
-                  </div>
-                </CardHeader>
-
-                <CardContent>
-                  {/* Metrics */}
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    {[
-                      { label: "Total Campaigns", value: metrics.totalCampaigns },
-                      { label: "Ongoing Campaigns", value: metrics.ongoingCampaigns },
-                      { label: "Total Signups", value: metrics.totalSignups },
-                      {
-                        label: "Total Earnings",
-                        value: `KES ${metrics.totalEarnings.toLocaleString()}`,
-                      },
-                    ].map((m, i) => (
-                      <div key={i} className="p-3 bg-muted rounded-lg">
-                        <p className="text-xs text-muted-foreground">{m.label}</p>
-                        <p className="mt-1 text-sm font-semibold text-foreground">{m.value}</p>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Chart */}
-                  <div className="mt-6 h-64 text-primary">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={earningsData}>
-                        <XAxis dataKey="date" stroke="var(--chart-1)" />
-                        <Line
-                          type="monotone"
-                          dataKey="amount"
-                          stroke="currentColor"
-                          strokeWidth={3}
-                          dot={false}
-                        />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </div>
-                </CardContent>
-              </Card>
-            </main>
-
-            {/* RIGHT */}
-            <aside className="lg:col-span-3 space-y-6">
-              {/* Upcoming Campaigns */}
-              <Card className="border border-muted">
-                <CardHeader>
-                  <CardTitle>Upcoming Campaigns</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {campaigns.slice(0, 3).map((c) => (
-                    <div
-                      key={c._id}
-                      className="flex items-start justify-between py-3 border-b last:border-0 border-border"
-                    >
-                      <div>
-                        <p className="text-sm font-medium text-foreground">{c.name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {c.duration_start} — {c.duration_end}
-                        </p>
-                      </div>
-                      <Badge variant="outline" className="text-xs capitalize">
-                        {c.status}
-                      </Badge>
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
-
-              {/* Recent Activity */}
-              <Card className="border border-muted">
-                <CardHeader>
-                  <CardTitle>Recent Signups</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {recentActivity.length > 0 ? (
-                    recentActivity.map((a) => (
-                      <div key={a._id} className="flex items-center justify-between py-2">
-                        <div className="flex items-center gap-3">
-                          <Avatar className="h-9 w-9">
-                            <AvatarFallback>{getInitials(a._id)}</AvatarFallback>
-                          </Avatar>
-                          
-                          <div className="flex flex-col gap-3">
-                            <p className="text-sm font-medium text-foreground">{a._id}</p>
-                            <Badge variant="outline" className="text-xs capitalize">
-                              {a.status || "pending"}
-                            </Badge>
-                            <p className="text-xs text-muted-foreground">
-                              {formatDate(new Date(a._creationTime))}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-sm text-muted-foreground">No recent signups yet.</p>
-                  )}
-                </CardContent>
-              </Card>
-            </aside>
           </div>
         </div>
       )}

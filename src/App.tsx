@@ -7,11 +7,12 @@ import SignUp from './pages/SignUp'
 import NotFound from './components/common/PageNotFound'
 import { ProtectedRoute } from './components/Protected'
 import { handleGetCSRF } from './utils/handleLogin'
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import OnboardingPage from './pages/Onboarding'
 
+
+
 function App() {
-  const [csrfReady, setCsrfReady] = useState(false)
   const csrfInitialized = useRef(false) 
 
   useEffect(() => {
@@ -23,11 +24,9 @@ function App() {
       
       try {
         await handleGetCSRF()
-        console.log('✅ CSRF token initialized')
-        setCsrfReady(true)
+
       } catch (error) {
         console.error('Failed to initialize CSRF token:', error)
-        setCsrfReady(true) 
       }
     }
     
@@ -43,9 +42,6 @@ function App() {
     {path: '*', element: <NotFound />}
   ]
 
-  if (!csrfReady) {
-    return <div>Loading...</div>
-  }
 
   return (
     <>

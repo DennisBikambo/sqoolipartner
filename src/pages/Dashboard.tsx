@@ -7,8 +7,9 @@ import CampaignSection from "../sections/CampaignSection";
 import WalletSection from "../sections/WalletSection";
 import ReportsSection from "../sections/ReportsSection";
 import { UserSection } from "../sections/UserSection";
+import ProgramsSection from "../sections/ProgramSection";
 // import UsersSection from "../sections/UsersSection"; // create this if not yet
-// import SettingsSection from "../sections/SettingsSection"; // create this if not yet
+import SettingsSection from "../sections/SettingsSection"; 
 // import { useAuth } from "../hooks/useAuth";
 // import { useQuery } from "convex/react";
 // import { api } from "../../convex/_generated/api";
@@ -29,7 +30,8 @@ export default function DashboardPage() {
     wallet: <WalletSection activeItem={activeItem} setActiveItem={setActiveItem} />,
     reports: <ReportsSection />,
     users: <UserSection />,
-    // settings: <SettingsSection />,
+    programs: <ProgramsSection />,
+    settings: <SettingsSection />,
   };
 
   return (
