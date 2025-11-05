@@ -39,11 +39,6 @@ export default function DashboardPage() {
       activeItem={activeItem}
       onSelect={setActiveItem}
       title={activeItem.charAt(0).toUpperCase() + activeItem.slice(1)}
-      subtitle={
-        activeItem === "dashboard"
-          ? "Overview of students performance"
-          : undefined
-      }
     >
       {sectionMap[activeItem]}
     </DashboardLayout>

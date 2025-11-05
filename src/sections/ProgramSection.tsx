@@ -112,7 +112,7 @@ export default function ProgramsSection() {
   };
 
   // Count purchases for each program (placeholder)
-  const getPurchasesCount = (programId: string) => {
+  const getPurchasesCount = () => {
     // This would come from your actual purchases/transactions data
     return 23;
   };
@@ -226,7 +226,7 @@ export default function ProgramsSection() {
                     <div>
                       <p className="text-xs text-muted-foreground mb-1">Purchases</p>
                       <p className="text-sm font-medium text-foreground">
-                        {getPurchasesCount(program._id)}
+                        {getPurchasesCount()}
                       </p>
                     </div>
                   </TableCell>
