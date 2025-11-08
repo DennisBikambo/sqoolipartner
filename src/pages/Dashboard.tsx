@@ -6,7 +6,7 @@ import DashboardSection from "../sections/DashboardSection";
 import CampaignSection from "../sections/CampaignSection";
 import WalletSection from "../sections/WalletSection";
 import ReportsSection from "../sections/ReportsSection";
-import { UserSection } from "../sections/UserSection";
+import UserSection from "../sections/UserSection";
 import ProgramsSection from "../sections/ProgramSection";
 // import UsersSection from "../sections/UsersSection"; // create this if not yet
 import SettingsSection from "../sections/SettingsSection"; 

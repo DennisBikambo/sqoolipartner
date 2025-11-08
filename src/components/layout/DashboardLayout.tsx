@@ -18,19 +18,19 @@ export function DashboardLayout({
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      {/* Header - Full Width at Top */}
+      {/* Fixed Header - Full Width at Top */}
       <Header title={title} />
       
-      {/* Content Area with Sidebar */}
-      <div className="flex flex-1 overflow-hidden">
-        {/* Sidebar */}
+      {/* Content Area with Sidebar - Add top padding for fixed header */}
+      <div className="flex flex-1 overflow-hidden ">
+        {/* Floating Sticky Sidebar */}
         <AppSidebar 
           activeItem={activeItem} 
           onSelect={onSelect}   
         />
         
-        {/* Main Content */}
-        <main className="flex-1 overflow-y-auto bg-muted/30">
+        {/* Main Content - Add left margin for sidebar spacing */}
+        <main className="flex-1 overflow-y-auto bg-muted/30 lg:ml-[130px]">
           {children}
         </main>
       </div>

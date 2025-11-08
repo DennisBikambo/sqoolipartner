@@ -14,16 +14,19 @@ import type {
   FunctionReference,
 } from "convex/server";
 import type * as assets from "../assets.js";
+import type * as audit from "../audit.js";
 import type * as campaign from "../campaign.js";
 import type * as curricula from "../curricula.js";
 import type * as http from "../http.js";
 import type * as partner from "../partner.js";
 import type * as partner_revenue from "../partner_revenue.js";
+import type * as permission from "../permission.js";
 import type * as program from "../program.js";
 import type * as program_enrollments from "../program_enrollments.js";
 import type * as program_subjects from "../program_subjects.js";
 import type * as subjects from "../subjects.js";
 import type * as transactions from "../transactions.js";
+import type * as user from "../user.js";
 import type * as wallet from "../wallet.js";
 
 /**
@@ -36,16 +39,19 @@ import type * as wallet from "../wallet.js";
  */
 declare const fullApi: ApiFromModules<{
   assets: typeof assets;
+  audit: typeof audit;
   campaign: typeof campaign;
   curricula: typeof curricula;
   http: typeof http;
   partner: typeof partner;
   partner_revenue: typeof partner_revenue;
+  permission: typeof permission;
   program: typeof program;
   program_enrollments: typeof program_enrollments;
   program_subjects: typeof program_subjects;
   subjects: typeof subjects;
   transactions: typeof transactions;
+  user: typeof user;
   wallet: typeof wallet;
 }>;
 export declare const api: FilterApi<

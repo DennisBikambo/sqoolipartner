@@ -16,6 +16,65 @@ export default defineSchema({
     username: v.string(),
   }),
 
+
+  users: defineTable({
+    partner_id: v.id("partners"), 
+    email: v.string(),
+    password_hash: v.string(),
+    name: v.string(),
+    phone: v.optional(v.string()),
+    role: v.union(
+      v.literal("partner_admin"),
+      v.literal("accountant"),
+      v.literal("campaign_manager"),
+      v.literal("viewer"),
+      v.literal("super_agent"),
+      v.literal("master_agent"),
+      v.literal("merchant_admin")
+    ), 
+    permission_id: v.id("permissions"), 
+    is_active: v.boolean(),
+    is_account_activated: v.boolean(),
+    is_first_login: v.boolean(),
+    last_login: v.optional(v.string()),
+    updated_at: v.optional(v.string()),
+  })
+    .index("by_email", ["email"])
+    .index("by_partner_id", ["partner_id"])
+    .index("by_permission_id", ["permission_id"])
+    .index("by_role", ["role"]),
+  
+  /**
+   * PERMISSIONS TABLE
+   * ------------------------
+   * Master list of all available permissions in the system
+   * Each permission defines what a user can access/do
+   */
+  permissions: defineTable({
+    key: v.string(), // Unique identifier e.g., "user.read", "campaign.create", "wallet.view"
+    name: v.string(), // Display name e.g., "User Read", "Campaign Create"
+    description: v.string(), // What this permission allows
+    category: v.union(
+      v.literal("users"),
+      v.literal("campaigns"),
+      v.literal("programs"),
+      v.literal("wallet"),
+      v.literal("dashboard"),
+      v.literal("settings"),
+      v.literal("all_access")
+    ),
+    level: v.union(
+      v.literal("read"),
+      v.literal("write"),
+      v.literal("admin"),
+      v.literal("full")
+    ), 
+    is_default: v.boolean(), 
+  })
+    .index("by_key", ["key"])
+    .index("by_category", ["category"])
+    .index("by_is_default", ["is_default"]),
+
   /**
    * CAMPAIGNS TABLE
    * ------------------------
@@ -25,6 +84,7 @@ export default defineSchema({
     name: v.string(), 
     program_id: v.id('programs'), 
     partner_id: v.id("partners"), 
+    user_id: v.id("users"),
     promo_code: v.string(), 
     target_signups: v.number(), 
     daily_target: v.number(), 
@@ -62,7 +122,8 @@ export default defineSchema({
   program_enrollments: defineTable({
     program_id: v.id('programs'),
     campaign_id: v.id("campaigns"),
-    redeem_code: v.string(), // e.g., "L-849327" (Lesson Access Key)
+    user_id: v.id("users"),
+    redeem_code: v.string(), 
     transaction_id: v.optional(v.id("transactions")),
     status: v.union(
       v.literal("pending"),
@@ -106,6 +167,7 @@ export default defineSchema({
   partner_revenue_logs: defineTable({
     partner_id: v.id("partners"),
     campaign_id: v.id("campaigns"),
+    user_id: v.id("users"),
     transaction_id: v.id("transactions"),
     amount: v.number(), // Partner’s 20% share
     gross_amount: v.number(), // Full transaction amount
@@ -200,6 +262,26 @@ export default defineSchema({
   })
     .index("by_account_number", ["account_number"])
     .index("by_user_id", ["user_id"]),
+  
+
+  audit_logs: defineTable({
+    user_id: v.id("users"),
+    partner_id: v.id("partners"),
+    action: v.string(), // e.g., "user.created", "campaign.deleted"
+    entity_type: v.string(), // e.g., "campaign", "user"
+    entity_id: v.optional(v.string()),
+    details: v.optional(v.string()), 
+    ip_address: v.optional(v.string()),
+    created_at: v.string(),
+  })
+    .index("by_user_id", ["user_id"])
+    .index("by_partner_id", ["partner_id"])
+    .index("by_action", ["action"]),
+
 });
+
+
+
+
   
 
