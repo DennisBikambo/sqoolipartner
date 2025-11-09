@@ -3,6 +3,7 @@
 
 import { useState, useEffect } from "react";
 import { useAuth } from "../hooks/useAuth";
+import { usePermissions } from "../hooks/usePermission";
 import { api } from "../../convex/_generated/api";
 import { useQuery, useConvex } from "convex/react";
 import { Loading } from "../components/common/Loading";
@@ -24,6 +25,7 @@ import { Avatar, AvatarFallback } from "../components/ui/avatar";
 import { NoCampaignCard } from "../components/common/NoCampaignCard";
 import CreateCampaignWizard from "../components/common/CreateCampaign";
 import { LineChart, Line, XAxis, ResponsiveContainer } from "recharts";
+import { Lock } from "lucide-react";
 
 export default function DashboardSection({ 
   activeItem, 
@@ -32,20 +34,27 @@ export default function DashboardSection({
   activeItem: string; 
   setActiveItem: (item: string) => void;
 }) {
-  const {  partner } = useAuth();
+  const { partner } = useAuth();
+  const { hasCategory, hasPermission, permissions } = usePermissions();
   const convex = useConvex();
   const [showCreateWizard, setShowCreateWizard] = useState(false);
   const [allEnrollments, setAllEnrollments] = useState<DashboardEnrollment[]>([]);
   const [earningsData, setEarningsData] = useState<DashboardEarnings[]>([]);
 
+  // Permission checks
+  const canViewCampaigns = hasCategory('campaigns') || hasPermission('campaign.read');
+  const canCreateCampaigns = hasPermission('campaign.create') || permissions?.level === 'write' || permissions?.level === 'admin' || permissions?.level === 'full';
+  const canViewWallet = hasCategory('wallet') || hasPermission('wallet.view');
+  const canViewFinancials = hasCategory('wallet') || hasPermission('wallet.view');
+
   // Use partner._id for queries (Convex partner ID)
   const campaigns = useQuery(
     api.campaign.getCampaignsByPartner,
-    partner?._id ? { partner_id: partner._id } : "skip"
+    partner?._id && canViewCampaigns ? { partner_id: partner._id } : "skip"
   ) as DashboardCampaign[] | undefined;
 
   useEffect(() => {
-    if (!campaigns?.length) return;
+    if (!campaigns?.length || !canViewCampaigns) return;
 
     async function fetchEnrollments() {
       const safeCampaigns = campaigns ?? [];
@@ -66,9 +75,10 @@ export default function DashboardSection({
     }
 
     async function fetchEarnings() {
+      if (!canViewFinancials) return;
+      
       const safeCampaigns = campaigns ?? [];
 
-      // Flatten all enrollments across campaigns
       const enrollments = await Promise.all(
         safeCampaigns.map((c) =>
           convex.query(api.program_enrollments.listByCampaign, {
@@ -78,8 +88,6 @@ export default function DashboardSection({
       );
 
       const flatEnrollments = enrollments.flat();
-
-      // Group earnings by date
       const earningsMap: Record<string, number> = {};
 
       flatEnrollments.forEach((e) => {
@@ -87,8 +95,6 @@ export default function DashboardSection({
           day: "2-digit",
           month: "short",
         });
-
-        // Assuming each enrollment = one lesson at KES 200
         earningsMap[date] = (earningsMap[date] || 0) + 200;
       });
 
@@ -97,7 +103,6 @@ export default function DashboardSection({
         amount,
       }));
 
-      // Sort by date ascending
       formatted.sort(
         (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
       );
@@ -107,14 +112,15 @@ export default function DashboardSection({
 
     fetchEnrollments();
     fetchEarnings();
-  }, [campaigns, convex]);
+  }, [campaigns, convex, canViewCampaigns, canViewFinancials]);
 
   const metrics: DashboardMetrics = {
     totalCampaigns: campaigns?.length || 0,
     ongoingCampaigns: campaigns?.filter((c) => c.status === "active").length || 0,
     totalSignups: allEnrollments.length,
-    totalEarnings:
-      campaigns?.reduce((sum, c) => sum + (c.revenue_projection * 0.2 || 0), 0) || 0,
+    totalEarnings: canViewFinancials
+      ? campaigns?.reduce((sum, c) => sum + (c.revenue_projection * 0.2 || 0), 0) || 0
+      : 0,
   };
 
   const recentActivity = allEnrollments
@@ -135,10 +141,23 @@ export default function DashboardSection({
       year: "numeric",
     });
 
-
-
-  // Check if we have enough data for the chart
   const hasEnoughData = earningsData.length > 0;
+
+  // Render locked metric card
+  const LockedMetric = ({ label }: { label: string }) => (
+    <div className="relative">
+      <div className="flex items-center gap-3 mb-3">
+        <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center">
+          <Lock className="h-5 w-5 text-muted-foreground" />
+        </div>
+      </div>
+      <p className="text-xs text-muted-foreground mb-1">{label}</p>
+      <p className="text-2xl font-bold text-muted-foreground blur-sm select-none">
+        KES ••••
+      </p>
+      <div className="absolute inset-0 bg-background/5 backdrop-blur-[1px] rounded-lg" />
+    </div>
+  );
 
   return (
     <div className="space-y-6 p-6">
@@ -149,15 +168,17 @@ export default function DashboardSection({
             Dashboard
           </h1>
         </div>
-        <Button 
-          onClick={() => setShowCreateWizard(true)} 
-          className="bg-primary text-primary-foreground hover:bg-primary/90"
-        >
-          + New Campaign
-        </Button>
+        {canCreateCampaigns && (
+          <Button 
+            onClick={() => setShowCreateWizard(true)} 
+            className="bg-primary text-primary-foreground hover:bg-primary/90"
+          >
+            + New Campaign
+          </Button>
+        )}
       </div>
 
-      {showCreateWizard && partner?._id && (
+      {showCreateWizard && partner?._id && canCreateCampaigns && (
         <CreateCampaignWizard
           partnerId={partner._id}
           open={showCreateWizard}
@@ -167,53 +188,65 @@ export default function DashboardSection({
 
       {!partner ? (
         <Loading message="Loading your dashboard..." size="lg" />
-      ) : campaigns === undefined ? (
+      ) : campaigns === undefined && canViewCampaigns ? (
         <Loading message="Loading your campaigns..." size="lg" />
-      ) : !campaigns?.length ? (
+      ) : !campaigns?.length && canViewCampaigns ? (
         <NoCampaignCard />
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* LEFT - Main Content (2 columns on desktop) */}
+          {/* LEFT - Main Content */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Single Metrics Card */}
+            {/* Metrics Card */}
             <Card className="border border-muted">
               <CardContent className="p-6">
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-6">
-                  <div>
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="h-10 w-10 rounded-lg bg-orange-100 flex items-center justify-center">
-                        <span className="text-lg">💰</span>
+                  {canViewFinancials ? (
+                    <div>
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="h-10 w-10 rounded-lg bg-orange-100 flex items-center justify-center">
+                          <span className="text-lg">💰</span>
+                        </div>
                       </div>
+                      <p className="text-xs text-muted-foreground mb-1">Total Earnings</p>
+                      <p className="text-2xl font-bold text-foreground">
+                        KES {metrics.totalEarnings.toFixed(2)}
+                      </p>
                     </div>
-                    <p className="text-xs text-muted-foreground mb-1">Total Earnings</p>
-                    <p className="text-2xl font-bold text-foreground">
-                      KES {metrics.totalEarnings.toFixed(2)}
-                    </p>
-                  </div>
+                  ) : (
+                    <LockedMetric label="Total Earnings" />
+                  )}
 
-                  <div>
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="h-10 w-10 rounded-lg bg-orange-100 flex items-center justify-center">
-                        <span className="text-lg">📊</span>
+                  {canViewCampaigns ? (
+                    <div>
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="h-10 w-10 rounded-lg bg-orange-100 flex items-center justify-center">
+                          <span className="text-lg">📊</span>
+                        </div>
                       </div>
+                      <p className="text-xs text-muted-foreground mb-1">Total Campaigns</p>
+                      <p className="text-2xl font-bold text-foreground">
+                        {metrics.totalCampaigns}
+                      </p>
                     </div>
-                    <p className="text-xs text-muted-foreground mb-1">Total Campaigns</p>
-                    <p className="text-2xl font-bold text-foreground">
-                      {metrics.totalCampaigns}
-                    </p>
-                  </div>
+                  ) : (
+                    <LockedMetric label="Total Campaigns" />
+                  )}
 
-                  <div>
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="h-10 w-10 rounded-lg bg-green-100 flex items-center justify-center">
-                        <span className="text-lg">🎯</span>
+                  {canViewCampaigns ? (
+                    <div>
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="h-10 w-10 rounded-lg bg-green-100 flex items-center justify-center">
+                          <span className="text-lg">🎯</span>
+                        </div>
                       </div>
+                      <p className="text-xs text-muted-foreground mb-1">Ongoing Campaigns</p>
+                      <p className="text-2xl font-bold text-foreground">
+                        {metrics.ongoingCampaigns}
+                      </p>
                     </div>
-                    <p className="text-xs text-muted-foreground mb-1">Ongoing Campaigns</p>
-                    <p className="text-2xl font-bold text-foreground">
-                      {metrics.ongoingCampaigns}
-                    </p>
-                  </div>
+                  ) : (
+                    <LockedMetric label="Ongoing Campaigns" />
+                  )}
 
                   <div>
                     <div className="flex items-center gap-3 mb-3">
@@ -231,81 +264,87 @@ export default function DashboardSection({
             </Card>
 
             {/* Second Row Metrics */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <Card className="border border-muted">
-                <CardContent className="p-6">
-                  <p className="text-xs text-muted-foreground mb-1">Earnings</p>
-                  <p className="text-xl font-bold text-foreground">
-                    KES {metrics.totalEarnings.toFixed(2)}
-                  </p>
-                </CardContent>
-              </Card>
+            {canViewFinancials && (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <Card className="border border-muted">
+                  <CardContent className="p-6">
+                    <p className="text-xs text-muted-foreground mb-1">Earnings</p>
+                    <p className="text-xl font-bold text-foreground">
+                      KES {metrics.totalEarnings.toFixed(2)}
+                    </p>
+                  </CardContent>
+                </Card>
 
-              <Card className="border border-muted">
-                <CardContent className="p-6">
-                  <p className="text-xs text-muted-foreground mb-1">Withdrawals</p>
-                  <p className="text-xl font-bold text-foreground">
-                    KES 0.00
-                  </p>
-                </CardContent>
-              </Card>
+                <Card className="border border-muted">
+                  <CardContent className="p-6">
+                    <p className="text-xs text-muted-foreground mb-1">Withdrawals</p>
+                    <p className="text-xl font-bold text-foreground">
+                      KES 0.00
+                    </p>
+                  </CardContent>
+                </Card>
 
-              <Card className="border border-muted">
-                <CardContent className="p-6">
-                  <p className="text-xs text-muted-foreground mb-1">Engagements</p>
-                  <p className="text-xl font-bold text-foreground">
-                    {metrics.totalSignups}
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
+                <Card className="border border-muted">
+                  <CardContent className="p-6">
+                    <p className="text-xs text-muted-foreground mb-1">Engagements</p>
+                    <p className="text-xl font-bold text-foreground">
+                      {metrics.totalSignups}
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
 
             {/* Chart */}
-            <Card className="border border-muted">
-              <CardContent className="p-6">
-                {hasEnoughData ? (
-                  <div className="h-64 text-primary">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={earningsData}>
-                        <XAxis 
-                          dataKey="date" 
-                          stroke="var(--chart-1)"
-                        />
-                        <Line
-                          type="monotone"
-                          dataKey="amount"
-                          stroke="currentColor"
-                          strokeWidth={2}
-                          dot={false}
-                        />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </div>
-                ) : (
-                  <div className="h-64 text-muted-foreground flex items-center justify-center">
-                    <p className="text-sm">Not enough data to show trend</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+            {canViewFinancials && (
+              <Card className="border border-muted">
+                <CardContent className="p-6">
+                  {hasEnoughData ? (
+                    <div className="h-64 text-primary">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={earningsData}>
+                          <XAxis 
+                            dataKey="date" 
+                            stroke="var(--chart-1)"
+                          />
+                          <Line
+                            type="monotone"
+                            dataKey="amount"
+                            stroke="currentColor"
+                            strokeWidth={2}
+                            dot={false}
+                          />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+                  ) : (
+                    <div className="h-64 text-muted-foreground flex items-center justify-center">
+                      <p className="text-sm">Not enough data to show trend</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
           </div>
 
-          {/* RIGHT - Sidebar (1 column on desktop) */}
+          {/* RIGHT - Sidebar */}
           <div className="space-y-6">
             {/* Wallet */}
-            <Wallet activeItem={activeItem} setActiveItem={setActiveItem} />
+            {canViewWallet && (
+              <Wallet activeItem={activeItem} setActiveItem={setActiveItem} />
+            )}
 
             {/* Upcoming Campaigns */}
-            <Card className="border border-muted">
-              <CardHeader className="pb-3">
-                <div className="flex items-center gap-2">
-                  <span className="text-lg">⏰</span>
-                  <CardTitle className="text-base">Upcoming Campaigns</CardTitle>
-                </div>
-              </CardHeader>
-              <CardContent>
-                {campaigns.length > 0 ? (
-                  campaigns.slice(0, 3).map((c) => (
+            {canViewCampaigns && campaigns && campaigns.length > 0 && (
+              <Card className="border border-muted">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg">⏰</span>
+                    <CardTitle className="text-base">Upcoming Campaigns</CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {campaigns.slice(0, 3).map((c) => (
                     <div
                       key={c._id}
                       className="py-3 border-b last:border-0 border-border"
@@ -315,14 +354,10 @@ export default function DashboardSection({
                         {c.duration_start} — {c.duration_end}
                       </p>
                     </div>
-                  ))
-                ) : (
-                  <p className="text-sm text-muted-foreground text-center py-4">
-                    No upcoming campaigns
-                  </p>
-                )}
-              </CardContent>
-            </Card>
+                  ))}
+                </CardContent>
+              </Card>
+            )}
 
             {/* Recent Activity */}
             <Card className="border border-muted">

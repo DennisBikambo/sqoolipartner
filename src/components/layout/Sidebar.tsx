@@ -9,14 +9,18 @@ import {
   Menu,
   X,
   LayoutGrid,
+  Lock,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useState } from 'react';
+import { usePermissions } from '../../hooks/usePermission';
 
 interface NavItem {
   id: string;
   label: string;
   icon: React.ElementType;
+  requiredPermission?: string; 
+  requiredCategory?: string;   
 }
 
 interface AppSidebarProps {
@@ -25,12 +29,42 @@ interface AppSidebarProps {
 }
 
 const navigationItems: NavItem[] = [
-  { id: 'dashboard', label: 'Dashboard', icon: Home },
-  { id: 'campaigns', label: 'Campaigns', icon: Megaphone },
-  { id: 'programs', label: 'Programs', icon: LayoutGrid },
-  { id: 'wallet', label: 'Wallet', icon: Wallet },
-  { id: 'users', label: 'Users', icon: Users },
-  { id: 'settings', label: 'Settings', icon: Settings },
+  { 
+    id: 'dashboard', 
+    label: 'Dashboard', 
+    icon: Home,
+    requiredCategory: 'dashboard',
+  },
+  { 
+    id: 'campaigns', 
+    label: 'Campaigns', 
+    icon: Megaphone,
+    requiredCategory: 'campaigns',
+  },
+  { 
+    id: 'programs', 
+    label: 'Programs', 
+    icon: LayoutGrid,
+    requiredCategory: 'programs',
+  },
+  { 
+    id: 'wallet', 
+    label: 'Wallet', 
+    icon: Wallet,
+    requiredCategory: 'wallet',
+  },
+  { 
+    id: 'users', 
+    label: 'Users', 
+    icon: Users,
+    requiredCategory: 'users',
+  },
+  { 
+    id: 'settings', 
+    label: 'Settings', 
+    icon: Settings,
+    requiredCategory: 'settings',
+  },
 ];
 
 export function AppSidebar({ 
@@ -38,10 +72,31 @@ export function AppSidebar({
   onSelect
 }: AppSidebarProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { hasPermission, hasCategory, permissions, loading } = usePermissions();
 
-  const handleSelect = (id: string) => {
+  // Debug: Log the current permission
+  console.log('Current User Permission:', permissions);
+  console.log('Has campaigns category?', hasCategory('campaigns'));
+  console.log('Loading?', loading);
+
+  const handleSelect = (id: string, isLocked: boolean) => {
+    if (isLocked) {
+      alert('This feature is locked. Contact your administrator for access.');
+      return;
+    }
     onSelect?.(id);
     setIsMobileMenuOpen(false);
+  };
+
+  const checkAccess = (item: NavItem): boolean => {
+    // If still loading permissions, deny access temporarily
+    if (loading || !permissions) return false;
+
+    if (permissions.key === 'admin.all.access' || permissions.level === 'full') return true;
+    if (item.requiredPermission && hasPermission(item.requiredPermission)) return true;
+    if (item.requiredCategory && hasCategory(item.requiredCategory)) return true;
+
+    return false;
   };
 
   return (
@@ -82,24 +137,46 @@ export function AppSidebar({
       >
         <nav className="flex flex-col justify-center gap-4 lg:justify-between lg:h-full">
           <div className="flex flex-col gap-4">
-            {navigationItems.map(({ id, label, icon: Icon }) => {
+            {navigationItems.map(({ id, label, icon: Icon, ...permissionReq }) => {
               const isActive = id === activeItem;
+              const hasAccess = checkAccess({ id, label, icon: Icon, ...permissionReq });
+              const isLocked = !hasAccess;
+
+              // Debug log for campaigns specifically
+              if (id === 'campaigns') {
+                console.log('Campaigns Access Check:', {
+                  hasAccess,
+                  isLocked,
+                  permission: permissions,
+                  category: permissions?.category
+                });
+              }
+
               return (
                 <button
                   key={id}
-                  onClick={() => handleSelect(id)}
+                  onClick={() => handleSelect(id, isLocked)}
+                  disabled={isLocked}
                   className={cn(
-                    "flex flex-col items-center justify-center gap-1.5 w-full py-2.5 px-2 rounded-md transition-all",
-                    isActive
-                      ? "text-primary bg-primary/10"
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
+                    "relative flex flex-col items-center justify-center gap-1.5 w-full py-2.5 px-2 rounded-md transition-all",
+                    isActive && !isLocked && "text-primary bg-primary/10",
+                    !isActive && !isLocked && "text-muted-foreground hover:text-foreground hover:bg-muted/40",
+                    isLocked && "text-muted-foreground/40 cursor-not-allowed opacity-50"
                   )}
-                  title={label}
+                  title={isLocked ? `${label} (Locked)` : label}
                 >
-                  <Icon className="h-5 w-5 shrink-0" />
+                  <div className="relative">
+                    <Icon className="h-5 w-5 shrink-0" />
+                    {isLocked && (
+                      <Lock className="absolute -top-1 -right-1 h-3 w-3 text-destructive" />
+                    )}
+                  </div>
                   <span className="text-[11px] font-medium leading-tight text-center">
                     {label}
                   </span>
+                  {isLocked && (
+                    <div className="absolute inset-0 bg-background/5 backdrop-blur-[1px] rounded-md" />
+                  )}
                 </button>
               );
             })}

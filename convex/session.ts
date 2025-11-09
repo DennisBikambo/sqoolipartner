@@ -59,3 +59,20 @@ export const validateSession = mutation({
     return { user, session };
   },
 });
+
+export const deleteSession = mutation(async (ctx, { token }: { token: string }) => {
+  const session = await ctx.db
+    .query("sessions")
+    .withIndex("by_token", (q) => q.eq("token", token))
+    .unique();
+
+  if (!session) {
+    console.log("⚠️ No session found for token:", token);
+    return { success: false, message: "Session not found" };
+  }
+
+  await ctx.db.delete(session._id);
+  console.log("✅ Session deleted:", session._id);
+
+  return { success: true };
+});

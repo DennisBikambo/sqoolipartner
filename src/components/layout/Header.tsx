@@ -16,6 +16,8 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { handleLogout } from '../../utils/handleLogout';
 import { getDisplayName, getUserEmail, getUserInitials, isConvexUser, isLaravelUser } from '../../types/auth.types';
+import { useMutation } from 'convex/react';
+import { api } from '../../../convex/_generated/api';
 
 interface HeaderProps {
   title?: string;
@@ -25,30 +27,48 @@ export function Header({ title = 'Dashboard' }: HeaderProps) {
   const { user, loading, partner, loginMethod } = useAuth();
   const { setTheme, theme } = useTheme();
   const navigate = useNavigate();
+  const deleteSession = useMutation(api.session.deleteSession);
 
   const onLogout = async () => {
     try {
-      if (loginMethod === 'convex') {
-        // Clear Convex session cookie
-        document.cookie = 'convex_session=; path=/; max-age=0';
-        toast.success('Logged out successfully 👋');
-        navigate('/signIn');
+      if (loginMethod === "convex") {
+        // 🔹 Get token from cookie
+        const token = document.cookie
+          .split("; ")
+          .find((row) => row.startsWith("convex_session="))
+          ?.split("=")[1];
+
+        if (token) {
+          try {
+            await deleteSession({ token });
+            console.log("✅ Convex session deleted from DB");
+          } catch (err) {
+            console.error("❌ Failed to delete session from DB:", err);
+          }
+        }
+
+        // 🔹 Clear cookie
+        document.cookie = "convex_session=; path=/; max-age=0";
+
+        toast.success("Logged out successfully 👋");
+        navigate("/signIn");
         return;
       }
 
-      // Laravel logout
+      // 🔹 Laravel logout
       const result = await handleLogout();
       if (result?.success) {
-        toast.success('Logged out successfully 👋');
-        navigate('/signIn');
+        toast.success("Logged out successfully 👋");
+        navigate("/signIn");
       } else {
-        toast.error('Logout failed. Please try again.');
+        toast.error("Logout failed. Please try again.");
       }
     } catch (error) {
-      console.error('Logout error:', error);
-      toast.error('An unexpected error occurred during logout.');
+      console.error("Logout error:", error);
+      toast.error("An unexpected error occurred during logout.");
     }
   };
+
 
   if (loading) {
     return (

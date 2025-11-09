@@ -8,30 +8,55 @@ import WalletSection from "../sections/WalletSection";
 import ReportsSection from "../sections/ReportsSection";
 import UserSection from "../sections/UserSection";
 import ProgramsSection from "../sections/ProgramSection";
-// import UsersSection from "../sections/UsersSection"; // create this if not yet
-import SettingsSection from "../sections/SettingsSection"; 
-// import { useAuth } from "../hooks/useAuth";
-// import { useQuery } from "convex/react";
-// import { api } from "../../convex/_generated/api";
+import SettingsSection from "../sections/SettingsSection";
+import { usePermissions } from "../hooks/usePermission";
+import LockedSection from "../sections/LockedSection";
+
+// Locked Section Component
+
 
 export default function DashboardPage() {
   const [activeItem, setActiveItem] = useState("dashboard");
-  // const { user } = useAuth();
+  const { hasCategory, permissions } = usePermissions();
 
-  // const campaigns = useQuery(
-  //   api.campaign.getCampaignsByPartner,
-  //   user ? { partner_id: user._id } : "skip"
-  // );
+  // Permission check helper
+  const canAccess = (category: string): boolean => {
+    // Admin all access bypasses everything
+    if (permissions?.key === 'admin.all.access' || permissions?.level === 'full') {
+      return true;
+    }
+    return hasCategory(category);
+  };
 
-  // ✅ Map sidebar IDs to page sections
+  
   const sectionMap: Record<string, React.ReactNode> = {
-    dashboard: <DashboardSection activeItem={activeItem} setActiveItem={setActiveItem} />,
-    campaigns: <CampaignSection />,
-    wallet: <WalletSection activeItem={activeItem} setActiveItem={setActiveItem} />,
-    reports: <ReportsSection />,
-    users: <UserSection />,
-    programs: <ProgramsSection />,
-    settings: <SettingsSection />,
+    dashboard: canAccess('dashboard') 
+      ? <DashboardSection activeItem={activeItem} setActiveItem={setActiveItem} />
+      : <LockedSection sectionName="Dashboard" />,
+    
+    campaigns: canAccess('campaigns')
+      ? <CampaignSection />
+      : <LockedSection sectionName="Campaigns" />,
+    
+    wallet: canAccess('wallet')
+      ? <WalletSection activeItem={activeItem} setActiveItem={setActiveItem} />
+      : <LockedSection sectionName="Wallet" />,
+    
+    reports: canAccess('dashboard') 
+      ? <ReportsSection />
+      : <LockedSection sectionName="Reports" />,
+    
+    users: canAccess('users')
+      ? <UserSection />
+      : <LockedSection sectionName="Users" />,
+    
+    programs: canAccess('programs')
+      ? <ProgramsSection />
+      : <LockedSection sectionName="Programs" />,
+    
+    settings: canAccess('settings')
+      ? <SettingsSection />
+      : <LockedSection sectionName="Settings" />,
   };
 
   return (

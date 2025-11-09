@@ -46,3 +46,12 @@ export const getAllPermissions = query({
     return await ctx.db.query("permissions").collect();
   },
 });
+
+export const getPermissionById = query({
+  args: { permission_id: v.id("permissions") },
+  handler: async (ctx, args) => {
+    const permission = await ctx.db.get(args.permission_id);
+    if (!permission) throw new Error("Permission not found");
+    return permission;
+  },
+});

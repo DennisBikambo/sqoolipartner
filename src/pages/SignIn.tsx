@@ -13,6 +13,7 @@ import discussion from "../assets/discussion.webp";
 import { useAuth } from '../hooks/useAuth';
 import { useMutation as useConvexMutation } from 'convex/react';
 import { api } from '../../convex/_generated/api';
+import { useLocation } from 'react-router-dom';
 
 export default function SignIn() {
   const { user } = useAuth();
@@ -21,6 +22,7 @@ export default function SignIn() {
   const [touchedFields, setTouchedFields] = React.useState<Set<keyof LoginFormData>>(new Set());
   const [errors, setErrors] = React.useState<LoginValidationErrors>({});
   const navigate = useNavigate();
+  const location = useLocation();
 
   // Convex mutations
   const loginMutation = useConvexMutation(api.user.login);
@@ -61,6 +63,8 @@ export default function SignIn() {
   };
 
   const handleSubmit = async () => {
+    const params = new URLSearchParams(location.search);
+    const extension = params.get("extension");
     const allFields = new Set(Object.keys(loginData) as (keyof LoginFormData)[]);
     setTouchedFields(allFields);
 
@@ -75,13 +79,12 @@ export default function SignIn() {
     setIsLoading(true);
 
     try {
-      // Check if extension exists in the URL
-      const urlParams = new URLSearchParams(window.location.search);
-      const extension = urlParams.get('extension') || undefined;
+  
 
       let result;
       if (extension) {
         // Convex user login using hooks
+        console.log("In here!")
         try {
           const loginResponse = await loginMutation({ 
             email: loginData.email, 
@@ -106,11 +109,20 @@ export default function SignIn() {
             session: sessionResponse,
             user: loginResponse.user,
           };
-        } catch (error: any) {
+        } catch (error: unknown) {
           console.error('Convex login failed:', error);
+          let message = 'Login failed';
+          if (
+            error &&
+            typeof error === 'object' &&
+            'message' in error &&
+            typeof (error as { message?: unknown }).message === 'string'
+          ) {
+            message = (error as { message: string }).message;
+          }
           result = {
             success: false,
-            message: error.message || 'Login failed',
+            message,
           };
         }
       } else {
@@ -126,12 +138,13 @@ export default function SignIn() {
       toast.success('Login successful! 🎉');
 
       // Store the Convex session token in cookies if using Convex login
-      const sessionToken = (result as any)?.session?.token;
+      const sessionToken = (result as { session?: { token?: string } })?.session?.token;
       if (typeof sessionToken === 'string') {
         document.cookie = `convex_session=${sessionToken}; path=/; max-age=${2 * 60 * 60}; SameSite=Lax`;
       }
-
+      
       navigate('/dashboard');
+      window.location.reload(); 
     } catch (error) {
       console.error('Login error:', error);
       toast.error('An unexpected error occurred. Please try again.');
