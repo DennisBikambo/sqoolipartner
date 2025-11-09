@@ -58,26 +58,58 @@ export default function AddUserDialog({ open, onOpenChange }: AddUserDialogProps
   const [selectedPermissions, setSelectedPermissions] = useState<Id<'permissions'>[]>([]);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [showCredDialog, setShowCredDialog] = useState(false);
-  const [newUserCreds, setNewUserCreds] = useState<{ email: string; password: string } | null>(null);
+  const [newUserCreds, setNewUserCreds] = useState<{ 
+    email: string; 
+    password: string; 
+    extension: string;
+  } | null>(null);
 
   const { partner } = useAuth();
   const partnerId = partner?._id;
 
   const permissions = useQuery(api.permission.getAllPermissions);
-  const defaultPermission = useQuery(api.permission.getPermissions, { is_default: true });
+  const defaultPermissions = useQuery(api.permission.getPermissions, { is_default: true });
   const createUser = useMutation(api.user.createUser);
 
-  // Group permissions by category
+  // Group permissions by category with proper ordering
+  const categoryOrder = ['users', 'campaigns', 'wallet', 'dashboard', 'settings', 'programs', 'all_access'];
+  
   const groupedPermissions = (permissions || []).reduce((acc, perm) => {
     if (!acc[perm.category]) acc[perm.category] = [];
     acc[perm.category]?.push(perm);
     return acc;
   }, {} as Record<string, typeof permissions>);
 
+  // Sort categories and permissions within each category
+  const sortedCategories = categoryOrder.filter((cat) => groupedPermissions[cat]);
+  
+  sortedCategories.forEach((cat) => {
+    groupedPermissions[cat]?.sort((a, b) => {
+      const order = { read: 1, write: 2, admin: 3, full: 4 };
+      return (order[a.level] || 99) - (order[b.level] || 99);
+    });
+  });
+
   const handleTogglePermission = (id: Id<'permissions'>) => {
     setSelectedPermissions((prev) =>
       prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]
     );
+  };
+
+  const handleToggleCategory = (category: string, perms: typeof permissions) => {
+    const categoryPermIds = perms?.map((p) => p._id) || [];
+    const allSelected = categoryPermIds.every((id) => selectedPermissions.includes(id));
+
+    if (allSelected) {
+      // Deselect all in category
+      setSelectedPermissions((prev) => prev.filter((id) => !categoryPermIds.includes(id)));
+    } else {
+      // Select all in category
+      setSelectedPermissions((prev) => {
+        const newSet = new Set([...prev, ...categoryPermIds]);
+        return Array.from(newSet);
+      });
+    }
   };
 
   const handleSubmit = async () => {
@@ -86,12 +118,13 @@ export default function AddUserDialog({ open, onOpenChange }: AddUserDialogProps
       return;
     }
 
-    const perms =
-      selectedPermissions.length > 0
-        ? selectedPermissions
-        : defaultPermission?.map((p) => p._id) || [];
+    // Get default permissions (settings.read and programs.view)
+    const defaultPermIds = defaultPermissions?.map((p) => p._id) || [];
+    
+    // Combine selected + default permissions (avoid duplicates)
+    const allPermIds = Array.from(new Set([...selectedPermissions, ...defaultPermIds]));
 
-    if (perms.length === 0 || !partnerId) {
+    if (allPermIds.length === 0 || !partnerId) {
       toast.error('Missing permissions or partner ID');
       return;
     }
@@ -103,11 +136,15 @@ export default function AddUserDialog({ open, onOpenChange }: AddUserDialogProps
         name: formData.name,
         phone: formData.phone || undefined,
         role: formData.role,
-        permission_ids: perms,
+        permission_ids: allPermIds,
       });
 
       // Store new credentials to show in dialog
-      setNewUserCreds({ email: formData.email, password: res.generatedPassword });
+      setNewUserCreds({ 
+        email: formData.email, 
+        password: res.generatedPassword,
+        extension: res.extension 
+      });
       setShowCredDialog(true);
 
       toast.success('User created successfully!');
@@ -122,6 +159,19 @@ export default function AddUserDialog({ open, onOpenChange }: AddUserDialogProps
     }
   };
 
+  const getCategoryDisplayName = (category: string): string => {
+    const names: Record<string, string> = {
+      users: 'Users',
+      campaigns: 'Campaigns',
+      wallet: 'Wallet',
+      dashboard: 'Dashboard',
+      settings: 'Settings',
+      programs: 'Programs',
+      all_access: 'All Access'
+    };
+    return names[category] || category;
+  };
+
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
@@ -129,7 +179,7 @@ export default function AddUserDialog({ open, onOpenChange }: AddUserDialogProps
           <DialogHeader>
             <DialogTitle>Add User</DialogTitle>
             <DialogDescription>
-              Create a user and assign one or more permissions
+              Create a user and assign permissions. Default permissions (Settings & Programs view) are included automatically.
             </DialogDescription>
           </DialogHeader>
 
@@ -187,64 +237,80 @@ export default function AddUserDialog({ open, onOpenChange }: AddUserDialogProps
 
             {/* Permissions */}
             <div>
-              <Label>Setup Permissions</Label>
-              <ScrollArea className="h-80 border rounded-lg p-3">
-                {Object.entries(groupedPermissions).map(([category, perms]) => (
-                  <div key={category} className="mb-4">
-                    <div className="flex items-center justify-between">
-                      <h4 className="text-xs font-semibold text-muted-foreground uppercase">
-                        {category}
-                      </h4>
-                      <Badge
-                        variant="outline"
-                        className="cursor-pointer hover:bg-primary/10 hover:text-primary transition-colors"
-                        onClick={() =>
-                          setExpanded((prev) => ({ ...prev, [category]: !prev[category] }))
-                        }
-                      >
-                        {expanded[category] ? 'Hide' : 'Show'}
-                      </Badge>
-                    </div>
+              <Label>Permissions</Label>
+              <p className="text-xs text-muted-foreground mb-2">
+                Settings view and Programs view are included by default
+              </p>
+              <ScrollArea className="h-96 border rounded-lg p-3">
+                {sortedCategories.map((category) => {
+                  const perms = groupedPermissions[category] || [];
+                  const categoryPermIds = perms.map((p) => p._id);
+                  const allSelected = categoryPermIds.every((id) => selectedPermissions.includes(id));
+                  const someSelected = categoryPermIds.some((id) => selectedPermissions.includes(id));
 
-                    {expanded[category] && (
-                      <div className="mt-2 space-y-2">
-                        {perms?.map((perm) => (
-                          <div
-                            key={perm._id}
-                            className="flex items-center justify-between p-2 hover:bg-muted/20 rounded-lg transition"
-                          >
-                            <div className="flex items-center gap-3">
-                              <Checkbox
-                                checked={selectedPermissions.includes(perm._id)}
-                                onCheckedChange={() => handleTogglePermission(perm._id)}
-                              />
-                              <div className="flex items-center gap-2">
-                                <span className="text-sm">{perm.name}</span>
-                                {perm.is_default && <Badge variant="secondary">Default</Badge>}
-                              </div>
-                            </div>
-                            {perm.description && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="hover:bg-transparent hover:text-primary"
-                                onClick={() =>
-                                  setExpanded((prev) => ({ ...prev, [perm.key]: !prev[perm.key] }))
-                                }
-                              >
-                                <Eye
-                                  className={`h-4 w-4 ${
-                                    expanded[perm.key] ? 'text-primary' : 'text-muted-foreground'
-                                  }`}
-                                />
-                              </Button>
-                            )}
-                          </div>
-                        ))}
+                  return (
+                    <div key={category} className="mb-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <Checkbox
+                            checked={allSelected}
+                            onCheckedChange={() => handleToggleCategory(category, perms)}
+                            className={someSelected && !allSelected ? 'opacity-50' : ''}
+                          />
+                          <h4 className="text-sm font-semibold text-foreground">
+                            {getCategoryDisplayName(category)}
+                          </h4>
+                        </div>
+                        <Badge
+                          variant="outline"
+                          className="cursor-pointer hover:bg-primary/10 hover:text-primary transition-colors"
+                          onClick={() =>
+                            setExpanded((prev) => ({ ...prev, [category]: !prev[category] }))
+                          }
+                        >
+                          {expanded[category] ? 'Hide' : 'Show'}
+                        </Badge>
                       </div>
-                    )}
-                  </div>
-                ))}
+
+                      {expanded[category] && (
+                        <div className="ml-6 space-y-2">
+                          {perms.map((perm) => (
+                            <div
+                              key={perm._id}
+                              className="flex items-center justify-between p-2 hover:bg-muted/20 rounded-lg transition"
+                            >
+                              <div className="flex items-center gap-3 flex-1">
+                                <Checkbox
+                                  checked={selectedPermissions.includes(perm._id)}
+                                  onCheckedChange={() => handleTogglePermission(perm._id)}
+                                  disabled={perm.is_default}
+                                />
+                                <div className="flex items-center gap-2 flex-1">
+                                  <span className="text-sm">{perm.name}</span>
+                                  {perm.is_default && (
+                                    <Badge variant="secondary" className="text-xs">
+                                      Default
+                                    </Badge>
+                                  )}
+                                </div>
+                              </div>
+                              {perm.description && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="hover:bg-transparent hover:text-primary"
+                                  title={perm.description}
+                                >
+                                  <Eye className="h-4 w-4 text-muted-foreground" />
+                                </Button>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </ScrollArea>
             </div>
 
@@ -261,6 +327,7 @@ export default function AddUserDialog({ open, onOpenChange }: AddUserDialogProps
         onOpenChange={setShowCredDialog}
         email={newUserCreds?.email || ''}
         password={newUserCreds?.password || ''}
+        extension={newUserCreds?.extension || ''}
       />
     </>
   );

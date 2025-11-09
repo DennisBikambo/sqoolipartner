@@ -13,6 +13,7 @@ export const createCampaign = mutation({
   args: {
     partner_id: v.id("partners"),
     program_id: v.id("programs"),
+    user_id: v.id("users"),
     name: v.string(),
     duration_start: v.string(),
     duration_end: v.string(),
@@ -56,6 +57,7 @@ export const createCampaign = mutation({
       name: args.name,
       program_id: args.program_id,
       partner_id: args.partner_id,
+      user_id: args.user_id,
       promo_code: promoCode,
       target_signups: args.target_signups,
       daily_target: dailyTarget,

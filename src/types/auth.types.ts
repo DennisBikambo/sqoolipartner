@@ -115,6 +115,19 @@ export interface AuthenticatedUser {
   is_first_login: boolean;
 }
 
+export interface Partner {
+  _id: Id<"partners">;
+  _creationTime: number;
+  name: string;
+  laravelUserId?: number;
+  email: string;
+  phone?: string;
+  is_first_login?: boolean;
+  username?: string;
+  role?: string;
+  permission_ids: Id<"permissions">[]; 
+}
+
 /**
  * Convex User data (from users table - for extension-based logins)
  */
@@ -126,7 +139,7 @@ export interface ConvexUser {
   name: string;
   phone?: string;
   role: "partner_admin" | "accountant" | "campaign_manager" | "viewer" | "super_agent" | "master_agent" | "merchant_admin";
-  permission_id: Id<"permissions">;
+  permission_ids: Id<"permissions">[];
   extension: string;
   is_active: boolean;
   is_first_login: boolean;
@@ -146,6 +159,7 @@ export interface ConvexPartner {
   email: string;
   phone: string;
   is_first_login: boolean;
+  permission_ids: Id<"permissions">[];
   username: string;
   role: string;
 }

@@ -1,35 +1,29 @@
+// PermissionProvider.tsx
 import type { ReactNode } from "react";
 import { PermissionContext, type Permission } from "./PermissionContext";
-import { useQuery } from 'convex/react';
-import { api } from '../../convex/_generated/api';
-import { useAuth } from '../hooks/useAuth';
-import type { Id } from '../../convex/_generated/dataModel';
-import { useState, useEffect, useMemo } from 'react';
+import { useQuery } from "convex/react";
+import { api } from "../../convex/_generated/api";
+import { useAuth } from "../hooks/useAuth";
+import type { Id } from "../../convex/_generated/dataModel";
+import { useState, useEffect, useMemo } from "react";
+import { isConvexUser, type Partner } from "../types/auth.types";
 
 export function PermissionProvider({ children }: { children: ReactNode }) {
   const { user, partner, loading: authLoading, loginMethod } = useAuth();
-  const [userPermissionIds, setUserPermissionIds] = useState<Id<'permissions'>[]>([]);
+  const [userPermissionIds, setUserPermissionIds] = useState<Id<"permissions">[]>([]);
 
-  // 🧩 Extract permission IDs from user or partner
+  // Load permission IDs from user or partner
   useEffect(() => {
-    const hasPermissionIds = (obj: unknown): obj is { permission_ids: Id<'permissions'>[] } => {
-      if (typeof obj !== 'object' || obj === null) return false;
-      return (
-        'permission_ids' in obj &&
-        Array.isArray((obj as { permission_ids?: unknown }).permission_ids)
-      );
-    };
-
-    if (loginMethod === 'convex' && user && hasPermissionIds(user)) {
-      setUserPermissionIds(user.permission_ids);
-    } else if (loginMethod === 'laravel' && partner && hasPermissionIds(partner)) {
-      setUserPermissionIds(partner.permission_ids);
+    if (loginMethod === "convex" && isConvexUser(user)) {
+      setUserPermissionIds(user.permission_ids ?? []);
+    } else if (loginMethod === "laravel" && partner) {
+      setUserPermissionIds((partner as Partner).permission_ids ?? []);
     } else {
       setUserPermissionIds([]);
     }
   }, [user, partner, loginMethod]);
 
-  // 🧠 Fetch all permissions belonging to this user
+  // Fetch permission objects from Convex
   const rawPermissions = useQuery(
     api.permission.getPermissionsByIds,
     userPermissionIds.length > 0 ? { permission_ids: userPermissionIds } : "skip"
@@ -38,12 +32,12 @@ export function PermissionProvider({ children }: { children: ReactNode }) {
   const permissions: Permission[] = useMemo(() => {
     if (!rawPermissions) return [];
 
-    // Narrow type to ensure _id exists on each permission before mapping
-    const hasId = (p: typeof rawPermissions[number]): p is typeof p & { _id: Id<'permissions'> } =>
-      p?._id !== undefined && p?._id !== null;
-
+    // Ensure _id exists to match Permission type
     return rawPermissions
-      .filter(hasId)
+      .filter(
+        (p): p is { _id: Id<"permissions">; _creationTime?: number } & typeof p =>
+          Boolean(p?._id)
+      )
       .map((p) => ({
         ...p,
         _id: p._id,
@@ -53,29 +47,28 @@ export function PermissionProvider({ children }: { children: ReactNode }) {
 
   const loading = authLoading || (userPermissionIds.length > 0 && rawPermissions === undefined);
 
-  // ✅ Permission checking helpers (now works with arrays)
+  // Check if user has exact permission by key
   const hasPermission = (permissionKey: string): boolean => {
-    if (!permissions.length) return false;
-    return permissions.some(
-      (p) => p.key === 'admin.all.access' || p.level === 'full' || p.key === permissionKey
-    );
+    return permissions.some((p) => p.key === permissionKey);
   };
 
+  // Check if user has exact level in a category
+  const hasLevel = (level: "read" | "write" | "admin" | "full"): boolean => {
+    return permissions.some((p) => p.level === level);
+  };
+
+  // Check if user has permission in a category
   const hasCategory = (category: string): boolean => {
-    if (!permissions.length) return false;
-    return permissions.some(
-      (p) => p.key === 'admin.all.access' || p.level === 'full' || p.category === category
-    );
+    return permissions.some((p) => p.category === category);
   };
 
-  const hasLevel = (level: 'read' | 'write' | 'admin' | 'full'): boolean => {
-    if (!permissions.length) return false;
-    const levelHierarchy = { read: 1, write: 2, admin: 3, full: 4 };
-    return permissions.some((p) => {
-      const userLevel = levelHierarchy[p.level as keyof typeof levelHierarchy] || 0;
-      const requiredLevel = levelHierarchy[level];
-      return userLevel >= requiredLevel;
-    });
+  // Strict read/write checks
+  const canRead = (category: string): boolean => {
+    return permissions.some((p) => p.category === category && p.level === "read");
+  };
+
+  const canWrite = (category: string): boolean => {
+    return permissions.some((p) => p.category === category && p.level === "write");
   };
 
   return (
@@ -85,6 +78,8 @@ export function PermissionProvider({ children }: { children: ReactNode }) {
         hasPermission,
         hasCategory,
         hasLevel,
+        canRead,
+        canWrite,
         loading,
       }}
     >

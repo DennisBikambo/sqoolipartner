@@ -18,12 +18,24 @@ function TooltipProvider({
   )
 }
 
+interface TooltipProps extends React.ComponentProps<typeof TooltipPrimitive.Root> {
+  content: string;
+  side?: "top" | "right" | "bottom" | "left";
+  children: React.ReactElement;
+}
+
 function Tooltip({
+  children,
+  content,
+  side = "top",
   ...props
-}: React.ComponentProps<typeof TooltipPrimitive.Root>) {
+}: TooltipProps) {
   return (
     <TooltipProvider>
-      <TooltipPrimitive.Root data-slot="tooltip" {...props} />
+      <TooltipPrimitive.Root data-slot="tooltip" {...props}>
+        <TooltipTrigger asChild>{children}</TooltipTrigger>
+        <TooltipContent side={side}>{content}</TooltipContent>
+      </TooltipPrimitive.Root>
     </TooltipProvider>
   )
 }

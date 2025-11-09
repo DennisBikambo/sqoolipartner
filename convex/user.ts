@@ -233,3 +233,36 @@ export const login = mutation({
     };
   },
 });
+
+
+export const getUserByCampaign = query({
+  args: {
+    campaignId: v.id("campaigns"), 
+  },
+  handler: async ({ db }, { campaignId }) => {
+    // Fetch the campaign record
+    const campaign = await db.get(campaignId);
+    if (!campaign) {
+      throw new Error("Campaign not found");
+    }
+
+    // Ensure the campaign has a userId field
+    if (!campaign.user_id) {
+      throw new Error("Campaign has no associated user");
+    }
+
+    // Fetch the user linked to this campaign
+    const user = await db.get(campaign.user_id);
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    // Return minimal user info (you can expand if needed)
+    return {
+      _id: user._id,
+      name: user.name ?? "Unknown User",
+      email: user.email ?? "N/A",
+      createdAt: user._creationTime,
+    };
+  },
+})

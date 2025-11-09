@@ -24,6 +24,7 @@ const steps = [
 
 interface WizardState {
   program_id: Id<"programs"> | "";
+
   name: string;
   duration_start: string;
   duration_end: string;
@@ -35,10 +36,12 @@ interface WizardState {
 
 export default function CreateCampaignWizard({
   partnerId,
+  user_id,
   open,
   onClose,
 }: {
   partnerId: Id<"partners">;
+  user_id: Id<"users">;
   open: boolean;
   onClose?: () => void;
 }) {
@@ -173,6 +176,7 @@ export default function CreateCampaignWizard({
 
       const insertedId = await createCampaign({
         partner_id: partnerId,
+        user_id: user_id,
         program_id: state.program_id as Id<"programs">,
         name: state.name,
         duration_start: state.duration_start,

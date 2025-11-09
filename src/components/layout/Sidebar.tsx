@@ -72,10 +72,9 @@ export function AppSidebar({
   onSelect
 }: AppSidebarProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const { hasPermission, hasCategory, permissions, loading } = usePermissions();
+  const { hasPermission, hasCategory, permissions, loading,hasLevel } = usePermissions();
 
-  // Debug: Log the current permission
-  console.log('Current User Permissions:', permissions);
+
 
 
   const handleSelect = (id: string, isLocked: boolean) => {
@@ -91,12 +90,14 @@ export function AppSidebar({
     // If still loading permissions, deny access temporarily
     if (loading || !permissions) return false;
 
-    if (permissions.key === 'admin.all.access' || permissions.level === 'full') return true;
+    if (hasLevel('full')) return true;
     if (item.requiredPermission && hasPermission(item.requiredPermission)) return true;
     if (item.requiredCategory && hasCategory(item.requiredCategory)) return true;
 
     return false;
   };
+
+  
 
   return (
     <>
@@ -140,17 +141,6 @@ export function AppSidebar({
               const isActive = id === activeItem;
               const hasAccess = checkAccess({ id, label, icon: Icon, ...permissionReq });
               const isLocked = !hasAccess;
-
-              // Debug log for campaigns specifically
-              if (id === 'campaigns') {
-                console.log('Campaigns Access Check:', {
-                  hasAccess,
-                  isLocked,
-                  permission: permissions,
-                  category: permissions?.category
-                });
-              }
-
               return (
                 <button
                   key={id}

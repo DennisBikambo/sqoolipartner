@@ -4,15 +4,18 @@ import { Copy } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../../components/ui/dialog';
 import { Button } from '../../components/ui/button';
 import { toast } from 'sonner';
+import { Input } from '../ui/input';
+import { Label } from '../ui/label';
 
 interface UserCredentialsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   email: string;
   password: string;
+  extension: string;
 }
 
-export function UserCredentialsDialog({ open, onOpenChange, email, password }: UserCredentialsDialogProps) {
+export function UserCredentialsDialog({ open, onOpenChange, email, password , extension}: UserCredentialsDialogProps) {
   const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text);
     toast.success('Copied to clipboard!');
@@ -48,6 +51,15 @@ export function UserCredentialsDialog({ open, onOpenChange, email, password }: U
             >
               <Copy className="w-4 h-4 text-muted-foreground hover:text-primary" />
             </Button>
+          </div>
+          <div>
+            <Label>Extension (Login ID)</Label>
+            <div className="flex gap-2">
+              <Input value={extension} readOnly />
+              <Button onClick={() => navigator.clipboard.writeText(extension)}>
+                Copy
+              </Button>
+            </div>
           </div>
           <Button className="w-full" onClick={() => onOpenChange(false)}>
             Done

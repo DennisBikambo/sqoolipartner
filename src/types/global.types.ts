@@ -55,6 +55,7 @@ export interface DashboardCampaign {
   duration_end: string;
   status: string;
   revenue_projection: number;
+  target_signups: number;
 }
 
 export interface DashboardEnrollment {

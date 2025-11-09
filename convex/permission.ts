@@ -56,3 +56,4 @@ export const getPermissionsByIds = query({
     return permissions.filter(Boolean);
   },
 });
+
