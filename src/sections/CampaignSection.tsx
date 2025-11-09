@@ -31,6 +31,7 @@ import { CampaignDetailDialog } from "../components/common/CampaignDetails";
 import { ConfirmDialog } from "../components/common/ConfirmationDialog";
 import type { Doc } from "../../convex/_generated/dataModel";
 import { toast } from "sonner";
+import CreateCampaignWizard from "../components/common/CreateCampaign";
 
 export default function CampaignSection() {
   const [activeTab, setActiveTab] = useState<"active" | "expired" | "draft">("active");

@@ -11,7 +11,7 @@ export default defineSchema({
     name: v.string(),
     laravelUserId: v.number(),
     is_first_login: v.boolean(),
-    permission_id: v.id("permissions"),
+    permission_ids: v.array(v.id("permissions")),
     email: v.string(),
     phone: v.string(),
     username: v.string(),

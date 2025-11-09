@@ -15,6 +15,7 @@ import { ScrollArea } from '../components/ui/scroll-area';
 import { useAuth } from '../hooks/useAuth';
 import AddUserDialog from '../components/common/AddUserDialog';
 import { ConfirmDialog } from '../components/common/ConfirmationDialog';
+import ViewUserDialog, {type ViewUser} from '../components/common/ViewUserDialog';
 
 export default function UserSection() {
   const [showAddModal, setShowAddModal] = useState(false);
@@ -23,6 +24,13 @@ export default function UserSection() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<Id<'users'> | null>(null);
   const [isActivating, setIsActivating] = useState(false);
+  const [viewUser, setViewUser] = useState<ViewUser | null>(null);
+  const [viewOpen, setViewOpen] = useState(false);
+
+  const handleViewUser = (user: ViewUser) => {
+    setViewUser(user);
+    setViewOpen(true);
+};
 
   const { partner } = useAuth();
   const partnerId = partner?._id;
@@ -165,7 +173,7 @@ export default function UserSection() {
                           </div>
                         </div>
                         <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Button variant="ghost" size="icon">
+                          <Button variant="ghost" size="icon" onClick={() => handleViewUser(user as ViewUser)}>
                             <Eye className="h-4 w-4 text-primary" />
                           </Button>
                           <Button
@@ -198,7 +206,7 @@ export default function UserSection() {
                           </div>
                         </div>
                         <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Button variant="ghost" size="icon">
+                          <Button variant="ghost" size="icon" onClick={() => handleViewUser(user as ViewUser)}>
                             <Eye className="h-4 w-4 text-primary" />
                           </Button>
                           <Button
@@ -238,6 +246,8 @@ export default function UserSection() {
         confirmLabel={isActivating ? "Activate" : "Inactivate"}
         onConfirm={handleConfirmToggle}
       />
+
+      <ViewUserDialog open={viewOpen} onOpenChange={setViewOpen} user={viewUser} />
     </div>
   );
 }

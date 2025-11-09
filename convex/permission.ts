@@ -47,11 +47,12 @@ export const getAllPermissions = query({
   },
 });
 
-export const getPermissionById = query({
-  args: { permission_id: v.id("permissions") },
+export const getPermissionsByIds = query({
+  args: { permission_ids: v.array(v.id("permissions")) },
   handler: async (ctx, args) => {
-    const permission = await ctx.db.get(args.permission_id);
-    if (!permission) throw new Error("Permission not found");
-    return permission;
+    const permissions = await Promise.all(
+      args.permission_ids.map(id => ctx.db.get(id))
+    );
+    return permissions.filter(Boolean);
   },
 });

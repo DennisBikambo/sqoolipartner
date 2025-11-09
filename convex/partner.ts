@@ -84,7 +84,7 @@ export const register = mutation({
       phone: args.phone,
       username: args.username,
       is_first_login: true,
-      permission_id: defaultPermission._id,
+      permission_ids: [defaultPermission._id],
     });
 
     return {

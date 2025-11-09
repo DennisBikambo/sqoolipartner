@@ -13,7 +13,7 @@ export interface Permission {
 }
 
 export interface PermissionContextType {
-  permissions: Permission | null;
+  permissions: Permission[] | null;
   hasPermission: (permissionKey: string) => boolean;
   hasCategory: (category: string) => boolean;
   hasLevel: (level: 'read' | 'write' | 'admin' | 'full') => boolean;

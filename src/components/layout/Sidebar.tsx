@@ -75,9 +75,8 @@ export function AppSidebar({
   const { hasPermission, hasCategory, permissions, loading } = usePermissions();
 
   // Debug: Log the current permission
-  console.log('Current User Permission:', permissions);
-  console.log('Has campaigns category?', hasCategory('campaigns'));
-  console.log('Loading?', loading);
+  console.log('Current User Permissions:', permissions);
+
 
   const handleSelect = (id: string, isLocked: boolean) => {
     if (isLocked) {

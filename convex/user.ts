@@ -47,7 +47,7 @@ export const createUser = mutation({
       v.literal("master_agent"),
       v.literal("merchant_admin")
     ),
-    permission_ids: v.array(v.id("permissions")), // ✅ multiple permissions
+    permission_ids: v.array(v.id("permissions")), 
   },
   handler: async (ctx, args) => {
     const existingUser = await ctx.db
@@ -72,7 +72,7 @@ export const createUser = mutation({
       name: args.name,
       phone: args.phone,
       role: args.role,
-      permission_ids: args.permission_ids, // ✅ array stored here
+      permission_ids: args.permission_ids, 
       extension,
       is_active: true,
       is_first_login: true,
