@@ -25,7 +25,6 @@ function generateExtension(): string {
   for (let i = 0; i < 8; i++) {
     extension += chars.charAt(Math.floor(Math.random() * chars.length));
   }
-  // Add small random suffix to reduce collision chances
   const randomSuffix = Math.floor(1000 + Math.random() * 9000).toString();
   return `${extension}-${randomSuffix}`;
 }
@@ -48,7 +47,7 @@ export const createUser = mutation({
       v.literal("master_agent"),
       v.literal("merchant_admin")
     ),
-    permission_id: v.id("permissions"),
+    permission_ids: v.array(v.id("permissions")), // ✅ multiple permissions
   },
   handler: async (ctx, args) => {
     const existingUser = await ctx.db
@@ -61,8 +60,7 @@ export const createUser = mutation({
     }
 
     const generatedPassword = generateRandomPassword(10);
-    const extension = generateExtension(); // ✅ Generate secure unique extension
-    console.log(generatedPassword)
+    const extension = generateExtension();
 
     // ✅ Use synchronous hash to avoid Convex setTimeout error
     const password_hash = bcrypt.hashSync(generatedPassword, 10);
@@ -74,8 +72,8 @@ export const createUser = mutation({
       name: args.name,
       phone: args.phone,
       role: args.role,
-      permission_id: args.permission_id,
-      extension, 
+      permission_ids: args.permission_ids, // ✅ array stored here
+      extension,
       is_active: true,
       is_first_login: true,
       last_login: undefined,
@@ -87,7 +85,7 @@ export const createUser = mutation({
       message: "User created successfully",
       userId,
       generatedPassword,
-      extension, 
+      extension,
     };
   },
 });
@@ -96,29 +94,36 @@ export const createUser = mutation({
  * 📄 Get all users (optionally filtered by partner)
  */
 export const getUsers = query({
-  args: {
-    partner_id: v.optional(v.id("partners")),
-  },
+  args: { partner_id: v.optional(v.id("partners")) },
   handler: async (ctx, args) => {
-    if (args.partner_id) {
-      return await ctx.db
-        .query("users")
-        .withIndex("by_partner_id", (q) => q.eq("partner_id", args.partner_id!))
-        .collect();
-    }
-    return await ctx.db.query("users").collect();
+    const users = args.partner_id
+      ? await ctx.db
+          .query("users")
+          .withIndex("by_partner_id", (q) =>
+            q.eq("partner_id", args.partner_id!)
+          )
+          .collect()
+      : await ctx.db.query("users").collect();
+
+    return users;
   },
 });
 
 /**
- * 📄 Get single user by ID
+ * 📄 Get single user by ID (with expanded permissions)
  */
 export const getUserById = query({
   args: { user_id: v.id("users") },
   handler: async (ctx, args) => {
     const user = await ctx.db.get(args.user_id);
     if (!user) throw new Error("User not found");
-    return user;
+
+    // ✅ Fetch permissions linked to the user
+    const permissions = await Promise.all(
+      (user.permission_ids || []).map((id) => ctx.db.get(id))
+    );
+
+    return { ...user, permissions: permissions.filter(Boolean) };
   },
 });
 
@@ -145,7 +150,7 @@ export const updateUser = mutation({
     is_active: v.optional(v.boolean()),
     is_account_activated: v.optional(v.boolean()),
     is_first_login: v.optional(v.boolean()),
-    permission_id: v.optional(v.id("permissions")),
+    permission_ids: v.optional(v.array(v.id("permissions"))), // ✅ multiple permissions
     password: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
@@ -191,10 +196,7 @@ export const deleteUser = mutation({
  * 🔐 Login user
  */
 export const login = mutation({
-  args: {
-    email: v.string(),
-    password: v.string(),
-  },
+  args: { email: v.string(), password: v.string() },
   handler: async (ctx, args) => {
     const user = await ctx.db
       .query("users")
@@ -211,6 +213,11 @@ export const login = mutation({
       is_first_login: false,
     });
 
+    // ✅ Fetch permissions
+    const permissions = await Promise.all(
+      (user.permission_ids || []).map((id) => ctx.db.get(id))
+    );
+
     return {
       message: "Login successful",
       user: {
@@ -221,6 +228,7 @@ export const login = mutation({
         partner_id: user.partner_id,
         is_account_activated: user.is_account_activated,
         extension: user.extension,
+        permissions: permissions.filter(Boolean),
       },
     };
   },

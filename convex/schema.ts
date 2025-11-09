@@ -34,7 +34,7 @@ export default defineSchema({
       v.literal("master_agent"),
       v.literal("merchant_admin")
     ), 
-    permission_id: v.id("permissions"), 
+    permission_ids: v.array(v.id("permissions")),
     is_active: v.boolean(),
     is_account_activated: v.boolean(),
     is_first_login: v.boolean(),
@@ -43,7 +43,7 @@ export default defineSchema({
   })
     .index("by_email", ["email"])
     .index("by_partner_id", ["partner_id"])
-    .index("by_permission_id", ["permission_id"])
+    .index("by_permission_ids", ["permission_ids"])
     .index("by_role", ["role"]),
   
   /**
