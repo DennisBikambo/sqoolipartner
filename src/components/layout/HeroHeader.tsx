@@ -14,6 +14,7 @@ export function HeroHeader() {
   const { theme, setTheme } = useTheme();
   const [menuOpen, setMenuOpen] = useState(false);
   const { user, loading } = useAuth();
+  console.log(user)
 
   return (
     <header className="sticky top-0 z-50 w-full bg-background border-b border-border">

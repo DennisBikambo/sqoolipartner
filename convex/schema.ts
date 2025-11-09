@@ -11,6 +11,7 @@ export default defineSchema({
     name: v.string(),
     laravelUserId: v.number(),
     is_first_login: v.boolean(),
+    permission_id: v.id("permissions"),
     email: v.string(),
     phone: v.string(),
     username: v.string(),
@@ -23,6 +24,7 @@ export default defineSchema({
     password_hash: v.string(),
     name: v.string(),
     phone: v.optional(v.string()),
+    extension:v.string(),
     role: v.union(
       v.literal("partner_admin"),
       v.literal("accountant"),
@@ -277,6 +279,15 @@ export default defineSchema({
     .index("by_user_id", ["user_id"])
     .index("by_partner_id", ["partner_id"])
     .index("by_action", ["action"]),
+
+  
+  sessions: defineTable({
+    user_id: v.id("users"),
+    token: v.string(), 
+    expires_at: v.string(), 
+    created_at: v.string(),
+  }).index("by_token", ["token"])
+    .index("by_user_id", ["user_id"]),
 
 });
 

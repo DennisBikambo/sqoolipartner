@@ -68,6 +68,14 @@ export const register = mutation({
     if (existing) {
       throw new Error("Email already exists");
     }
+     
+    const defaultPermission = await ctx.db
+      .query("permissions")
+      .filter((q) => q.eq(q.field("is_default"), true))
+      .first();
+    if (!defaultPermission) {
+      throw new Error("Default permission not found");
+    }
 
     const partnerId = await ctx.db.insert("partners", {
       name: args.name,
@@ -76,6 +84,7 @@ export const register = mutation({
       phone: args.phone,
       username: args.username,
       is_first_login: true,
+      permission_id: defaultPermission._id,
     });
 
     return {
@@ -128,5 +137,14 @@ export const completeOnboarding = mutation({
   args: { partnerId: v.id("partners") },
   handler: async (ctx, args) => {
     await ctx.db.patch(args.partnerId, { is_first_login: false });
+  },
+});
+
+
+export const getById = query({
+  args: { partner_id: v.id("partners") },
+  handler: async (ctx, args) => {
+    const partner = await ctx.db.get(args.partner_id);
+    return partner;
   },
 });

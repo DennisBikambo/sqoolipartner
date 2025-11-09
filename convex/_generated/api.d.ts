@@ -24,6 +24,7 @@ import type * as permission from "../permission.js";
 import type * as program from "../program.js";
 import type * as program_enrollments from "../program_enrollments.js";
 import type * as program_subjects from "../program_subjects.js";
+import type * as session from "../session.js";
 import type * as subjects from "../subjects.js";
 import type * as transactions from "../transactions.js";
 import type * as user from "../user.js";
@@ -49,6 +50,7 @@ declare const fullApi: ApiFromModules<{
   program: typeof program;
   program_enrollments: typeof program_enrollments;
   program_subjects: typeof program_subjects;
+  session: typeof session;
   subjects: typeof subjects;
   transactions: typeof transactions;
   user: typeof user;

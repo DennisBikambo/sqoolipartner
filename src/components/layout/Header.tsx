@@ -15,27 +15,28 @@ import ThemeButton from '../common/ThemeButton';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { handleLogout } from '../../utils/handleLogout';
+import { getDisplayName, getUserEmail, getUserInitials, isConvexUser, isLaravelUser } from '../../types/auth.types';
 
 interface HeaderProps {
   title?: string;
 }
 
 export function Header({ title = 'Dashboard' }: HeaderProps) {
-  const { user, loading, partner } = useAuth();
+  const { user, loading, partner, loginMethod } = useAuth();
   const { setTheme, theme } = useTheme();
   const navigate = useNavigate();
 
-  const getInitials = (name?: string) => {
-    if (!name) return '?';
-    return name
-      .split(' ')
-      .map((n) => n[0])
-      .join('')
-      .toUpperCase();
-  };
-
   const onLogout = async () => {
     try {
+      if (loginMethod === 'convex') {
+        // Clear Convex session cookie
+        document.cookie = 'convex_session=; path=/; max-age=0';
+        toast.success('Logged out successfully 👋');
+        navigate('/signIn');
+        return;
+      }
+
+      // Laravel logout
       const result = await handleLogout();
       if (result?.success) {
         toast.success('Logged out successfully 👋');
@@ -43,7 +44,8 @@ export function Header({ title = 'Dashboard' }: HeaderProps) {
       } else {
         toast.error('Logout failed. Please try again.');
       }
-    } catch {
+    } catch (error) {
+      console.error('Logout error:', error);
       toast.error('An unexpected error occurred during logout.');
     }
   };
@@ -70,13 +72,19 @@ export function Header({ title = 'Dashboard' }: HeaderProps) {
     );
   }
 
-  const fullName =
-    'first_name' in user && 'last_name' in user
-      ? `${user.first_name || ''} ${user.last_name || ''}`.trim()
-      : partner?.name;
+  // Use type-safe helper functions
+  const fullName = getDisplayName(user);
+  const email = getUserEmail(user);
+  const initials = getUserInitials(user);
 
-  const email = 'email' in user ? user.email : '';
-  const avatarUrl = 'avatar' in user && typeof user.avatar === 'string' ? user.avatar : '';
+  // Get avatar (only Laravel users have this field)
+  const avatarUrl = isLaravelUser(user) && 'avatar' in user && typeof user.avatar === 'string' 
+    ? user.avatar 
+    : '';
+
+  // Get additional info for Convex users
+  const userRole = isConvexUser(user) ? user.role : null;
+  const userExtension = isConvexUser(user) ? user.extension : null;
 
   return (
     <header className="w-full bg-background border-b border-border shrink-0">
@@ -102,7 +110,7 @@ export function Header({ title = 'Dashboard' }: HeaderProps) {
                 <Avatar className="h-8 w-8">
                   <AvatarImage src={avatarUrl} alt={fullName} />
                   <AvatarFallback className="bg-gradient-to-br from-primary to-secondary border border-border text-xs text-primary-foreground">
-                    {getInitials(fullName)}
+                    {initials}
                   </AvatarFallback>
                 </Avatar>
                 <div className="hidden lg:flex flex-col items-start max-w-[150px]">
@@ -112,6 +120,12 @@ export function Header({ title = 'Dashboard' }: HeaderProps) {
                   {email && (
                     <span className="text-xs text-muted-foreground truncate w-full">
                       {email}
+                    </span>
+                  )}
+                  {/* Show role for Convex users */}
+                  {userRole && (
+                    <span className="text-xs text-muted-foreground truncate w-full capitalize">
+                      {userRole.replace(/_/g, ' ')}
                     </span>
                   )}
                 </div>
@@ -124,6 +138,24 @@ export function Header({ title = 'Dashboard' }: HeaderProps) {
               <DropdownMenuSeparator />
               <DropdownMenuItem>Profile</DropdownMenuItem>
               <DropdownMenuItem>Settings</DropdownMenuItem>
+              
+              {/* Show partner organization info */}
+              {partner && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuLabel className="text-xs text-muted-foreground">
+                    Organization: {partner.name}
+                  </DropdownMenuLabel>
+                </>
+              )}
+              
+              {/* Show extension for Convex users */}
+              {userExtension && (
+                <DropdownMenuLabel className="text-xs text-muted-foreground">
+                  Extension: {userExtension}
+                </DropdownMenuLabel>
+              )}
+              
               <DropdownMenuSeparator />
               <DropdownMenuItem className="text-destructive" onClick={onLogout}>
                 Log out

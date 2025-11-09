@@ -11,18 +11,20 @@ import { useNavigate } from 'react-router-dom';
 import { HeroHeader } from '../components/layout/HeroHeader';
 import discussion from "../assets/discussion.webp";
 import { useAuth } from '../hooks/useAuth';
-
+import { useMutation as useConvexMutation } from 'convex/react';
+import { api } from '../../convex/_generated/api';
 
 export default function SignIn() {
-  const { user} = useAuth();
+  const { user } = useAuth();
   const [showPassword, setShowPassword] = React.useState(false);
   const [isLoading, setIsLoading] = React.useState(false);
   const [touchedFields, setTouchedFields] = React.useState<Set<keyof LoginFormData>>(new Set());
   const [errors, setErrors] = React.useState<LoginValidationErrors>({});
   const navigate = useNavigate();
 
-
- 
+  // Convex mutations
+  const loginMutation = useConvexMutation(api.user.login);
+  const createSessionMutation = useConvexMutation(api.session.createSession);
 
   const [loginData, setLoginData] = React.useState<LoginFormData>({
     email: '',
@@ -59,36 +61,84 @@ export default function SignIn() {
   };
 
   const handleSubmit = async () => {
-    const allFields = new Set(Object.keys(loginData) as (keyof LoginFormData)[])
-    setTouchedFields(allFields)
+    const allFields = new Set(Object.keys(loginData) as (keyof LoginFormData)[]);
+    setTouchedFields(allFields);
 
-    const newErrors = validateLoginData(loginData)
-    setErrors(newErrors)
+    const newErrors = validateLoginData(loginData);
+    setErrors(newErrors);
 
     if (Object.keys(newErrors).length > 0) {
-      toast.error('Please correct the highlighted errors before continuing.')
-      return
+      toast.error('Please correct the highlighted errors before continuing.');
+      return;
     }
 
-    setIsLoading(true)
+    setIsLoading(true);
 
     try {
-      const result = await handleLogin(loginData)
+      // Check if extension exists in the URL
+      const urlParams = new URLSearchParams(window.location.search);
+      const extension = urlParams.get('extension') || undefined;
+
+      let result;
+      if (extension) {
+        // Convex user login using hooks
+        try {
+          const loginResponse = await loginMutation({ 
+            email: loginData.email, 
+            password: loginData.password 
+          });
+
+          if (!loginResponse.user) {
+            throw new Error('Invalid login credentials.');
+          }
+
+          if (!loginResponse.user.is_account_activated) {
+            throw new Error('Account not activated. Contact your partner admin.');
+          }
+
+          const sessionResponse = await createSessionMutation({
+            user_id: loginResponse.user._id,
+          });
+
+          result = {
+            success: true,
+            message: 'Login successful',
+            session: sessionResponse,
+            user: loginResponse.user,
+          };
+        } catch (error: any) {
+          console.error('Convex login failed:', error);
+          result = {
+            success: false,
+            message: error.message || 'Login failed',
+          };
+        }
+      } else {
+        // Default Laravel login
+        result = await handleLogin(loginData);
+      }
 
       if (!result?.success) {
-        toast.error(result?.message || 'Invalid email or password')
-        return
+        toast.error(result?.message || 'Invalid email or password');
+        return;
       }
-      toast.success('Login successful! 🎉')
-      
-      navigate('/dashboard')
+
+      toast.success('Login successful! 🎉');
+
+      // Store the Convex session token in cookies if using Convex login
+      const sessionToken = (result as any)?.session?.token;
+      if (typeof sessionToken === 'string') {
+        document.cookie = `convex_session=${sessionToken}; path=/; max-age=${2 * 60 * 60}; SameSite=Lax`;
+      }
+
+      navigate('/dashboard');
     } catch (error) {
-      console.error('Login error:', error)
-      toast.error('An unexpected error occurred. Please try again.')
+      console.error('Login error:', error);
+      toast.error('An unexpected error occurred. Please try again.');
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && isFormValid() && !isLoading) {

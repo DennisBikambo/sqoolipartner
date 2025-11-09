@@ -112,7 +112,27 @@ export interface AuthenticatedUser {
   email_verified_at: string | null;
   created_at: string;
   updated_at: string;
-    is_first_login: boolean;
+  is_first_login: boolean;
+}
+
+/**
+ * Convex User data (from users table - for extension-based logins)
+ */
+export interface ConvexUser {
+  _id: Id<"users">;
+  _creationTime: number;
+  partner_id: Id<"partners">;
+  email: string;
+  name: string;
+  phone?: string;
+  role: "partner_admin" | "accountant" | "campaign_manager" | "viewer" | "super_agent" | "master_agent" | "merchant_admin";
+  permission_id: Id<"permissions">;
+  extension: string;
+  is_active: boolean;
+  is_first_login: boolean;
+  is_account_activated: boolean;
+  last_login?: string;
+  updated_at?: string;
 }
 
 /**
@@ -127,19 +147,13 @@ export interface ConvexPartner {
   phone: string;
   is_first_login: boolean;
   username: string;
-  role: string
+  role: string;
 }
 
 /**
  * Combined user type for components that need access to both
  */
-export type CombinedUser = AuthenticatedUser & {
-  // Add Convex partner fields as optional
-  _id?: Id<"partners">;
-  _creationTime?: number;
-  name?: string; // Convex uses 'name', Laravel uses 'first_name' + 'last_name'
-  laravelUserId?: number;
-};
+export type CombinedUser = AuthenticatedUser | ConvexUser;
 
 /**
  * Password strength result
@@ -162,21 +176,38 @@ export interface LogoutResponse {
  * useAuth hook return type
  */
 export interface UseAuthReturn {
-  user: AuthenticatedUser | null;
+  user: AuthenticatedUser | ConvexUser | null;
   partner: ConvexPartner | null;
   loading: boolean;
   error: string | null;
   isFirstLogin: boolean;
+  loginMethod: 'laravel' | 'convex' | null;
   refetch?: () => void | Promise<void>;
+}
+
+/**
+ * Type guard to check if user is a Convex user
+ */
+export function isConvexUser(user: AuthenticatedUser | ConvexUser | null): user is ConvexUser {
+  if (!user) return false;
+  return '_id' in user && 'extension' in user;
+}
+
+/**
+ * Type guard to check if user is a Laravel user
+ */
+export function isLaravelUser(user: AuthenticatedUser | ConvexUser | null): user is AuthenticatedUser {
+  if (!user) return false;
+  return 'id' in user && 'first_name' in user;
 }
 
 /**
  * Helper function to get display name from either user type
  */
-export function getDisplayName(user: AuthenticatedUser | ConvexPartner | null): string {
+export function getDisplayName(user: AuthenticatedUser | ConvexUser | ConvexPartner | null): string {
   if (!user) return "";
   
-  // Check if it's a Convex partner (has 'name' field)
+  // Check if it's a Convex user or partner (has 'name' field)
   if ('name' in user) {
     return user.name;
   }
@@ -192,10 +223,10 @@ export function getDisplayName(user: AuthenticatedUser | ConvexPartner | null): 
 /**
  * Helper function to get user initials
  */
-export function getUserInitials(user: AuthenticatedUser | ConvexPartner | null): string {
+export function getUserInitials(user: AuthenticatedUser | ConvexUser | ConvexPartner | null): string {
   if (!user) return "";
   
-  // Check if it's a Convex partner
+  // Check if it's a Convex user or partner
   if ('name' in user) {
     return user.name
       .split(" ")
@@ -208,6 +239,26 @@ export function getUserInitials(user: AuthenticatedUser | ConvexPartner | null):
   // It's a Laravel user
   if ('first_name' in user && 'last_name' in user) {
     return `${user.first_name[0] || ""}${user.last_name[0] || ""}`.toUpperCase();
+  }
+  
+  return "";
+}
+
+/**
+ * Helper function to get user email
+ */
+export function getUserEmail(user: AuthenticatedUser | ConvexUser | ConvexPartner | null): string {
+  return user?.email || "";
+}
+
+/**
+ * Helper function to get user role
+ */
+export function getUserRole(user: AuthenticatedUser | ConvexUser | ConvexPartner | null): string {
+  if (!user) return "";
+  
+  if ('role' in user) {
+    return user.role;
   }
   
   return "";

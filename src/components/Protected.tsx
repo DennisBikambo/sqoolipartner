@@ -9,33 +9,32 @@ interface ProtectedRouteProps {
   children: ReactNode;
 }
 
-export function ProtectedRoute({ children }: ProtectedRouteProps) {
+export function ProtectedRoute({ children }: ProtectedRouteProps): JSX.Element | null {
   const { user, loading, isFirstLogin } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation(); // 👈 get current route path
+  const location = useLocation();
 
   useEffect(() => {
-  if (!loading) {
-    // 1️⃣ Not logged in
-    if (!user) {
-      navigate('/signIn');
-      return;
-    }
+    if (!loading) {
+      // 1️⃣ Not logged in
+      if (!user) {
+        navigate('/signIn');
+        return;
+      }
 
-    // 2️⃣ First-time users should *always* be on onboarding
-    if (isFirstLogin && location.pathname !== '/onboarding') {
-      navigate('/onboarding');
-      return;
-    }
+      // 2️⃣ First-time users should *always* be on onboarding
+      if (isFirstLogin && location.pathname !== '/onboarding') {
+        navigate('/onboarding');
+        return;
+      }
 
-    // 3️⃣ Completed onboarding should not revisit onboarding
-    if (!isFirstLogin && location.pathname === '/onboarding') {
-      navigate('/dashboard');
-      return;
+      // 3️⃣ Completed onboarding should not revisit onboarding
+      if (!isFirstLogin && location.pathname === '/onboarding') {
+        navigate('/dashboard');
+        return;
+      }
     }
-  }
-}, [user, loading, isFirstLogin, navigate, location]);
-
+  }, [user, loading, isFirstLogin, navigate, location.pathname]);
 
   if (loading) {
     return (
@@ -45,7 +44,9 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
     );
   }
 
-  if (!user) return null;
+  if (!user) {
+    return null;
+  }
 
   return <>{children}</>;
 }

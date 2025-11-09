@@ -1,51 +1,119 @@
 import { useEffect, useState } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
-import type { AuthenticatedUser, ConvexPartner, UseAuthReturn } from "../types/auth.types";
+import type { 
+  AuthenticatedUser, 
+  ConvexPartner, 
+  ConvexUser, 
+  UseAuthReturn 
+} from "../types/auth.types";
 import handleAuthenticated from "../utils/handleAuthenticated";
+
+// Helper to get session cookie
+function getSessionCookie(name: string): string | null {
+  const value = `; ${document.cookie}`;
+  const parts = value.split(`; ${name}=`);
+  if (parts.length === 2) return parts.pop()?.split(';').shift() || null;
+  return null;
+}
 
 export function useAuth(): UseAuthReturn {
   const [laravelUser, setLaravelUser] = useState<AuthenticatedUser | null>(null);
+  const [convexSessionToken, setConvexSessionToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [syncAttempted, setSyncAttempted] = useState(false);
+  const [convexUser, setConvexUser] = useState<ConvexUser | null>(null);
+  const [sessionValidated, setSessionValidated] = useState(false);
 
   const updateLaravelUserId = useMutation(api.partner.updateLaravelUserId);
 
-  // ✅ Step 1: Fetch Laravel-authenticated user
+  // ✅ Step 1: Check which auth method is active
   useEffect(() => {
-    const checkLaravelAuth = async () => {
+    const initAuth = async () => {
       try {
-        const authenticatedUser = await handleAuthenticated();
-        if (!authenticatedUser) {
-          setError("Not authenticated");
-          setLaravelUser(null);
+        // Check for Convex session cookie first
+        const sessionToken = getSessionCookie('convex_session');
+        
+        if (sessionToken) {
+          // User logged in via Convex - don't set loading false yet
+          setConvexSessionToken(sessionToken);
         } else {
-          setLaravelUser(authenticatedUser);
+          // Try Laravel authentication
+          const authenticatedUser = await handleAuthenticated();
+          if (!authenticatedUser) {
+            setError("Not authenticated");
+            setLaravelUser(null);
+          } else {
+            setLaravelUser(authenticatedUser);
+          }
+          setLoading(false);
         }
-      } catch {
+      } catch (err) {
+        console.error("Auth initialization error:", err);
         setError("Authentication check failed");
-      } finally {
         setLoading(false);
       }
     };
 
-    checkLaravelAuth();
+    initAuth();
   }, []);
 
-  // ✅ Step 2: Fetch matching Convex partner record
-  const convexPartner = useQuery(
+  // ✅ Step 2: Validate Convex session if token exists
+  const validateSessionMutation = useMutation(api.session.validateSession);
+
+  useEffect(() => {
+    const validateConvexSession = async () => {
+      if (!convexSessionToken || sessionValidated) return;
+
+      try {
+        const sessionData = await validateSessionMutation({ token: convexSessionToken });
+        
+        if (!sessionData || !sessionData.user) {
+          // Session invalid or expired
+          document.cookie = 'convex_session=; path=/; max-age=0'; // Clear cookie
+          setConvexSessionToken(null);
+          setConvexUser(null);
+          setError("Session expired");
+        } else {
+          setConvexUser(sessionData.user as ConvexUser);
+        }
+      } catch (err) {
+        console.error("Session validation error:", err);
+        document.cookie = 'convex_session=; path=/; max-age=0';
+        setConvexSessionToken(null);
+        setConvexUser(null);
+        setError("Session validation failed");
+      } finally {
+        // Mark validation complete and stop loading
+        setSessionValidated(true);
+        setLoading(false);
+      }
+    };
+
+    validateConvexSession();
+  }, [convexSessionToken, sessionValidated, validateSessionMutation]);
+
+  // ✅ Step 3: Fetch Convex partner
+  // - For Laravel users: fetch by email
+  // - For Convex users: fetch by partner_id
+  const convexPartnerForLaravel = useQuery(
     api.partner.getByEmail,
     laravelUser?.email ? { email: laravelUser.email } : "skip"
   ) as ConvexPartner | undefined | null;
 
-  // ✅ Step 3: Sync Laravel user ID into Convex if needed
+  const convexPartnerForConvexUser = useQuery(
+    api.partner.getById,
+    convexUser?.partner_id ? { partner_id: convexUser.partner_id } : "skip"
+  ) as ConvexPartner | undefined | null;
+
+  // ✅ Step 4: Sync Laravel user ID into Convex if needed (Laravel users only)
   useEffect(() => {
     const syncLaravelIdIfNeeded = async () => {
       if (syncAttempted) return;
-      if (!laravelUser || convexPartner === undefined || !convexPartner) return;
+      if (!laravelUser || convexPartnerForLaravel === undefined || !convexPartnerForLaravel) return;
 
-      if (convexPartner.laravelUserId === 0 && laravelUser.id !== 0) {
+      if (convexPartnerForLaravel.laravelUserId === 0 && laravelUser.id !== 0) {
         try {
           await updateLaravelUserId({
             email: laravelUser.email,
@@ -60,38 +128,74 @@ export function useAuth(): UseAuthReturn {
     };
 
     syncLaravelIdIfNeeded();
-  }, [laravelUser, convexPartner, updateLaravelUserId, syncAttempted]);
+  }, [laravelUser, convexPartnerForLaravel, updateLaravelUserId, syncAttempted]);
 
-  // ✅ Step 4: Derive `isFirstLogin` from Convex (source of truth)
-  const isFirstLogin = convexPartner?.is_first_login ?? false;
-
-  // ✅ Step 5: Handle loading & error states cleanly
-  if (loading || convexPartner === undefined) {
+  // ✅ Step 5: Handle loading states
+  if (loading) {
     return {
       user: null,
       partner: null,
       loading: true,
       error: null,
       isFirstLogin: false,
+      loginMethod: null,
     };
   }
 
-  if (error && !laravelUser) {
+  // If waiting for partner data to load for Laravel user
+  if (laravelUser && convexPartnerForLaravel === undefined) {
     return {
       user: null,
       partner: null,
-      loading: false,
-      error,
+      loading: true,
+      error: null,
       isFirstLogin: false,
+      loginMethod: 'laravel',
     };
   }
 
-  // ✅ Step 6: Return unified auth data
+  // If waiting for partner data to load for Convex user
+  if (convexUser && convexPartnerForConvexUser === undefined) {
+    return {
+      user: null,
+      partner: null,
+      loading: true,
+      error: null,
+      isFirstLogin: false,
+      loginMethod: 'convex',
+    };
+  }
+
+
+  if (convexUser) {
+    return {
+      user: convexUser,
+      partner: convexPartnerForConvexUser || null, 
+      loading: false,
+      error: null,
+      isFirstLogin: convexUser.is_first_login ?? false,
+      loginMethod: 'convex',
+    };
+  }
+
+  if (laravelUser) {
+    return {
+      user: laravelUser, 
+      partner: convexPartnerForLaravel || null,
+      loading: false,
+      error: null,
+      isFirstLogin: convexPartnerForLaravel?.is_first_login ?? false,
+      loginMethod: 'laravel',
+    };
+  }
+
+  // NOT AUTHENTICATED
   return {
-    user: laravelUser,
-    partner: convexPartner,
+    user: null,
+    partner: null,
     loading: false,
-    error: null,
-    isFirstLogin,
+    error: error || "Not authenticated",
+    isFirstLogin: false,
+    loginMethod: null,
   };
 }

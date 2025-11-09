@@ -17,7 +17,21 @@ function generateRandomPassword(length = 10): string {
 }
 
 /**
- * ➕ Create a new user (password generated automatically)
+ * Utility to generate a secure but simple unique extension
+ */
+function generateExtension(): string {
+  const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
+  let extension = "";
+  for (let i = 0; i < 8; i++) {
+    extension += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  // Add small random suffix to reduce collision chances
+  const randomSuffix = Math.floor(1000 + Math.random() * 9000).toString();
+  return `${extension}-${randomSuffix}`;
+}
+
+/**
+ * ➕ Create a new user (password + extension generated automatically)
  */
 export const createUser = mutation({
   args: {
@@ -47,6 +61,8 @@ export const createUser = mutation({
     }
 
     const generatedPassword = generateRandomPassword(10);
+    const extension = generateExtension(); // ✅ Generate secure unique extension
+    console.log(generatedPassword)
 
     // ✅ Use synchronous hash to avoid Convex setTimeout error
     const password_hash = bcrypt.hashSync(generatedPassword, 10);
@@ -59,6 +75,7 @@ export const createUser = mutation({
       phone: args.phone,
       role: args.role,
       permission_id: args.permission_id,
+      extension, 
       is_active: true,
       is_first_login: true,
       last_login: undefined,
@@ -69,7 +86,8 @@ export const createUser = mutation({
     return {
       message: "User created successfully",
       userId,
-      generatedPassword, // returned once for admin
+      generatedPassword,
+      extension, 
     };
   },
 });
@@ -132,7 +150,6 @@ export const updateUser = mutation({
   },
   handler: async (ctx, args) => {
     const { user_id, password, ...fields } = args;
-
     const existingUser = await ctx.db.get(user_id);
     if (!existingUser) throw new Error("User not found");
 
@@ -146,13 +163,12 @@ export const updateUser = mutation({
     });
 
     if (password) {
-      // ✅ Use synchronous hash here too
       patchData.password_hash = bcrypt.hashSync(password, 10);
     }
 
     patchData.updated_at = new Date().toISOString();
-
     await ctx.db.patch(user_id, patchData);
+
     return { message: "User updated successfully", updatedFields: patchData };
   },
 });
@@ -203,6 +219,8 @@ export const login = mutation({
         name: user.name,
         role: user.role,
         partner_id: user.partner_id,
+        is_account_activated: user.is_account_activated,
+        extension: user.extension,
       },
     };
   },
