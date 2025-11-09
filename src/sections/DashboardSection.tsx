@@ -70,21 +70,24 @@ export default function DashboardSection({
     partner?._id && canViewDashboard ? { partner_id: partner._id } : "skip"
   ) as DashboardCampaign[] | undefined;
 
-  async function getUserForCampaign(campaignId: Id<"campaigns">) {
-    try {
-      const user = await convex.query(api.user.getUserByCampaign, {
-        campaignId,
-      });
-      return user;
-    } catch (err) {
-      console.error("Failed to fetch user for campaign:", err);
-      return null;
-    }
-  }
-
   useEffect(() => {
     async function fetchUsers() {
-      if (!campaigns || campaigns.length === 0) return;
+      if (!campaigns || campaigns.length === 0) {
+        setUsers({});
+        return;
+      }
+
+      async function getUserForCampaign(campaignId: Id<"campaigns">) {
+        try {
+          const user = await convex.query(api.user.getUserByCampaign, {
+            campaignId,
+          });
+          return user;
+        } catch (err) {
+          console.error("Failed to fetch user for campaign:", err);
+          return null;
+        }
+      }
 
       const results = await Promise.all(
         campaigns.map(async (c) => {
@@ -102,7 +105,7 @@ export default function DashboardSection({
     }
 
     fetchUsers();
-  }, [campaigns, convex,getUserForCampaign]);
+  }, [campaigns, convex]);
 
   useEffect(() => {
     if (!campaigns || campaigns.length === 0) return;
