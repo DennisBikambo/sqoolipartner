@@ -1,366 +1,399 @@
-import React from 'react';
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
-import { Building2, Users, GraduationCap, Rocket, CheckCircle2, Handshake, TrendingUp } from 'lucide-react';
+import { Textarea } from '../components/ui/textarea';
+import { RadioGroup, RadioGroupItem } from '../components/ui/radio-group';
+import { Label } from '../components/ui/label';
+import { Megaphone, Handshake } from 'lucide-react';
+import StatCard from '../components/landing/StatCard';
+import PartnershipCard from '../components/landing/PartnershipCard';
+import TimelineStep from '../components/landing/TimelineStep';
+import Footer from '../components/landing/Footer';
+import PartnerCarousel from '../components/landing/PartnerCarousel';
 import { HeroHeader } from '../components/layout/HeroHeader';
-import homework from "../assets/homeWork.webp";
-import studying from "../assets/studying.webp";
-import { useNavigate } from 'react-router-dom';
+import { useTheme } from '../hooks/useTheme';
 
 export default function Hero() {
-  const [formData, setFormData] = React.useState({
+  const navigate = useNavigate();
+  const { theme } = useTheme();
+  const isDark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  
+  const [formData, setFormData] = useState({
     orgName: '',
     email: '',
     partnershipType: 'Media',
     message: ''
   });
+  const [result, setResult] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    // Handle form submission
+    // Validation
+    if (!formData.orgName.trim()) {
+      setResult("validation");
+      return;
+    }
+
+    if (!formData.email.trim()) {
+      setResult("validation");
+      return;
+    }
+
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      setResult("validation");
+      return;
+    }
+
+    if (!formData.message.trim()) {
+      setResult("validation");
+      return;
+    }
+
+    setIsSubmitting(true);
+    setResult("");
+
+    const submitData = new FormData();
+    submitData.append("access_key", "2313b8a5-6438-473f-acb4-8f4cd0df5926");
+    submitData.append("name", formData.orgName);
+    submitData.append("email", formData.email);
+    submitData.append("partnership_type", formData.partnershipType);
+    submitData.append("message", formData.message);
+
+    try {
+      const response = await fetch("https://api.web3forms.com/submit", {
+        method: "POST",
+        body: submitData
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setResult("success");
+        setFormData({
+          orgName: '',
+          email: '',
+          partnershipType: 'Media',
+          message: ''
+        });
+      } else {
+        setResult("error");
+      }
+    } catch (error) {
+      console.error("Form submission error:", error);
+      setResult("error");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const navigate = useNavigate();
-
   return (
-    <>
-    
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-white dark:bg-background">
+      {/* Navigation Bar */}
       <HeroHeader />
+
       {/* Hero Section */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-primary/5 via-secondary/5 to-chart-5/5">
-        <div className="container mx-auto px-6 py-20 lg:py-32">
+      <section className={isDark 
+        ? "relative overflow-hidden bg-gradient-to-br from-[#1a1f2e] via-[#2a1f2e] to-[#1a202e] pt-4 pb-8"
+        : "relative overflow-hidden bg-gradient-to-br from-[#eef6fc] via-[#fbeefc] to-[#eef1fc] pt-4 pb-8"
+      }>
+        <div className="max-w-7xl mx-auto px-6 lg:pl-20">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <div className="space-y-6">
-              <h1 className="text-4xl lg:text-6xl font-bold text-foreground leading-tight">
+            <div className="space-y-8">
+              <h1 className="text-4xl lg:text-5xl xl:text-6xl font-medium text-[#101828] dark:text-foreground leading-tight" style={{ fontFamily: 'Outfit, sans-serif' }}>
                 Empower Education.<br />
                 <span className="text-primary">Inspire Change.</span>
               </h1>
-              <p className="text-lg text-muted-foreground max-w-xl">
-                Whether you're a content creator, media hub, or corporate donor — Sqooli gives you a way to make education accessible and rewarding for everyone.
+              <p className="text-lg lg:text-xl font-light text-[#111111] dark:text-muted-foreground leading-relaxed max-w-xl" style={{ fontFamily: 'Outfit, sans-serif' }}>
+                Whether you're a content creator, media brand, or corporate donor — Sqooli gives you a way to make education accessible and rewarding for everyone.
               </p>
-              <Button size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground" onClick={()=>navigate('/signIn')}>
+              <Button 
+                size="lg" 
+                className="bg-primary hover:bg-primary/90 text-white font-medium text-lg px-8 py-6 rounded-lg"
+                style={{ fontFamily: 'Outfit, sans-serif' }}
+                onClick={() => navigate('/signIn')}
+              >
                 Become a Partner
               </Button>
             </div>
-            <div className="relative aspect-square w-full max-w-md mx-auto">
-              <div className="relative overflow-hidden rounded-2xl shadow-xl bg-card border border-border">
-                <img
-                  src={homework}
-                  alt="Partner"
-                  className="object-cover w-full h-full opacity-90 mix-blend-multiply dark:mix-blend-normal"
-                />
-
-                {/* Decorative target lines */}
-                <div className="absolute inset-0 pointer-events-none">
-                  <div className="absolute top-1/3 left-1/3 w-1/3 h-1/3 border border-primary/30 rounded-full" />
-                  <div className="absolute top-1/2 left-0 w-1/4 h-px bg-primary/30" />
-                  <div className="absolute top-1/2 right-0 w-1/4 h-px bg-primary/30" />
-                  <div className="absolute top-0 left-1/2 h-1/4 w-px bg-primary/30" />
-                  <div className="absolute bottom-0 left-1/2 h-1/4 w-px bg-primary/30" />
+            
+            <div className="hidden relative h-full md:w-[120%] md:flex justify-start">
+              {/* Decorative blob SVGs in background - behind everything */}
+              <div className="relative rounded-2xl overflow-visible h-full" style={{ zIndex: 1 }}>
+                {/* Main hero image */}
+                <div className="relative bottom-4 w-full h-full">
+                  <img
+                    src="/images/landing/hero.png"
+                    alt="Children learning"
+                    className="w-full h-full object-cover rounded-2xl"
+                  />
                 </div>
-
-                {/* Gradient overlay */}
-                <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent" />
               </div>
             </div>
-
-
           </div>
         </div>
       </section>
 
-      {/* Stats Section */}
-      <section className="py-20 bg-card">
-        <div className="container mx-auto px-6">
-          <h2 className="text-3xl font-bold text-center text-foreground mb-4">
-            Why Partner with Sqooli?
-          </h2>
-          <p className="text-center text-muted-foreground mb-16 max-w-2xl mx-auto">
-            Sqooli empowers digital schools to reach new learners through education — Partners help us amplify results, quality, and growth.
-          </p>
+      {/* Statistics Section */}
+      <section className="py-16 lg:py-20 bg-white dark:bg-background">
+        <div className="max-w-7xl mx-auto px-6 lg:px-20">
+          <div className="text-center mb-12 lg:mb-16 space-y-4">
+            <h2 className="text-3xl lg:text-4xl font-medium text-[#101828] dark:text-foreground" style={{ fontFamily: 'Outfit, sans-serif' }}>
+              Why Partner with Sqooli
+            </h2>
+            <p className="text-base font-light text-[#475467] dark:text-muted-foreground max-w-2xl mx-auto leading-relaxed" style={{ fontFamily: 'Outfit, sans-serif' }}>
+              Sqooli empowers digital schools to reach more learners through innovation. Partners help us amplify access, visibility, and opportunity.
+            </p>
+          </div>
           
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
-            <div className="text-center space-y-4">
-              <div className="w-20 h-20 mx-auto bg-gradient-to-br from-primary/20 to-primary/10 rounded-2xl flex items-center justify-center">
-                <Building2 className="w-10 h-10 text-primary" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground mb-1">Schools Digitally Transformed</p>
-                <p className="text-4xl font-bold text-foreground">100+</p>
-              </div>
-            </div>
-
-            <div className="text-center space-y-4">
-              <div className="w-20 h-20 mx-auto bg-gradient-to-br from-secondary/20 to-secondary/10 rounded-2xl flex items-center justify-center">
-                <Users className="w-10 h-10 text-secondary" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground mb-1">Teachers Empowered</p>
-                <p className="text-4xl font-bold text-foreground">500+</p>
-              </div>
-            </div>
-
-            <div className="text-center space-y-4">
-              <div className="w-20 h-20 mx-auto bg-gradient-to-br from-chart-3/20 to-chart-3/10 rounded-2xl flex items-center justify-center">
-                <GraduationCap className="w-10 h-10 text-chart-3" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground mb-1">Students Enrolled</p>
-                <p className="text-4xl font-bold text-foreground">18K+</p>
-              </div>
-            </div>
-
-            <div className="text-center space-y-4">
-              <div className="w-20 h-20 mx-auto bg-gradient-to-br from-chart-5/20 to-chart-5/10 rounded-2xl flex items-center justify-center">
-                <Rocket className="w-10 h-10 text-chart-5" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground mb-1">Partner Campaigns Launched</p>
-                <p className="text-4xl font-bold text-foreground">18K+</p>
-              </div>
-            </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <StatCard
+              icon="/school-building.svg"
+              label="Schools Digitally Transformed"
+              value="100+"
+              iconAlt="School building"
+            />
+            <StatCard
+              icon="/teacher-illustration.svg"
+              label="Teachers Empowered"
+              value="500+"
+              iconAlt="Teacher"
+            />
+            <StatCard
+              icon="/student-illustration.svg"
+              label="Students Reached"
+              value="18K+"
+              iconAlt="Student"
+            />
+            <StatCard
+              icon="/scholarship-illustration.svg"
+              label="Running Scholarships"
+              value="18K+"
+              iconAlt="Scholarships"
+            />
           </div>
         </div>
       </section>
 
       {/* Partnership Types Section */}
-      <section className="py-20 bg-background">
-        <div className="container mx-auto px-6">
-          <div className="grid lg:grid-cols-2 gap-12">
-            {/* Marketing Partners */}
-            <div className="bg-gradient-to-br from-primary/5 to-primary/10 rounded-3xl p-8 lg:p-12 border border-primary/20">
-              <div className="w-16 h-16 bg-primary/20 rounded-2xl flex items-center justify-center mb-6">
-                <TrendingUp className="w-8 h-8 text-primary" />
-              </div>
-              <h3 className="text-2xl font-bold text-foreground mb-4">
-                Marketing Partners (Media & Influencers)
-              </h3>
-              <p className="text-muted-foreground mb-6">
-                If you create digital content or have an audience, we can work together to build creative campaigns that both grow your reach and give back to learning.
-              </p>
-              <ul className="space-y-3 mb-8">
-                <li className="flex items-start gap-3">
-                  <CheckCircle2 className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
-                  <span className="text-sm text-foreground">Co-create video campaigns and brand activations</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <CheckCircle2 className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
-                  <span className="text-sm text-foreground">Amplify your brand while supporting education</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <CheckCircle2 className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
-                  <span className="text-sm text-foreground">Access student audiences and social impact</span>
-                </li>
-              </ul>
-              <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground">
-                Join As a Media Partner
-              </Button>
-            </div>
+      <section className="py-16 lg:py-20 bg-[#f8fafc] dark:bg-muted/20">
+        <div className="max-w-7xl mx-auto px-6 lg:px-20">
+          <div className="grid lg:grid-cols-2 gap-6">
+            <PartnershipCard
+              icon={<Megaphone className="w-8 h-8" />}
+              title="Marketing Partners (Media & Influencers)"
+              description="Marketing is at the cornerstone of our outreach. Media and Influencer partners stand to get perks including"
+              benefits={[
+                "Earn commission for every school or student you bring on board",
+                "Access affiliate dashboard and campaign tools",
+                "Co-branded media kits, webinars, and educational challenges"
+              ]}
+              buttonText="Join the Sqooli Affiliate Program"
+              variant="primary"
+              onButtonClick={() => navigate('/signIn')}
+            />
 
-            {/* Impact Partners */}
-            <div className="bg-gradient-to-br from-secondary/5 to-secondary/10 rounded-3xl p-8 lg:p-12 border border-secondary/20">
-              <div className="w-16 h-16 bg-secondary/20 rounded-2xl flex items-center justify-center mb-6">
-                <Handshake className="w-8 h-8 text-secondary" />
-              </div>
-              <h3 className="text-2xl font-bold text-foreground mb-4">
-                Impact Partners (Corporate Sponsors & Donors)
-              </h3>
-              <p className="text-muted-foreground mb-6">
-                Your sponsorship or donation directly powers student scholarships, teacher training, and access to quality digital learning tools.
-              </p>
-              <ul className="space-y-3 mb-8">
-                <li className="flex items-start gap-3">
-                  <CheckCircle2 className="w-5 h-5 text-secondary mt-0.5 flex-shrink-0" />
-                  <span className="text-sm text-foreground">Sponsor digital learning tools for underserved schools</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <CheckCircle2 className="w-5 h-5 text-secondary mt-0.5 flex-shrink-0" />
-                  <span className="text-sm text-foreground">Empower educators through capacity-building programs</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <CheckCircle2 className="w-5 h-5 text-secondary mt-0.5 flex-shrink-0" />
-                  <span className="text-sm text-foreground">Receive transparent impact reports and recognition</span>
-                </li>
-              </ul>
-              <Button className="w-full bg-secondary hover:bg-secondary/90 text-secondary-foreground">
-                Become a Donor
-              </Button>
-            </div>
+            <PartnershipCard
+              icon={<Handshake className="w-8 h-8" />}
+              title="Impact Partners (Corporate Sponsors & Donors)"
+              description="Join us in impacting the future of education through your donations and scholarship for disadvantaged students."
+              benefits={[
+                "Support digital learning through scholarships for students",
+                "Support CSR programs that fund community schools",
+                "Receive transparent impact reports and recognition"
+              ]}
+              buttonText="Support Digital Education"
+              variant="secondary"
+              onButtonClick={() => navigate('/signIn')}
+            />
           </div>
         </div>
       </section>
 
+      {/* Partner Logos Section */}
+      <section className="py-12 lg:py-16 bg-white dark:bg-background">
+        <div className="max-w-7xl mx-auto px-6 lg:px-20">
+          <PartnerCarousel />
+        </div>
+      </section>
+
       {/* How It Works Section */}
-      <section className="py-20 bg-card">
-        <div className="container mx-auto px-6">
-          <div className="text-center mb-12">
-            <p className="text-sm text-muted-foreground mb-2">Join 100+ of our amazing partners</p>
-            <div className="flex flex-wrap justify-center items-center gap-8 mt-8">
-              <div className="px-6 py-3 bg-background rounded-xl border border-border">
-                <span className="text-lg font-semibold text-foreground">Boltshift</span>
-              </div>
-              <div className="px-6 py-3 bg-background rounded-xl border border-border">
-                <span className="text-lg font-semibold text-foreground">Lightbox</span>
-              </div>
-              <div className="px-6 py-3 bg-background rounded-xl border border-border">
-                <span className="text-lg font-semibold text-foreground">FeatherDev</span>
-              </div>
-              <div className="px-6 py-3 bg-background rounded-xl border border-border">
-                <span className="text-lg font-semibold text-foreground">Spherule</span>
-              </div>
-              <div className="px-6 py-3 bg-background rounded-xl border border-border">
-                <span className="text-lg font-semibold text-foreground">GlobalBank</span>
-              </div>
-              <div className="px-6 py-3 bg-background rounded-xl border border-border">
-                <span className="text-lg font-semibold text-foreground">Nietszche</span>
-              </div>
-            </div>
+      <section className="py-16 lg:py-20 bg-white dark:bg-background">
+        <div className="max-w-7xl mx-auto px-6 lg:px-20">
+          <div className="text-center mb-12 lg:mb-16 space-y-4">
+            <h2 className="text-3xl lg:text-4xl font-medium text-[#101828] dark:text-foreground" style={{ fontFamily: 'Outfit, sans-serif' }}>
+              How it works
+            </h2>
+            <p className="text-base font-light text-[#475467] dark:text-muted-foreground max-w-2xl mx-auto" style={{ fontFamily: 'Outfit, sans-serif' }}>
+              Its easy. Here is a 3 step visual timeline of what to expect by partnering with us
+            </p>
           </div>
-
-          <h2 className="text-3xl font-bold text-center text-foreground mt-20 mb-12">
-            How it works
-          </h2>
-          <p className="text-center text-muted-foreground mb-16 max-w-2xl mx-auto">
-            It's easy. Here is a 3-step visual that explains how to invest by partnering with us.
-          </p>
-
-          <div className="max-w-3xl mx-auto space-y-8">
-            <div className="flex gap-6 items-start">
-              <div className="w-12 h-12 bg-primary/20 rounded-full flex items-center justify-center flex-shrink-0">
-                <span className="text-lg font-bold text-primary">1</span>
-              </div>
-              <div>
-                <h3 className="text-xl font-bold text-foreground mb-2">Apply to Partner</h3>
-                <p className="text-muted-foreground">
-                  Submit your details through our simple partner portal, specifying your goals and preferred model of partnership.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex gap-6 items-start">
-              <div className="w-12 h-12 bg-secondary/20 rounded-full flex items-center justify-center flex-shrink-0">
-                <span className="text-lg font-bold text-secondary">2</span>
-              </div>
-              <div>
-                <h3 className="text-xl font-bold text-foreground mb-2">Approval & Onboarding</h3>
-                <p className="text-muted-foreground">
-                  Our team will reach out within 48 hours to set up an onboarding dashboard and design a tailored partnership strategy.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex gap-6 items-start">
-              <div className="w-12 h-12 bg-chart-3/20 rounded-full flex items-center justify-center flex-shrink-0">
-                <span className="text-lg font-bold text-chart-3">3</span>
-              </div>
-              <div>
-                <h3 className="text-xl font-bold text-foreground mb-2">Promote, Fund & Collaborate</h3>
-                <p className="text-muted-foreground">
-                  You choose your involvement level: run campaigns, donate digital tools, or sponsor impact reports. We take care of the logistics.
-                </p>
-              </div>
-            </div>
+          
+          <div className="max-w-3xl mx-auto space-y-0">
+            <TimelineStep
+              number="1"
+              title="Apply to Partner"
+              description="Reach out to our team to be a partner through our contacts"
+              showLine={true}
+            />
+            <TimelineStep
+              number="2"
+              title="Approval & Onboarding"
+              description="Get your account created and access to your personalized dashboard based on type of partnership"
+              showLine={true}
+            />
+            <TimelineStep
+              number="3"
+              title="Promote,  Fund & Collaborate"
+              description="Track your earnings (marketing partners) and impact (impact partners) on your dashboard"
+              showLine={false}
+            />
           </div>
         </div>
       </section>
 
       {/* Contact Form Section */}
-      <section className="py-20 bg-gradient-to-br from-primary/5 via-background to-secondary/5">
-        <div className="container mx-auto px-6">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
+      <section className={isDark
+        ? "py-16 lg:py-20 bg-gradient-to-br from-[#0f1419] via-[#1a1f2e] to-[#0f1419] relative overflow-hidden"
+        : "py-16 lg:py-20 bg-gradient-to-br from-[#eef6fc] via-white to-[#eef1fc] relative overflow-hidden"
+      }>
+        <div className="max-w-7xl mx-auto px-6 lg:px-20">
+          <div className="grid lg:grid-cols-2 gap-12 items-start">
             <div>
-              <div className="flex items-center gap-2 mb-6">
-                <h2 className="text-3xl lg:text-4xl font-bold text-foreground">
+              <div className="flex items-center gap-3 mb-6">
+                <h2 className="text-3xl lg:text-4xl font-medium text-[#101828] dark:text-foreground" style={{ fontFamily: 'Outfit, sans-serif' }}>
                   Ready to Make an Impact?
                 </h2>
                 <span className="text-3xl">✨</span>
               </div>
-              <p className="text-lg text-muted-foreground mb-8">
-                Join our growing community of partners who are transforming education across Africa. Let's create lasting change together.
+              <p className="text-base font-light text-[#475467] dark:text-muted-foreground mb-8" style={{ fontFamily: 'Lexend, sans-serif' }}>
+                Join the Sqooli Partners Network today.
               </p>
               
               <form onSubmit={handleSubmit} className="space-y-6">
-                <div>
+                <div className="space-y-2">
+                  <Label htmlFor="orgName" className="text-sm font-normal text-[#475467] dark:text-muted-foreground" style={{ fontFamily: 'Lexend, sans-serif' }}>
+                    Organization Name
+                  </Label>
                   <Input
-                    placeholder="Organization Name"
+                    id="orgName"
                     value={formData.orgName}
                     onChange={(e) => setFormData({ ...formData, orgName: e.target.value })}
-                    className="bg-background"
+                    className="bg-[#eceefd] dark:bg-input border-[#dfe2fc] dark:border-border rounded-xl h-12"
+                    required
                   />
                 </div>
                 
-                <div>
+                <div className="space-y-2">
+                  <Label htmlFor="email" className="text-sm font-normal text-[#475467] dark:text-muted-foreground" style={{ fontFamily: 'Lexend, sans-serif' }}>
+                    Email Address
+                  </Label>
                   <Input
+                    id="email"
                     type="email"
-                    placeholder="Email Address"
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    className="bg-background"
+                    className="bg-[#eceefd] dark:bg-input border-[#dfe2fc] dark:border-border rounded-xl h-12"
+                    required
                   />
                 </div>
 
-                <div>
-                  <select
+                <div className="space-y-2">
+                  <Label className="text-sm font-normal text-[#475467] dark:text-muted-foreground" style={{ fontFamily: 'Lexend, sans-serif' }}>
+                    Type of Partnership
+                  </Label>
+                  <RadioGroup
                     value={formData.partnershipType}
-                    onChange={(e) => setFormData({ ...formData, partnershipType: e.target.value })}
-                    className="w-full px-4 py-2 rounded-lg border border-input bg-background text-foreground"
+                    onValueChange={(value) => setFormData({ ...formData, partnershipType: value })}
+                    className="flex flex-wrap gap-4"
                   >
-                    <option value="Media">Media</option>
-                    <option value="Influencer">Influencer</option>
-                    <option value="Sponsor">Sponsor</option>
-                    <option value="Donor">Donor</option>
-                  </select>
+                    {['Media', 'Influencer', 'Sponsor', 'Donor'].map((type) => (
+                      <div key={type} className="flex items-center space-x-2">
+                        <RadioGroupItem 
+                          value={type} 
+                          id={type}
+                          className="border-[#d0d5dd] dark:border-border"
+                        />
+                        <Label 
+                          htmlFor={type} 
+                          className="text-sm font-normal text-[#475467] dark:text-muted-foreground cursor-pointer"
+                          style={{ fontFamily: 'Outfit, sans-serif' }}
+                        >
+                          {type}
+                        </Label>
+                      </div>
+                    ))}
+                  </RadioGroup>
                 </div>
 
-                <div>
-                  <textarea
-                    placeholder="Message"
-                    rows={4}
+                <div className="space-y-2">
+                  <Label htmlFor="message" className="text-sm font-normal text-[#475467] dark:text-muted-foreground" style={{ fontFamily: 'Lexend, sans-serif' }}>
+                    Message
+                  </Label>
+                  <Textarea
+                    id="message"
+                    rows={5}
                     value={formData.message}
                     onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                    className="w-full px-4 py-2 rounded-lg border border-input bg-background text-foreground resize-none"
+                    className="bg-[#eceefd] dark:bg-input border-[#dfe2fc] dark:border-border rounded-xl resize-none"
+                    required
                   />
                 </div>
 
-                <Button type="submit" size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground">
-                  Submit Form
+                <Button
+                  type="submit"
+                  size="lg"
+                  disabled={isSubmitting}
+                  className="bg-primary hover:bg-primary/90 text-white font-medium text-sm px-6 rounded-full disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{ fontFamily: 'Outfit, sans-serif' }}
+                >
+                  {isSubmitting ? 'Submitting...' : 'Become a Partner'}
                 </Button>
+
+                {result === "validation" && (
+                  <div className="p-4 bg-yellow-50 dark:bg-yellow-950/30 border border-yellow-200 dark:border-yellow-800 rounded-xl">
+                    <p className="text-sm text-yellow-800 dark:text-yellow-400 font-medium" style={{ fontFamily: 'Outfit, sans-serif' }}>
+                      ⚠ Please fill in all required fields with valid information.
+                    </p>
+                  </div>
+                )}
+
+                {true && (
+                  <div className="p-4  dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-xl">
+                    <p className="text-sm font-medium" style={{ fontFamily: 'Outfit, sans-serif' }}>
+                      ✓ Thank you! Your application has been submitted successfully. We'll get back to you soon.
+                    </p>
+                  </div>
+                )}
+
+                {result === "error" && (
+                  <div className="p-4 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-xl">
+                    <p className="text-sm text-red-800 dark:text-red-400 font-medium" style={{ fontFamily: 'Outfit, sans-serif' }}>
+                      ✗ Something went wrong. Please try again or contact us directly.
+                    </p>
+                  </div>
+                )}
               </form>
             </div>
 
-            <div className="relative h-[500px] hidden lg:block">
-              <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-chart-3/30 to-transparent rounded-full blur-3xl"></div>
-              <div className="absolute bottom-0 left-0 w-64 h-64 bg-gradient-to-br from-chart-5/30 to-transparent rounded-full blur-3xl"></div>
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="relative w-full h-full max-w-md">
-                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-96 bg-gradient-to-br from-primary/10 to-secondary/10 rounded-3xl"></div>
-                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
-                    <div className="relative overflow-hidden w-64 h-80 bg-card border border-border rounded-2xl shadow-2xl">
-                      <img
-                        src={studying}
-                        alt="Studying Image"
-                        className="object-cover w-full h-full opacity-90 mix-blend-multiply dark:mix-blend-normal"
-                      />
-                      <div className="absolute inset-0 pointer-events-none">
-                        <div className="absolute top-1/3 left-1/3 w-1/3 h-1/3 border border-primary/30 rounded-full" />
-                        <div className="absolute top-1/2 left-0 w-1/4 h-px bg-primary/30" />
-                        <div className="absolute top-1/2 right-0 w-1/4 h-px bg-primary/30" />
-                        <div className="absolute top-0 left-1/2 h-1/4 w-px bg-primary/30" />
-                        <div className="absolute bottom-0 left-1/2 h-1/4 w-px bg-primary/30" />
-                      </div>
-                      <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent" />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
 
+            <div className="hidden md:flex relative h-[500px] items-center justify-end">
+              <img 
+                src="/images/landing/contact-us-bg.png" 
+                alt="Contact us" 
+                className="h-full w-auto object-contain"
+              />
+            </div>
           </div>
         </div>
       </section>
+
+      {/* Footer */}
+      <Footer />
     </div>
-    </>
   );
 }

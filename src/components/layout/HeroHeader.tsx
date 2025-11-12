@@ -4,7 +4,6 @@ import { Button } from '../ui/button';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../../hooks/useTheme';
 import ThemeButton from '../common/ThemeButton';
-import Logo from '../common/Logo';
 import { Menu } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '../../hooks/useAuth';
@@ -24,7 +23,7 @@ export function HeroHeader() {
           className="flex items-center gap-0.5 text-2xl font-bold cursor-pointer"
           onClick={() => navigate('/')}
         >
-          <Logo />
+          <img src="/sqooli-logo.svg" alt="Sqooli" className="h-8 md:h-10" />
         </div>
 
         {/* Desktop Buttons */}
@@ -48,13 +47,13 @@ export function HeroHeader() {
               >
                 Sign In
               </Button>
-              <Button
+              {/* <Button
                 variant="default"
                 className="font-semibold"
                 onClick={() => navigate('/signUp')}
               >
                 Sign Up
-              </Button>
+              </Button> */}
             </>
           )}
         </div>
@@ -94,7 +93,7 @@ export function HeroHeader() {
               >
                 Sign In
               </Button>
-              <Button
+              {/* <Button
                 variant="default"
                 className="w-full font-semibold"
                 onClick={() => {
@@ -103,7 +102,7 @@ export function HeroHeader() {
                 }}
               >
                 Sign Up
-              </Button>
+              </Button> */}
             </>
           )}
         </div>

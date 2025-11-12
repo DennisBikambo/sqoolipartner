@@ -9,7 +9,6 @@ import type { LoginFormData, LoginValidationErrors } from '../types/auth.types';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { HeroHeader } from '../components/layout/HeroHeader';
-import discussion from "../assets/discussion.webp";
 import { useAuth } from '../hooks/useAuth';
 import { useMutation as useConvexMutation } from 'convex/react';
 import { api } from '../../convex/_generated/api';
@@ -162,67 +161,58 @@ export default function SignIn() {
   return (
     <>
       <HeroHeader />
-      <div className="min-h-screen bg-background flex">
-        {/* Left Side */}
-        <div className="hidden lg:block lg:w-1/2 relative overflow-hidden rounded-r-3xl">
-          <div className="absolute inset-0 bg-gradient-to-br from-[#5a9c92] to-[#4a8c82]" />
-
-          <div className="relative h-full flex flex-col justify-between p-12">
-            <div className="text-white text-center space-y-2">
-              <h1 className="text-3xl font-bold">Welcome to Sqooli</h1>
-              <p className="text-white/90 text-sm">
-                The ultimate school management tool<br />designed for everyone
-              </p>
-            </div>
-
-            <div className="flex-1 flex items-center justify-center">
-              <div className="relative w-full max-w-sm aspect-[3/4] rounded-2xl overflow-hidden shadow-xl bg-card border border-border">
-                <img
-                  src={discussion}
-                  alt="Student discussion"
-                  className="object-cover w-full h-full opacity-90 mix-blend-multiply dark:mix-blend-normal"
-                />
-
-                {/* Decorative target lines */}
-                <div className="absolute inset-0 pointer-events-none">
-                  <div className="absolute top-1/3 left-1/3 w-1/3 h-1/3 border border-primary/30 rounded-full" />
-                  <div className="absolute top-1/2 left-0 w-1/4 h-px bg-primary/30" />
-                  <div className="absolute top-1/2 right-0 w-1/4 h-px bg-primary/30" />
-                  <div className="absolute top-0 left-1/2 h-1/4 w-px bg-primary/30" />
-                  <div className="absolute bottom-0 left-1/2 h-1/4 w-px bg-primary/30" />
-                </div>
-
-                {/* Gradient overlay */}
-                <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent" />
-              </div>
-            </div>
-
-            <div className="h-20" />
+      <div className="h-[calc(100vh-64px)] bg-background flex overflow-hidden p-4 lg:p-6">
+        {/* Left Side - Green Panel */}
+        <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden rounded-[24px] mr-6">
+          {/* Background with teal gradient */}
+          <div className="absolute inset-0 bg-[#5a9c92] w-min" />
+          
+          {/* Green blob covering full container */}
+          <div className="absolute inset-0 flex items-start justify-center pt-20">
+            
           </div>
-
-          <div className="absolute bottom-0 left-0 right-0">
-            <svg viewBox="0 0 1200 120" className="w-full h-24 opacity-20">
-              <path
-                d="M0,64 C150,100 350,0 600,64 C850,128 1050,0 1200,64 L1200,120 L0,120 Z"
-                fill="currentColor"
-                className="text-white/20"
+          
+          <div className="relative h-full flex flex-col items-center justify-between p-0 w-fit rounded-3xl">
+          <img 
+              src="/images/sign-in/greeb-blob.svg" 
+              alt="" 
+              className="h-auto z-[10] absolute opacity-30 w-min"
+              style={{
+                zIndex: 9,
+                top: '-6rem',
+              }}
+            />
+            {/* Welcome text */}
+            <div className="relative flex flex-col items-center gap-4 z-10">
+              {/* Text SVG */}
+              <img 
+                src="/images/sign-in/text.svg" 
+                alt="Welcome to Sqooli - The ultimate school management tool designed for everyone" 
+                className="w-full max-w-[437px] top-[2rem] relative"
               />
-            </svg>
+            </div>
+
+            {/* Background image of students */}
+            <div className="flex-1 flex items-end justify-center pb-0 max-w-full">
+              <img
+                src="/images/sign-in/bg-image.png"
+                alt="Students with books"
+                className="object-contain relative bottom-[15rem]"
+              />
+            </div>
           </div>
         </div>
 
         {/* Right Side */}
-        <div className="w-full lg:w-1/2 flex items-center justify-center p-8">
-          <div className="w-full max-w-md space-y-8">
-            <div className="flex justify-center lg:justify-end mb-12">
-              <div className="flex items-center gap-0.5 text-3xl font-bold">
-                <span className="text-primary bg-primary/10 px-2 py-1 rounded">s</span>
-                <span className="text-secondary bg-secondary/10 px-2 py-1 rounded">q</span>
-                <span className="text-chart-3 bg-chart-3/10 px-2 py-1 rounded">o</span>
-                <span className="text-chart-3 bg-chart-3/10 px-2 py-1 rounded">o</span>
-                <span className="text-secondary bg-secondary/10 px-2 py-1 rounded">l</span>
-                <span className="text-chart-5 bg-chart-5/10 px-2 py-1 rounded">i</span>
-              </div>
+        <div className="w-full lg:w-1/2 flex items-center justify-center p-8 overflow-y-auto">
+          <div className="w-full max-w-[400px]">
+            {/* Logo */}
+            <div className="flex justify-center mb-12">
+              <img 
+                src="/images/sign-in/logo.svg" 
+                alt="Sqooli" 
+                className="h-[60px] w-auto"
+              />
             </div>
 
             {/* Already Signed In Ribbon */}
@@ -232,10 +222,10 @@ export default function SignIn() {
                   <div className="flex justify-center">
                     <CheckCircle2 className="w-16 h-16 text-secondary" />
                   </div>
-                  <h2 className="text-2xl font-bold text-foreground">
+                  <h2 className="text-signin-heading dark:text-foreground">
                     You're Already Signed In!
                   </h2>
-                  <p className="text-muted-foreground">
+                  <p className="text-signin-description dark:text-muted-foreground">
                     Welcome back! You're currently logged in and ready to go.
                   </p>
                   <Button
@@ -248,27 +238,29 @@ export default function SignIn() {
               </div>
             ) : (
               /* Sign In Form */
-              <div className="space-y-6" onKeyPress={handleKeyPress}>
-                <div className="space-y-2">
-                  <h2 className="text-2xl font-bold text-foreground">Sign In</h2>
-                  <p className="text-sm text-muted-foreground">
+              <div className="flex flex-col gap-8" onKeyPress={handleKeyPress}>
+                {/* Header */}
+                <div className="flex flex-col gap-2 text-center">
+                  <h2 className="text-signin-heading dark:text-foreground">Sign In</h2>
+                  <p className="text-signin-description dark:text-muted-foreground">
                     Please provide your credentials to proceed
                   </p>
                 </div>
 
-                <div className="space-y-5">
+                {/* Form Fields */}
+                <div className="flex flex-col gap-4">
                   {/* Email */}
-                  <div>
-                    <label className="text-sm font-medium text-foreground mb-2 block">
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-signin-label dark:text-foreground">
                       Email Address
                     </label>
                     <Input
                       type="email"
-                      placeholder="name@schoolmail.com"
+                      placeholder="james@schoolhub.com"
                       value={loginData.email}
                       onChange={(e) => handleChange('email', e.target.value)}
                       onBlur={() => handleBlur('email')}
-                      className={`w-full h-11 ${
+                      className={`w-full h-12 text-signin-input dark:text-foreground border-[#D0D5DD] dark:border-border rounded-lg bg-white dark:bg-input ${
                         errors.email && touchedFields.has('email') ? 'border-destructive' : ''
                       }`}
                       disabled={isLoading}
@@ -279,8 +271,8 @@ export default function SignIn() {
                   </div>
 
                   {/* Password */}
-                  <div>
-                    <label className="text-sm font-medium text-foreground mb-2 block">
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-signin-label dark:text-foreground">
                       Password
                     </label>
                     <div className="relative">
@@ -290,7 +282,7 @@ export default function SignIn() {
                         value={loginData.password}
                         onChange={(e) => handleChange('password', e.target.value)}
                         onBlur={() => handleBlur('password')}
-                        className={`w-full h-11 pr-10 ${
+                        className={`w-full h-12 pr-10 text-signin-input dark:text-foreground border-[#D0D5DD] dark:border-border rounded-lg bg-white dark:bg-input ${
                           errors.password && touchedFields.has('password') ? 'border-destructive' : ''
                         }`}
                         disabled={isLoading}
@@ -298,7 +290,7 @@ export default function SignIn() {
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-[#667085] dark:text-muted-foreground hover:text-[#344054] dark:hover:text-foreground"
                         disabled={isLoading}
                       >
                         {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -309,29 +301,34 @@ export default function SignIn() {
                     )}
                   </div>
 
-                  {/* Submit Button */}
-                  <Button
-                    onClick={handleSubmit}
-                    disabled={!isFormValid() || isLoading}
-                    className="w-full bg-primary hover:bg-primary/90 text-primary-foreground h-11 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {isLoading ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Signing In...
-                      </>
-                    ) : (
-                      'Sign In'
-                    )}
-                  </Button>
+                  {/* Submit Button and Link */}
+                  <div className="flex flex-col gap-2 mt-2">
+                    <Button
+                      onClick={handleSubmit}
+                      disabled={!isFormValid() || isLoading}
+                      className="w-full bg-[#3498db] hover:bg-[#2980b9] dark:bg-primary dark:hover:bg-primary/90 text-signin-button dark:text-primary-foreground h-12 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isLoading ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Signing In...
+                        </>
+                      ) : (
+                        'Sign In'
+                      )}
+                    </Button>
 
-                  <div className="text-center pt-2">
-                    <p className="text-sm text-muted-foreground">
-                      Don't have an account?{' '}
-                      <a onClick={() => navigate('/signUp')} className="text-primary hover:underline font-medium cursor-pointer">
-                        Learn how to Get Started
-                      </a>
-                    </p>
+                    <div className="text-center">
+                      <p className="text-signin-description dark:text-muted-foreground">
+                        Don't have an account?{' '}
+                        <a 
+                          onClick={() => navigate('/signUp')} 
+                          className="text-signin-link dark:text-primary hover:underline cursor-pointer"
+                        >
+                          Learn how to Get Started
+                        </a>
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
