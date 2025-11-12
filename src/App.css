@@ -40,6 +40,24 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+  --color-light-blue-bg: var(--light-blue-bg);
+  --color-light-pink-bg: var(--light-pink-bg);
+  --color-light-purple-bg: var(--light-purple-bg);
+  --color-soft-peach: var(--soft-peach);
+  --color-soft-mint: var(--soft-mint);
+  --color-soft-pink: var(--soft-pink);
+  --color-soft-yellow: var(--soft-yellow);
+  --color-text-dark: var(--text-dark);
+  --color-text-gray: var(--text-gray);
+  --color-text-black: var(--text-black);
+  --color-text-link: var(--text-link);
+  --color-browser-chrome: var(--browser-chrome);
+  --color-browser-gray: var(--browser-gray);
+  --color-browser-dark: var(--browser-dark);
+  --color-form-bg: var(--form-bg);
+  --color-form-border: var(--form-border);
+  --color-radio-border: var(--radio-border);
+  --color-radio-selected: var(--radio-selected);
 }
 
 :root {
@@ -87,6 +105,26 @@
   --sidebar-accent-foreground: #ffffff;
   --sidebar-border: #e2e8f0;
   --sidebar-ring: #0ea5e9;
+
+  /* Landing page colors */
+  --light-blue-bg: #eef6fc;
+  --light-pink-bg: #fbeefc;
+  --light-purple-bg: #eef1fc;
+  --soft-peach: #f9d7c5;
+  --soft-mint: #b8d4a8;
+  --soft-pink: #f5c5d4;
+  --soft-yellow: #faedb5;
+  --text-dark: #101828;
+  --text-gray: #475467;
+  --text-black: #000000;
+  --text-link: #3498db;
+  --browser-chrome: #f2f5fd;
+  --browser-gray: #86888a;
+  --browser-dark: #475467;
+  --form-bg: #eceefd;
+  --form-border: #dfe2fc;
+  --radio-border: #d0d5dd;
+  --radio-selected: #f2f4f7;
 }
 
 /* ===== Dark Mode ===== */
@@ -154,4 +192,169 @@
 }
 .animate-fadeIn {
   animation: fadeIn 0.4s ease-in-out forwards;
+}
+
+/* Custom typography utilities for landing page */
+@utility heading-hero {
+  font-family: Outfit, sans-serif;
+  font-size: 48px;
+  font-weight: 500;
+  color: var(--text-dark);
+}
+
+@utility heading-section {
+  font-family: Outfit, sans-serif;
+  font-size: 32px;
+  font-weight: 500;
+  line-height: 24px;
+  color: var(--text-dark);
+}
+
+@utility heading-card {
+  font-family: Outfit, sans-serif;
+  font-size: 32px;
+  font-weight: 500;
+  line-height: 36px;
+  color: var(--text-dark);
+}
+
+@utility text-body-large {
+  font-family: Outfit, sans-serif;
+  font-size: 20px;
+  font-weight: 300;
+  line-height: 30px;
+  color: #111111;
+}
+
+@utility text-body {
+  font-family: Outfit, sans-serif;
+  font-size: 16px;
+  font-weight: 300;
+  line-height: 24px;
+  color: var(--text-gray);
+}
+
+@utility text-label {
+  font-family: Outfit, sans-serif;
+  font-size: 16px;
+  font-weight: 400;
+  color: var(--text-gray);
+}
+
+@utility text-stat {
+  font-family: Outfit, sans-serif;
+  font-size: 36px;
+  font-weight: 500;
+  color: var(--text-black);
+}
+
+@utility text-button {
+  font-family: Outfit, sans-serif;
+  font-size: 18px;
+  font-weight: 500;
+  line-height: 18px;
+}
+
+@utility text-button-small {
+  font-family: Outfit, sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 14px;
+}
+
+@utility text-handwritten {
+  font-family: Pecita;
+  font-size: 64px;
+  font-weight: 400;
+  color: #1c1c1c;
+}
+
+@utility text-browser {
+  font-family: Lexend, sans-serif;
+  font-size: 14px;
+  font-weight: 300;
+  letter-spacing: 0.25px;
+  color: #111111;
+}
+
+@utility text-form-label {
+  font-family: Lexend, sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--text-gray);
+}
+
+@utility text-small {
+  font-family: Outfit, sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--text-gray);
+}
+
+@utility text-link {
+  font-family: Lexend, sans-serif;
+  font-size: 16px;
+  font-weight: 400;
+  color: var(--text-link);
+  text-decoration-line: underline;
+}
+
+/* Sign-in page typography utilities */
+@utility text-signin-title {
+  font-family: Quicksand, sans-serif;
+  font-size: 36px;
+  font-weight: 600;
+  letter-spacing: -0.72px;
+  color: #ffffff;
+}
+
+@utility text-signin-subtitle {
+  font-family: Quicksand, sans-serif;
+  font-size: 20px;
+  font-weight: 400;
+  line-height: 30px;
+  color: #ffffff;
+}
+
+@utility text-signin-heading {
+  font-family: Quicksand, sans-serif;
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.48px;
+  color: #101828;
+}
+
+@utility text-signin-description {
+  font-family: Quicksand, sans-serif;
+  font-size: 16px;
+  font-weight: 400;
+  color: #475467;
+}
+
+@utility text-signin-label {
+  font-family: Quicksand, sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  color: #344054;
+}
+
+@utility text-signin-input {
+  font-family: Quicksand, sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  color: #667085;
+}
+
+@utility text-signin-button {
+  font-family: Quicksand, sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+@utility text-signin-link {
+  font-family: Quicksand, sans-serif;
+  font-size: 16px;
+  font-weight: 400;
+  color: #3498db;
 }
