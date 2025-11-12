@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { Slot } from "@radix-ui/react-slot"
+import * as TooltipPrimitive from "@radix-ui/react-tooltip"
 import { cva, type VariantProps } from "class-variance-authority"
 import { PanelLeftIcon } from "lucide-react"
 
@@ -19,7 +20,6 @@ import {
 } from "../ui/sheet"
 import { Skeleton } from "../ui/skeleton"
 import {
-  Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
@@ -532,16 +532,20 @@ function SidebarMenuButton({
     }
   }
 
+  const { children: tooltipChildren, ...tooltipProps } = tooltip;
+
   return (
-    <Tooltip>
+    <TooltipPrimitive.Root>
       <TooltipTrigger asChild>{button}</TooltipTrigger>
       <TooltipContent
         side="right"
         align="center"
         hidden={state !== "collapsed" || isMobile}
-        {...tooltip}
-      />
-    </Tooltip>
+        {...tooltipProps}
+      >
+        {tooltipChildren}
+      </TooltipContent>
+    </TooltipPrimitive.Root>
   )
 }
 

@@ -6,6 +6,7 @@ import { Card } from "../components/ui/card";
 import CreateCampaignWizard from "../components/common/CreateCampaign";
 import { WalletSetupDialog } from "../components/common/WalletSetUp";
 import { useAuth } from "../hooks/useAuth";
+import { isConvexUser } from "../types/auth.types";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
@@ -14,7 +15,7 @@ import { useNavigate } from "react-router-dom";
 export default function OnboardingPage() {
   const [walletOpen, setWalletOpen] = useState(false);
   const [campaignOpen, setCampaignOpen] = useState(false);
-  const { partner } = useAuth();
+  const { partner, user } = useAuth();
   const navigate = useNavigate();
 
   const wallet = useQuery(
@@ -176,11 +177,14 @@ export default function OnboardingPage() {
         onClose={() => setWalletOpen(false)}
         partnerId={partner?._id as Id<"partners">}
       />
-      <CreateCampaignWizard
-        open={campaignOpen}
-        onClose={() => setCampaignOpen(false)}
-        partnerId={partner?._id as Id<"partners">}
-      />
+      {partner?._id && user && isConvexUser(user) && (
+        <CreateCampaignWizard
+          open={campaignOpen}
+          onClose={() => setCampaignOpen(false)}
+          partnerId={partner._id}
+          user_id={user._id}
+        />
+      )}
     </div>
   );
 }

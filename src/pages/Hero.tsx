@@ -17,7 +17,7 @@ import { useTheme } from '../hooks/useTheme';
 export default function Hero() {
   const navigate = useNavigate();
   const { theme } = useTheme();
-  const isDark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  const isDark = theme === 'dark';
   
   const [formData, setFormData] = useState({
     orgName: '',

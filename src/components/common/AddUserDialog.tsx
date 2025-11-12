@@ -96,7 +96,7 @@ export default function AddUserDialog({ open, onOpenChange }: AddUserDialogProps
     );
   };
 
-  const handleToggleCategory = (category: string, perms: typeof permissions) => {
+  const handleToggleCategory = (_category: string, perms: typeof permissions) => {
     const categoryPermIds = perms?.map((p) => p._id) || [];
     const allSelected = categoryPermIds.every((id) => selectedPermissions.includes(id));
 
