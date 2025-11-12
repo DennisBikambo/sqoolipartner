@@ -362,7 +362,7 @@ export default function Hero() {
                   </div>
                 )}
 
-                {true && (
+                {result === "success" && (
                   <div className="p-4  dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-xl">
                     <p className="text-sm font-medium" style={{ fontFamily: 'Outfit, sans-serif' }}>
                       ✓ Thank you! Your application has been submitted successfully. We'll get back to you soon.
