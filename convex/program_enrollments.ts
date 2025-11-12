@@ -7,6 +7,7 @@ import { v } from "convex/values";
 export const createEnrollment = mutation({
   args: {
     program_id: v.id("programs"),
+    user_id: v.id("users"),
     campaign_id: v.id("campaigns"),
     redeem_code: v.string(),
     transaction_id: v.optional(v.id("transactions")),
@@ -19,7 +20,6 @@ export const createEnrollment = mutation({
       v.object({
         phone: v.optional(v.string()),
         payment_amount: v.optional(v.number()),
-        number_of_lessons_subscribed:v.optional(v.number()),
       })
     ),
   },

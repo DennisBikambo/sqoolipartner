@@ -1,5 +1,5 @@
 'use client';
-import type { ReactNode } from "react";
+import type { ReactNode, ReactElement } from "react";
 import { useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
@@ -9,7 +9,7 @@ interface ProtectedRouteProps {
   children: ReactNode;
 }
 
-export function ProtectedRoute({ children }: ProtectedRouteProps): JSX.Element | null {
+export function ProtectedRoute({ children }: ProtectedRouteProps): ReactElement | null {
   const { user, loading, isFirstLogin } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();

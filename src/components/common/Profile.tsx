@@ -6,7 +6,7 @@ import { Avatar, AvatarFallback } from "../ui/avatar";
 import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
 import { useAuth } from "../../hooks/useAuth";
-import { getDisplayName, getUserInitials } from "../../types/auth.types";
+import { getDisplayName, getUserInitials, isConvexUser } from "../../types/auth.types";
 import CreateCampaignWizard from "./CreateCampaign";
 import { Loading } from "./Loading";
 
@@ -17,6 +17,7 @@ export default function Profile() {
   const displayName = getDisplayName(partner || user);
   const initials = getUserInitials(partner || user);
   const partnerId = partner?._id;
+  const userId = user && isConvexUser(user) ? user._id : undefined;
 
   if (!partner && !user) {
     return (
@@ -86,9 +87,10 @@ export default function Profile() {
       </Card>
 
       {/* Create Campaign Modal */}
-      {partnerId && (
+      {partnerId && userId && (
         <CreateCampaignWizard
           partnerId={partnerId}
+          user_id={userId}
           open={showWizard}
           onClose={() => setShowWizard(false)}
         />

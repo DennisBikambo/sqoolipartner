@@ -7,7 +7,7 @@ export type Theme = "light" | "dark" | "system";
 
 export function ThemeProvider({
   children,
-  defaultTheme = "system",
+  defaultTheme = "light",
   storageKey = "vite-ui-theme",
 }: {
   children: React.ReactNode;

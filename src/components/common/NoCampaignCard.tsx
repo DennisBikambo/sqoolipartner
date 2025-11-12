@@ -5,6 +5,7 @@ import { Card, CardContent } from "../ui/card";
 import { Button } from "../ui/button";
 import { Plus, X } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
+import { isConvexUser } from "../../types/auth.types";
 import CreateCampaignWizard from "./CreateCampaign";
 
 interface NoCampaignCardProps {
@@ -14,12 +15,13 @@ interface NoCampaignCardProps {
 
 export const NoCampaignCard: React.FC<NoCampaignCardProps> = ({
   title = "No Campaigns Yet",
-  message = "You don’t have any active campaigns yet. Create one to get started.",
+  message = "You don't have any active campaigns yet. Create one to get started.",
 }) => {
-  const { partner } = useAuth();
+  const { partner, user } = useAuth();
   const [openWizard, setOpenWizard] = useState(false);
 
-  if (openWizard && partner?._id) {
+  // Only show wizard if we have a Convex user (with _id)
+  if (openWizard && partner?._id && user && isConvexUser(user)) {
     return (
       <Card className="border border-[var(--color-border)] shadow-md p-6 relative">
         <Button
@@ -33,6 +35,7 @@ export const NoCampaignCard: React.FC<NoCampaignCardProps> = ({
 
         <CreateCampaignWizard
           partnerId={partner._id}
+          user_id={user._id}
           open={openWizard}
           onClose={() => setOpenWizard(false)}
         />
