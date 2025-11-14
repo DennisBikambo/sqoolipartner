@@ -10,6 +10,9 @@ import { useQuery } from "convex/react";
 import type { Doc, Id } from "../../../convex/_generated/dataModel";
 import { WalletSetupDialog } from "./WalletSetUp";
 import { PinVerificationDialog } from "./PinVerification";
+import { WithdrawalDialog } from "./WithdrawalDialog";
+import { isConvexUser } from "../../types/auth.types";
+import { toast } from "sonner";
 // import { cn } from "../../lib/utils";
 
 export default function Wallet({
@@ -23,6 +26,7 @@ export default function Wallet({
   const [showSetupDialog, setShowSetupDialog] = useState(false);
   const [showBalance, setShowBalance] = useState(false);
   const [pinDialogOpen, setPinDialogOpen] = useState(false);
+  const [withdrawalDialogOpen, setWithdrawalDialogOpen] = useState(false);
 
   const partnerId = partner?._id as Id<"partners"> | undefined;
   const wallet = useQuery(
@@ -46,6 +50,22 @@ export default function Wallet({
     if (activeItem === "wallet") setShowSetupDialog(true);
     else setActiveItem("wallet");
   }
+
+  function withdraw() {
+      if (!wallet) {
+        toast.error("Wallet not available for withdrawal.");
+        return;
+      }
+
+      if (!wallet.is_setup_complete) {
+        toast.error("Wallet is not set up yet.");
+        setShowSetupDialog(true);
+        return;
+      }
+
+      setWithdrawalDialogOpen(true);
+    }
+
 
   // Skeleton loading
   if (partner && wallet === undefined) {
@@ -136,13 +156,15 @@ export default function Wallet({
 
               {/* Actions */}
               <div className="flex gap-3">
-                <Button className="flex-1 bg-primary text-primary-foreground font-medium rounded-lg hover:bg-primary/90">
+                <Button className="flex-1 bg-primary text-primary-foreground font-medium rounded-lg hover:bg-primary/90"
+                  onClick={withdraw}
+                >
                   Withdraw
                 </Button>
                 <Button
                   variant="outline"
                   className="flex-1 border-primary text-primary font-medium rounded-lg hover:bg-primary/10"
-                  onClick={setUpWallet}
+                  onClick={()=>toast.success("Feature coming soon!")}
                 >
                   <Edit className="h-4 w-4 mr-2" /> Edit
                 </Button>
@@ -175,11 +197,22 @@ export default function Wallet({
         />
       )}
 
-      {user && (
+      {user && isConvexUser(user) && (
         <WalletSetupDialog
           open={showSetupDialog}
           onClose={() => setShowSetupDialog(false)}
           partnerId={partner?._id as Id<"partners">}
+          userId={user._id}
+        />
+      )}
+
+      {partner?._id && wallet && user && isConvexUser(user) &&(
+        <WithdrawalDialog
+          open={withdrawalDialogOpen}
+          onClose={() => setWithdrawalDialogOpen(false)}
+          wallet={wallet}
+          partnerId={partner?._id as Id<"partners">}
+          userId={user._id}
         />
       )}
     </>

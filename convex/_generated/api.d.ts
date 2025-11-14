@@ -29,6 +29,8 @@ import type * as subjects from "../subjects.js";
 import type * as transactions from "../transactions.js";
 import type * as user from "../user.js";
 import type * as wallet from "../wallet.js";
+import type * as withdrawalLimits from "../withdrawalLimits.js";
+import type * as withdrawals from "../withdrawals.js";
 
 /**
  * A utility for referencing Convex functions in your app's API.
@@ -55,6 +57,8 @@ declare const fullApi: ApiFromModules<{
   transactions: typeof transactions;
   user: typeof user;
   wallet: typeof wallet;
+  withdrawalLimits: typeof withdrawalLimits;
+  withdrawals: typeof withdrawals;
 }>;
 export declare const api: FilterApi<
   typeof fullApi,

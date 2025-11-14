@@ -7,7 +7,8 @@ import { mutation } from "./_generated/server";
 
 export const createWallet = mutation({
   args: {
-    user_id: v.id("partners"),
+    partner_id: v.id("partners"),
+    user_id: v.id("users"),
     account_number: v.string(),
     withdrawal_method: v.union(
       v.literal("mpesa"),
@@ -29,6 +30,7 @@ export const createWallet = mutation({
     
     return await ctx.db.insert("wallets", {
       account_number: args.account_number,
+      partner_id: args.partner_id,
       user_id: args.user_id,
       balance: 0,
       pending_balance: 0,
@@ -49,7 +51,7 @@ export const getWalletByPartnerId = query({
   handler: async (ctx, args) => {
     const wallet = await ctx.db
       .query("wallets")
-      .withIndex("by_user_id", (q) => q.eq("user_id", args.partner_id))
+      .withIndex("by_partner_id", (q) => q.eq("partner_id", args.partner_id))
       .first(); 
     return wallet ?? null;
   },
@@ -83,7 +85,7 @@ export const updateWalletBalance = mutation({
   handler: async (ctx, args) => {
     const wallet = await ctx.db
       .query("wallets")
-      .withIndex("by_user_id", (q) => q.eq("user_id", args.partner_id))
+      .withIndex("by_partner_id", (q) => q.eq("partner_id", args.partner_id))
       .first();
 
     if (!wallet) {
@@ -108,7 +110,7 @@ export const getWalletByPartner = query({
   handler: async (ctx, args) => {
     return await ctx.db
       .query("wallets")
-      .withIndex("by_user_id", (q) => q.eq("user_id", args.partnerId))
+      .withIndex("by_partner_id", (q) => q.eq("partner_id", args.partnerId))
       .first();
   },
 });

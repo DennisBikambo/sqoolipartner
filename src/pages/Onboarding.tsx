@@ -172,11 +172,15 @@ export default function OnboardingPage() {
       </div>
 
       {/* Dialogs */}
-      <WalletSetupDialog
+      { partner?._id && user && isConvexUser(user) && (
+        <WalletSetupDialog
         open={walletOpen}
         onClose={() => setWalletOpen(false)}
         partnerId={partner?._id as Id<"partners">}
+        userId={user._id}
       />
+      )}
+      
       {partner?._id && user && isConvexUser(user) && (
         <CreateCampaignWizard
           open={campaignOpen}

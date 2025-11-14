@@ -19,12 +19,14 @@ interface WalletSetupDialogProps {
   open: boolean;
   onClose: () => void;
   partnerId: Id<"partners">;
+  userId: Id<"users">;
 }
 
 export function WalletSetupDialog({
   open,
   onClose,
   partnerId,
+  userId,
 }: WalletSetupDialogProps) {
   const [activeTab, setActiveTab] = useState("method");
   const [withdrawalMethod, setWithdrawalMethod] = useState<"mpesa" | "bank" | "paybill">("mpesa");
@@ -66,7 +68,8 @@ export function WalletSetupDialog({
     setIsLoading(true);
     try {
       await createWallet({
-        user_id: partnerId,
+        partner_id: partnerId,
+        user_id: userId,
         account_number: accountNumber,
         withdrawal_method: withdrawalMethod,
         paybill_number: withdrawalMethod === "mpesa" ? paybillNumber : undefined,

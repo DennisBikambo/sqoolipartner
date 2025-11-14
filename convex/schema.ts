@@ -53,9 +53,9 @@ export default defineSchema({
    * Each permission defines what a user can access/do
    */
   permissions: defineTable({
-    key: v.string(), // Unique identifier e.g., "user.read", "campaign.create", "wallet.view"
-    name: v.string(), // Display name e.g., "User Read", "Campaign Create"
-    description: v.string(), // What this permission allows
+    key: v.string(), 
+    name: v.string(), 
+    description: v.string(), 
     category: v.union(
       v.literal("users"),
       v.literal("campaigns"),
@@ -213,7 +213,6 @@ export default defineSchema({
     updated_at: v.optional(v.string()),
   }),
 
-  // Program-Subject Mapping (optional if using JSON subjects)
   program_subjects: defineTable({
     program_id: v.id("programs"),
     subject_id: v.id("subjects"),
@@ -237,7 +236,8 @@ export default defineSchema({
 
   wallets: defineTable({
     account_number: v.string(), 
-    user_id: v.id("partners"), 
+    partner_id: v.id("partners"), 
+    user_id : v.id("users"),
     balance: v.number(), 
     pending_balance: v.number(), 
     lifetime_earnings: v.number(), 
@@ -263,14 +263,15 @@ export default defineSchema({
     is_setup_complete: v.boolean(), 
   })
     .index("by_account_number", ["account_number"])
-    .index("by_user_id", ["user_id"]),
+    .index("by_user_id", ["user_id"])
+    .index("by_partner_id",["partner_id"]),
   
 
   audit_logs: defineTable({
     user_id: v.id("users"),
     partner_id: v.id("partners"),
-    action: v.string(), // e.g., "user.created", "campaign.deleted"
-    entity_type: v.string(), // e.g., "campaign", "user"
+    action: v.string(), 
+    entity_type: v.string(),
     entity_id: v.optional(v.string()),
     details: v.optional(v.string()), 
     ip_address: v.optional(v.string()),
@@ -289,7 +290,73 @@ export default defineSchema({
   }).index("by_token", ["token"])
     .index("by_user_id", ["user_id"]),
 
+  
+
+
+/**
+ * WITHDRAWALS TABLE
+ * ------------------------
+ * Tracks all withdrawal requests from partners
+ */
+withdrawals: defineTable({
+  wallet_id: v.id("wallets"),
+  partner_id: v.id("partners"),
+  user_id: v.id("users"), 
+  amount: v.number(),
+  withdrawal_method: v.union(
+    v.literal("mpesa"),
+    v.literal("bank"),
+    v.literal("paybill")
+  ),
+  // Destination details (based on withdrawal_method)
+  destination_details: v.object({
+    account_number: v.string(),
+    account_name: v.optional(v.string()), 
+    bank_name: v.optional(v.string()),
+    branch: v.optional(v.string()),
+    paybill_number: v.optional(v.string()),
+  }),
+  status: v.union(
+    v.literal("pending"),
+    v.literal("processing"),
+    v.literal("completed"),
+    v.literal("failed"),
+    v.literal("cancelled")
+  ),
+  reference_number: v.string(), 
+  mpesa_receipt: v.optional(v.string()), 
+  notes: v.optional(v.string()),
+  processed_at: v.optional(v.string()),
+  failed_reason: v.optional(v.string()),
+  updated_at: v.optional(v.string()),
+})
+  .index("by_wallet_id", ["wallet_id"])
+  .index("by_partner_id", ["partner_id"])
+  .index("by_user_id", ["user_id"])
+  .index("by_status", ["status"])
+  .index("by_reference_number", ["reference_number"]),
+
+/**
+ * WITHDRAWAL_LIMITS TABLE
+ * ------------------------
+ * Tracks all withdrawal requests from partners
+ */
+withdrawal_limits: defineTable({
+  partner_id: v.optional(v.id("partners")), 
+  min_withdrawal_amount: v.number(),
+  max_withdrawal_amount: v.number(),
+  daily_limit: v.number(),
+  monthly_limit: v.number(),
+  processing_days: v.number(), 
+  is_active: v.boolean(),
+  updated_at: v.optional(v.string()),
+})
+  .index("by_partner_id", ["partner_id"])
+  .index("by_is_active", ["is_active"]),
+
 });
+
+
 
 
 
