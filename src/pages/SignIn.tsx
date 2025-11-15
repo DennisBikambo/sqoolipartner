@@ -62,95 +62,112 @@ export default function SignIn() {
   };
 
   const handleSubmit = async () => {
-    const params = new URLSearchParams(location.search);
-    const extension = params.get("extension");
-    const allFields = new Set(Object.keys(loginData) as (keyof LoginFormData)[]);
-    setTouchedFields(allFields);
+      const params = new URLSearchParams(location.search);
+      const extension = params.get("extension");
+      const allFields = new Set(Object.keys(loginData) as (keyof LoginFormData)[]);
+      setTouchedFields(allFields);
 
-    const newErrors = validateLoginData(loginData);
-    setErrors(newErrors);
+      const newErrors = validateLoginData(loginData);
+      setErrors(newErrors);
 
-    if (Object.keys(newErrors).length > 0) {
-      toast.error('Please correct the highlighted errors before continuing.');
-      return;
-    }
-
-    setIsLoading(true);
-
-    try {
-  
-
-      let result;
-      if (extension) {
-        // Convex user login using hooks
-        console.log("In here!")
-        try {
-          const loginResponse = await loginMutation({ 
-            email: loginData.email, 
-            password: loginData.password 
-          });
-
-          if (!loginResponse.user) {
-            throw new Error('Invalid login credentials.');
-          }
-
-          if (!loginResponse.user.is_account_activated) {
-            throw new Error('Account not activated. Contact your partner admin.');
-          }
-
-          const sessionResponse = await createSessionMutation({
-            user_id: loginResponse.user._id,
-          });
-
-          result = {
-            success: true,
-            message: 'Login successful',
-            session: sessionResponse,
-            user: loginResponse.user,
-          };
-        } catch (error: unknown) {
-          console.error('Convex login failed:', error);
-          let message = 'Login failed';
-          if (
-            error &&
-            typeof error === 'object' &&
-            'message' in error &&
-            typeof (error as { message?: unknown }).message === 'string'
-          ) {
-            message = (error as { message: string }).message;
-          }
-          result = {
-            success: false,
-            message,
-          };
-        }
-      } else {
-        // Default Laravel login
-        result = await handleLogin(loginData);
-      }
-
-      if (!result?.success) {
-        toast.error(result?.message || 'Invalid email or password');
+      if (Object.keys(newErrors).length > 0) {
+        toast.error('Please correct the errors above to continue');
         return;
       }
 
-      toast.success('Login successful! 🎉');
+      setIsLoading(true);
 
-      // Store the Convex session token in cookies if using Convex login
-      const sessionToken = (result as { session?: { token?: string } })?.session?.token;
-      if (typeof sessionToken === 'string') {
-        document.cookie = `convex_session=${sessionToken}; path=/; max-age=${2 * 60 * 60}; SameSite=Lax`;
+      try {
+        let result;
+        if (extension) {
+          // Convex user login using hooks
+          console.log("In here!")
+          try {
+            const loginResponse = await loginMutation({ 
+              email: loginData.email, 
+              password: loginData.password,
+              extension: extension
+            });
+
+            if (!loginResponse.user) {
+              throw new Error('Invalid email or password');
+            }
+
+            if (!loginResponse.user.is_account_activated) {
+              throw new Error('Your account needs activation. Please contact your administrator');
+            }
+
+            const sessionResponse = await createSessionMutation({
+              user_id: loginResponse.user._id,
+            });
+
+            result = {
+              success: true,
+              message: 'Login successful',
+              session: sessionResponse,
+              user: loginResponse.user,
+            };
+          } catch (error: unknown) {
+            console.error('Convex login failed:', error);
+            let message = 'An unexpected error occurred. Please try again';
+            
+            if (
+              error &&
+              typeof error === 'object' &&
+              'message' in error &&
+              typeof (error as { message?: unknown }).message === 'string'
+            ) {
+              const errorMsg = (error as { message: string }).message;
+              
+              // Transform backend error messages to user-friendly ones
+              if (errorMsg.includes('Invalid email or password')) {
+                message = 'The email or password you entered is incorrect';
+              } else if (errorMsg.includes('Invalid extension')) {
+                message = 'Invalid login link. Please use the correct sign-in URL';
+              } else if (errorMsg.includes('Account not activated') || errorMsg.includes('not activated')) {
+                message = 'Your account needs activation. Please contact your administrator';
+              } else {
+                message = errorMsg;
+              }
+              
+              // Clear password field for password-related errors
+              if (message.includes('password') || message.includes('incorrect')) {
+                setLoginData(prev => ({ ...prev, password: '' }));
+              }
+            }
+            
+            result = {
+              success: false,
+              message,
+            };
+          }
+        } else {
+          // Default Laravel login
+          result = await handleLogin(loginData);
+        }
+
+        if (!result?.success) {
+          toast.error(result?.message || 'The email or password you entered is incorrect');
+          return;
+        }
+
+        toast.success('Login successful! 🎉');
+
+        // Store the Convex session token in cookies if using Convex login
+        const sessionToken = (result as { session?: { token?: string } })?.session?.token;
+        if (typeof sessionToken === 'string') {
+          document.cookie = `convex_session=${sessionToken}; path=/; max-age=${2 * 60 * 60}; SameSite=Lax`;
+        }
+        
+        navigate('/dashboard');
+        window.location.reload(); 
+      } catch (error) {
+        console.error('Login error:', error);
+        toast.error('An unexpected error occurred. Please try again');
+      } finally {
+        setIsLoading(false);
       }
-      
-      navigate('/dashboard');
-      window.location.reload(); 
-    } catch (error) {
-      console.error('Login error:', error);
-      toast.error('An unexpected error occurred. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && isFormValid() && !isLoading) {
