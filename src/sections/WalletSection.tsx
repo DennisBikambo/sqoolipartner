@@ -8,6 +8,7 @@ import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Badge } from "../components/ui/badge";
+import { maskPhoneNumber } from "../lib/maskPhoneNumber";
 import {
   Table,
   TableBody,
@@ -300,7 +301,7 @@ export default function WalletSection({
                                     {transaction.student_name}
                                   </div>
                                   <div className="text-sm text-muted-foreground">
-                                    {transaction.phone_number}
+                                    {maskPhoneNumber(transaction.phone_number)}
                                   </div>
                                 </div>
                                 <Badge 
@@ -384,7 +385,7 @@ export default function WalletSection({
                                 </TableCell>
                                 <TableCell>
                                   <div className="text-sm text-foreground">
-                                    {transaction.phone_number}
+                                    {maskPhoneNumber(transaction.phone_number)}
                                   </div>
                                 </TableCell>
                                 <TableCell>

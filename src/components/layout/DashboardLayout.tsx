@@ -22,7 +22,7 @@ export function DashboardLayout({
       <Header title={title} />
       
       {/* Content Area with Sidebar - Add top padding for fixed header */}
-      <div className="flex flex-1 overflow-hidden ">
+      <div className="flex flex-1 overflow-hidden bg-muted/30 ">
         {/* Floating Sticky Sidebar */}
         <AppSidebar 
           activeItem={activeItem} 
@@ -30,7 +30,7 @@ export function DashboardLayout({
         />
         
         {/* Main Content - Add left margin for sidebar spacing */}
-        <main className="flex-1 overflow-y-auto bg-muted/30 lg:ml-[130px]">
+        <main className="flex-1 overflow-y-auto  lg:ml-[130px]">
           {children}
         </main>
       </div>

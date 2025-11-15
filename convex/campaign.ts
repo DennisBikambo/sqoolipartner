@@ -136,6 +136,16 @@ export const getCampaignsByPartner = query({
   },
 });
 
+export const getCampaignsByUser = query({
+  args: { user_id: v.id("users") },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("campaigns")
+      .withIndex("by_user_id", (q) => q.eq("user_id", args.user_id))
+      .collect();
+  },
+});
+
 /**
  * UPDATE campaign status (for approval workflow)
  */

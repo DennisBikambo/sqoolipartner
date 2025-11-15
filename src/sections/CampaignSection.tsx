@@ -1,5 +1,5 @@
 "use client";
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -50,24 +50,17 @@ export default function CampaignSection() {
   const [showCreateWizard, setShowCreateWizard] = useState(false);
 
   const { user,partner } = useAuth();
-  const { canRead, canWrite, permissions, loading: permissionsLoading } = usePermissions();
+  const { canRead, canWrite, loading: permissionsLoading } = usePermissions();
   
   // Permission checks
   const canViewCampaigns = canRead("campaigns");
   const canManageCampaigns = canWrite("campaigns");
 
-  // Debug logs
-  useEffect(() => {
-    console.log('Campaign Permissions:', {
-      permissions,
-      canViewCampaigns,
-      canManageCampaigns,
-    });
-  }, [permissions, canViewCampaigns, canManageCampaigns]);
+
 
   const campaigns = useQuery(
-    api.campaign.getCampaignsByPartner,
-    partner?._id && canViewCampaigns ? { partner_id: partner._id } : "skip"
+    api.campaign.getCampaignsByUser,
+    isConvexUser(user) && user?._id && canViewCampaigns ? { user_id: user._id } : "skip"
   );
 
   const updateCampaignStatus = useMutation(api.campaign.updateCampaignStatus);

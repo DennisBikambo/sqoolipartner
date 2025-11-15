@@ -113,6 +113,7 @@ export default defineSchema({
     ),
   })
     .index("by_partner_id", ["partner_id"])
+    .index("by_user_id", ["user_id"])
     .index("by_program_id", ["program_id"])
     .index("by_promo_code", ["promo_code"]),
 

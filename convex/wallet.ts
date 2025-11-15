@@ -114,3 +114,41 @@ export const getWalletByPartner = query({
       .first();
   },
 });
+
+export const updateWallet = mutation({
+  args: {
+    wallet_id: v.id("wallets"),
+    account_number: v.string(),
+    withdrawal_method: v.union(
+      v.literal("mpesa"),
+      v.literal("bank"),
+      v.literal("paybill")
+    ),
+    paybill_number: v.optional(v.string()),
+    pin: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const wallet = await ctx.db.get(args.wallet_id);
+    
+    if (!wallet) {
+      throw new Error("Wallet not found");
+    }
+
+    const updateData: Partial<typeof wallet> = {
+      account_number: args.account_number,
+      withdrawal_method: args.withdrawal_method,
+      pin: args.pin,
+      pin_set_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    if (args.withdrawal_method === "paybill" && args.paybill_number) {
+      updateData.paybill_number = args.paybill_number;
+    } else if (args.withdrawal_method !== "paybill") {
+      updateData.paybill_number = undefined;
+    }
+
+    await ctx.db.patch(args.wallet_id, updateData);
+
+    return { success: true, message: "Wallet updated successfully" };
+  },
+});
