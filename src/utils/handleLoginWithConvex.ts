@@ -9,7 +9,7 @@ export async function handleLoginWithConvex(email: string, password: string, ext
     }
 
     
-    const loginResponse = await fetchMutation(api.user.login, { email, password });
+    const loginResponse = await fetchMutation(api.user.login, { email, password, extension });
 
     const user = loginResponse.user;
     if (!user) throw new Error("Invalid login credentials.");
@@ -31,11 +31,18 @@ export async function handleLoginWithConvex(email: string, password: string, ext
       session: sessionResponse,
       user,
     };
-  } catch (error: any) {
-    console.error("Convex login failed:", error);
-    return {
-      success: false,
-      message: error.message || "Login failed",
-    };
-  }
+  } catch (error: unknown) {
+      console.error("Convex login failed:", error);
+
+      let message = "Login failed";
+
+      if (error instanceof Error) {
+        message = error.message;
+      }
+
+      return {
+        success: false,
+        message,
+      };
+    }
 }
