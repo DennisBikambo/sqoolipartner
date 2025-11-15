@@ -424,3 +424,30 @@ export const getWithdrawalStats = query({
     return stats;
   },
 });
+
+export const getTotalWithdrawals = query({
+  args: {
+    partner_id: v.id("partners"),
+  },
+  handler: async (ctx, { partner_id }) => {
+    const withdrawals = await ctx.db
+      .query("withdrawals")
+      .withIndex("by_partner_id", (q) => q.eq("partner_id", partner_id))
+      .collect();
+
+    const completedWithdrawals = withdrawals.filter((w) => w.status === "completed");
+    const pendingWithdrawals = withdrawals.filter(
+      (w) => w.status === "pending" || w.status === "processing"
+    );
+
+    return {
+      total_completed: completedWithdrawals.reduce((sum, w) => sum + w.amount, 0),
+      total_pending: pendingWithdrawals.reduce((sum, w) => sum + w.amount, 0),
+      count_completed: completedWithdrawals.length,
+      count_pending: pendingWithdrawals.length,
+      recent_withdrawals: withdrawals
+        .sort((a, b) => b._creationTime - a._creationTime)
+        .slice(0, 5),
+    };
+  },
+});

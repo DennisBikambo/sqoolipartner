@@ -206,3 +206,61 @@ export const getCampaignByPartner = query({
       .first();
   },
 });
+
+export const getCampaignEarnings = query({
+  args: {
+    partner_id: v.id("partners"),
+  },
+  handler: async (ctx, { partner_id }) => {
+    // Get all campaigns for this partner
+    const campaigns = await ctx.db
+      .query("campaigns")
+      .withIndex("by_partner_id", (q) => q.eq("partner_id", partner_id))
+      .collect();
+
+    // Get earnings for each campaign
+    const campaignEarnings = await Promise.all(
+      campaigns.map(async (campaign) => {
+        // Get all enrollments for this campaign
+        const enrollments = await ctx.db
+          .query("program_enrollments")
+          .withIndex("by_campaign_id", (q) => q.eq("campaign_id", campaign._id))
+          .filter((q) => q.eq(q.field("status"), "redeemed"))
+          .collect();
+        
+        
+
+        // Get all transactions for this campaign
+        const transactions = await ctx.db
+          .query("transactions")
+          .withIndex("by_campaign_code", (q) => q.eq("campaign_code", campaign.promo_code))
+          .filter((q) => q.eq(q.field("status"), "Success"))
+          .collect();
+        
+
+        
+
+        // Calculate total earnings (20% of transaction amounts)
+        const totalRevenue = transactions.reduce((sum, t) => sum + t.amount, 0);
+        const partnerEarnings = totalRevenue * (campaign.revenue_share.partner_percentage / 100);
+
+        return {
+          campaign_id: campaign._id,
+          campaign_name: campaign.name,
+          promo_code: campaign.promo_code,
+          status: campaign.status,
+          enrollments: enrollments.length,
+          total_revenue: totalRevenue,
+          partner_earnings: partnerEarnings,
+          target_signups: campaign.target_signups,
+          conversion_rate: campaign.target_signups > 0 
+            ? (enrollments.length / campaign.target_signups) * 100 
+            : 0,
+        };
+      })
+    );
+
+    // Sort by earnings (highest first)
+    return campaignEarnings.sort((a, b) => b.partner_earnings - a.partner_earnings);
+  },
+});
