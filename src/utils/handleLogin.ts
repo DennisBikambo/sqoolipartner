@@ -20,15 +20,12 @@ export const validateLoginData = (data: LoginFormData): LoginValidationErrors =>
   return errors
 }
 
-export const handleGetCSRF = async (): Promise<void> => {
-  const response = await fetch(getApiEndpoint('/sanctum/csrf-cookie'), {
-    method: 'GET',
-    credentials: 'include',
-  })
-
-  if (!response.ok) throw new Error('Failed to fetch CSRF cookie')
-}
-
+/**
+ * Gets CSRF token from cookies
+ * Note: In cross-origin setups (sqooli.org -> api.sqooli.com), the XSRF-TOKEN cookie
+ * is set by api.sqooli.com but cannot be read by JavaScript on sqooli.org due to
+ * browser security. The cookie IS sent with credentials: 'include', but we can't access it.
+ */
 export const getCookie = (name: string): string | null => {
   const cookies = document.cookie.split('; ')
   for (const cookie of cookies) {
@@ -36,6 +33,22 @@ export const getCookie = (name: string): string | null => {
     if (key === name) return decodeURIComponent(value)
   }
   return null
+}
+
+/**
+ * Fetches CSRF cookie from Laravel Sanctum
+ * This sets the XSRF-TOKEN cookie which will be automatically sent with subsequent requests
+ */
+export const handleGetCSRF = async (): Promise<void> => {
+  const response = await fetch(getApiEndpoint('/sanctum/csrf-cookie'), {
+    method: 'GET',
+    credentials: 'include',
+  })
+
+  if (!response.ok) throw new Error('Failed to fetch CSRF cookie')
+
+  // The cookie is now set and will be sent automatically with credentials: 'include'
+  // In cross-origin scenarios, we can't read it but the browser will send it
 }
 
 export const handleLogin = async (data: LoginFormData) => {
@@ -47,24 +60,40 @@ export const handleLogin = async (data: LoginFormData) => {
   try {
     const xsrfToken = getCookie('XSRF-TOKEN')
 
+    // Debug logging for cross-origin issues
+    if (!xsrfToken) {
+      console.warn('⚠️ XSRF-TOKEN cookie not found. This may indicate a cross-origin cookie issue.')
+      console.warn('   Available cookies:', document.cookie)
+      console.warn('   Make sure the API server sets cookies with domain=.sqooli.com')
+    }
+
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    }
+
+    // Only add X-XSRF-TOKEN header if we have the token
+    // For cross-origin requests, if cookie domain is not shared, we can't read it
+    if (xsrfToken) {
+      headers['X-XSRF-TOKEN'] = xsrfToken
+    }
+
     const response = await fetch(getApiEndpoint('/login'), {
       method: 'POST',
       credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'X-XSRF-TOKEN': xsrfToken ?? '',
-      },
+      headers,
       body: JSON.stringify({
         email: data.email.trim().toLowerCase(),
         password: data.password,
       }),
     })
 
- 
-
     if (response.status === 419) {
-      return { success: false, message: 'CSRF token mismatch (419)' }
+      console.error('❌ CSRF token mismatch. Cookie found:', !!xsrfToken)
+      return {
+        success: false,
+        message: 'CSRF token mismatch. Please ensure cookies are enabled and the API server is configured for cross-origin requests with domain=.sqooli.com'
+      }
     }
 
     // Laravel returns 204 No Content on successful login
