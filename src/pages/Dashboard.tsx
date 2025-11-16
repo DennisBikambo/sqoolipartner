@@ -35,7 +35,7 @@ export default function DashboardPage() {
     if (!permissions) return false;
 
     const admin = permissions.some(
-      (p) => p.key === "all_access.admin" || p.level === "full"
+      (p) => p.category === "all_access" || p.level === "full"
     );
     if (admin) return true;
 

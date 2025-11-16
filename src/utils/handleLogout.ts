@@ -1,16 +1,16 @@
-// const API_URL = import.meta.env.VITE_API_URL;
+import { getApiEndpoint } from "./apiConfig";
 
 export async function handleLogout() {
   try {
 
-    await fetch(`/sanctum/csrf-cookie`, {
+    await fetch(getApiEndpoint("/sanctum/csrf-cookie"), {
       method: "GET",
       credentials: "include",
     });
-    
+
     const xsrfToken = getCookieValue("XSRF-TOKEN");
 
-    const response = await fetch(`/logout`, {
+    const response = await fetch(getApiEndpoint("/logout"), {
       method: "POST",
       credentials: "include",
       headers: {

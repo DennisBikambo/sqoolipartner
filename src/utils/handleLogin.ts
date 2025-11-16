@@ -1,6 +1,5 @@
 import type { LoginFormData, LoginValidationErrors } from '../types/auth.types'
-
-// const API_URL = import.meta.env.VITE_API_URL;
+import { getApiEndpoint } from './apiConfig'
 export const validateLoginData = (data: LoginFormData): LoginValidationErrors => {
   const errors: LoginValidationErrors = {}
 
@@ -22,7 +21,7 @@ export const validateLoginData = (data: LoginFormData): LoginValidationErrors =>
 }
 
 export const handleGetCSRF = async (): Promise<void> => {
-  const response = await fetch(`/sanctum/csrf-cookie`, {
+  const response = await fetch(getApiEndpoint('/sanctum/csrf-cookie'), {
     method: 'GET',
     credentials: 'include',
   })
@@ -48,12 +47,12 @@ export const handleLogin = async (data: LoginFormData) => {
   try {
     const xsrfToken = getCookie('XSRF-TOKEN')
 
-    const response = await fetch(`/login`, {
+    const response = await fetch(getApiEndpoint('/login'), {
       method: 'POST',
       credentials: 'include',
       headers: {
         'Content-Type': 'application/json',
-        'Accept': 'application/json', 
+        'Accept': 'application/json',
         'X-XSRF-TOKEN': xsrfToken ?? '',
       },
       body: JSON.stringify({
@@ -71,9 +70,9 @@ export const handleLogin = async (data: LoginFormData) => {
     // Laravel returns 204 No Content on successful login
     if (response.status === 204 ) {
 
-      
+
       // Verify user is authenticated
-      const userRes = await fetch(`/api/user`, {
+      const userRes = await fetch(getApiEndpoint('/api/user'), {
         method: 'GET',
         credentials: 'include',
         headers: {

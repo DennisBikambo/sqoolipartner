@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Textarea } from '../components/ui/textarea';
@@ -15,9 +14,15 @@ import { HeroHeader } from '../components/layout/HeroHeader';
 import { useTheme } from '../hooks/useTheme';
 
 export default function Hero() {
-  const navigate = useNavigate();
   const { theme } = useTheme();
   const isDark = theme === 'dark';
+
+  const scrollToForm = () => {
+    const formSection = document.getElementById('partner-form');
+    if (formSection) {
+      formSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
   
   const [formData, setFormData] = useState({
     orgName: '',
@@ -111,11 +116,11 @@ export default function Hero() {
               <p className="text-lg lg:text-xl font-light text-[#111111] dark:text-muted-foreground leading-relaxed max-w-xl" style={{ fontFamily: 'Outfit, sans-serif' }}>
                 Whether you're a content creator, media brand, or corporate donor — Sqooli gives you a way to make education accessible and rewarding for everyone.
               </p>
-              <Button 
-                size="lg" 
+              <Button
+                size="lg"
                 className="bg-primary hover:bg-primary/90 text-white font-medium text-lg px-8 py-6 rounded-lg"
                 style={{ fontFamily: 'Outfit, sans-serif' }}
-                onClick={() => navigate('/signIn')}
+                onClick={scrollToForm}
               >
                 Become a Partner
               </Button>
@@ -194,7 +199,7 @@ export default function Hero() {
               ]}
               buttonText="Join the Sqooli Affiliate Program"
               variant="primary"
-              onButtonClick={() => navigate('/signIn')}
+              onButtonClick={scrollToForm}
             />
 
             <PartnershipCard
@@ -208,7 +213,7 @@ export default function Hero() {
               ]}
               buttonText="Support Digital Education"
               variant="secondary"
-              onButtonClick={() => navigate('/signIn')}
+              onButtonClick={scrollToForm}
             />
           </div>
         </div>
@@ -257,10 +262,13 @@ export default function Hero() {
       </section>
 
       {/* Contact Form Section */}
-      <section className={isDark
-        ? "py-16 lg:py-20 bg-gradient-to-br from-[#0f1419] via-[#1a1f2e] to-[#0f1419] relative overflow-hidden"
-        : "py-16 lg:py-20 bg-gradient-to-br from-[#eef6fc] via-white to-[#eef1fc] relative overflow-hidden"
-      }>
+      <section
+        id="partner-form"
+        className={isDark
+          ? "py-16 lg:py-20 bg-gradient-to-br from-[#0f1419] via-[#1a1f2e] to-[#0f1419] relative overflow-hidden"
+          : "py-16 lg:py-20 bg-gradient-to-br from-[#eef6fc] via-white to-[#eef1fc] relative overflow-hidden"
+        }
+      >
         <div className="max-w-7xl mx-auto px-6 lg:px-20">
           <div className="grid lg:grid-cols-2 gap-12 items-start">
             <div>

@@ -1,13 +1,12 @@
 import type { AuthenticatedUser } from "../types/auth.types";
-
-// const API_URL = import.meta.env.VITE_API_URL;
+import { getApiEndpoint } from "./apiConfig";
 
 export default async function handleAuthenticated(): Promise<AuthenticatedUser | null> {
   try {
 
     const xsrfToken = getCookieValue("XSRF-TOKEN");
 
-    const response = await fetch(`/api/user`, {
+    const response = await fetch(getApiEndpoint("/api/user"), {
       method: "GET",
       credentials: "include",
       headers: {

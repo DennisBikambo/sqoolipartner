@@ -70,12 +70,32 @@ export default defineSchema({
       v.literal("write"),
       v.literal("admin"),
       v.literal("full")
-    ), 
-    is_default: v.boolean(), 
+    ),
+    is_default: v.boolean(),
   })
     .index("by_key", ["key"])
     .index("by_category", ["category"])
     .index("by_is_default", ["is_default"]),
+
+  /**
+   * ROLES TABLE
+   * ------------------------
+   * Defines system roles and their associated permissions
+   * Each role has a predefined set of permission IDs
+   */
+  roles: defineTable({
+    name: v.string(), // Role name e.g., "partner_admin", "campaign_manager"
+    display_name: v.string(), // Human-readable name e.g., "Partner Administrator"
+    description: v.string(), // What this role can do
+    permission_ids: v.array(v.id("permissions")), // Array of permission IDs
+    is_system_role: v.boolean(), // Whether this is a built-in role (cannot be deleted)
+    is_active: v.boolean(), // Whether this role is currently active
+    created_at: v.string(),
+    updated_at: v.optional(v.string()),
+  })
+    .index("by_name", ["name"])
+    .index("by_is_active", ["is_active"])
+    .index("by_is_system_role", ["is_system_role"]),
 
   /**
    * CAMPAIGNS TABLE
