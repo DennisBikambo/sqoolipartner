@@ -58,6 +58,9 @@ export const handleLogin = async (data: LoginFormData) => {
   }
 
   try {
+    // Fetch CSRF cookie immediately before login to ensure it's fresh
+    await handleGetCSRF()
+
     const xsrfToken = getCookie('XSRF-TOKEN')
 
     // Debug logging for cross-origin issues
