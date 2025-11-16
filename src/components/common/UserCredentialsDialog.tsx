@@ -165,8 +165,8 @@ export function UserCredentialsDialog({
               onClick={handleSendEmail}
               // disabled={isSendingEmail || emailSent}
             >
-              SEND
-              {/* {isSendingEmail ? (
+              
+              {isSendingEmail ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                   Sending...
@@ -181,7 +181,7 @@ export function UserCredentialsDialog({
                   <Mail className="w-4 h-4 mr-2" />
                   Send to User
                 </>
-              )} */}
+              )}
             </Button>
             <Button 
               className="flex-1 bg-primary"
