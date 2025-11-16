@@ -1,4 +1,4 @@
-import { Bell, ChevronDown } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import {
@@ -12,6 +12,7 @@ import {
 import { useAuth } from '../../hooks/useAuth';
 import { useTheme } from '../../hooks/useTheme';
 import ThemeButton from '../common/ThemeButton';
+import { NotificationDropdown } from '../common/NotificationDropDown';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { handleLogout } from '../../utils/handleLogout';
@@ -32,7 +33,6 @@ export function Header({ title = 'Dashboard' }: HeaderProps) {
   const onLogout = async () => {
     try {
       if (loginMethod === "convex") {
-        // 🔹 Get token from cookie
         const token = document.cookie
           .split("; ")
           .find((row) => row.startsWith("convex_session="))
@@ -47,7 +47,6 @@ export function Header({ title = 'Dashboard' }: HeaderProps) {
           }
         }
 
-        // 🔹 Clear cookie
         document.cookie = "convex_session=; path=/; max-age=0";
 
         toast.success("Logged out successfully 👋");
@@ -55,7 +54,6 @@ export function Header({ title = 'Dashboard' }: HeaderProps) {
         return;
       }
 
-      // 🔹 Laravel logout
       const result = await handleLogout();
       if (result?.success) {
         toast.success("Logged out successfully 👋");
@@ -69,13 +67,16 @@ export function Header({ title = 'Dashboard' }: HeaderProps) {
     }
   };
 
-
   if (loading) {
     return (
       <header className="w-full bg-background border-b border-border shrink-0">
         <div className="flex h-14 sm:h-16 items-center justify-between px-4 sm:px-6">
           <div className="h-4 w-24 bg-muted animate-pulse rounded" />
-          <div className="h-8 w-8 bg-muted animate-pulse rounded-full" />
+          <div className="flex items-center gap-3">
+            <div className="h-8 w-8 bg-muted animate-pulse rounded-full" />
+            <div className="h-8 w-8 bg-muted animate-pulse rounded-full" />
+            <div className="h-8 w-8 bg-muted animate-pulse rounded-full" />
+          </div>
         </div>
       </header>
     );
@@ -92,35 +93,27 @@ export function Header({ title = 'Dashboard' }: HeaderProps) {
     );
   }
 
-  // Use type-safe helper functions
   const fullName = getDisplayName(user);
   const email = getUserEmail(user);
   const initials = getUserInitials(user);
 
-  // Get avatar (only Laravel users have this field)
   const avatarUrl = isLaravelUser(user) && 'avatar' in user && typeof user.avatar === 'string' 
     ? user.avatar 
     : '';
 
-  // Get additional info for Convex users
   const userRole = isConvexUser(user) ? user.role : null;
   const userExtension = isConvexUser(user) ? user.extension : null;
 
   return (
     <header className="w-full bg-background border-b border-border shrink-0">
       <div className="flex h-14 sm:h-16 items-center justify-between px-4 sm:px-6 gap-2">
-        {/* Logo / Title Section */}
         <div className="flex items-center gap-2">
-          {/* <h1 className="text-lg sm:text-xl font-semibold text-foreground hidden sm:block">
-            {title}
-          </h1> */}
+          {/* Logo / Title can go here */}
         </div>
 
-        {/* Desktop Actions */}
         <div className="flex items-center gap-3 lg:gap-4">
-          <Button variant="ghost" size="icon" className="relative h-9 w-9">
-            <Bell className="h-5 w-5" />
-          </Button>
+          {/* Notification Dropdown - Only show if partner exists */}
+          {partner && <NotificationDropdown partnerId={partner._id} />}
 
           <ThemeButton theme={theme} setTheme={setTheme} />
 
@@ -142,7 +135,6 @@ export function Header({ title = 'Dashboard' }: HeaderProps) {
                       {email}
                     </span>
                   )}
-                  {/* Show role for Convex users */}
                   {userRole && (
                     <span className="text-xs text-muted-foreground truncate w-full capitalize">
                       {userRole.replace(/_/g, ' ')}
@@ -159,7 +151,6 @@ export function Header({ title = 'Dashboard' }: HeaderProps) {
               <DropdownMenuItem>Profile</DropdownMenuItem>
               <DropdownMenuItem>Settings</DropdownMenuItem>
               
-              {/* Show partner organization info */}
               {partner && (
                 <>
                   <DropdownMenuSeparator />
@@ -169,7 +160,6 @@ export function Header({ title = 'Dashboard' }: HeaderProps) {
                 </>
               )}
               
-              {/* Show extension for Convex users */}
               {userExtension && (
                 <DropdownMenuLabel className="text-xs text-muted-foreground">
                   Extension: {userExtension}

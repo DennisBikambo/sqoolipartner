@@ -1,6 +1,7 @@
 // server/user.ts
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+import { api } from "./_generated/api";
 import bcrypt from "bcryptjs";
 
 /**
@@ -79,6 +80,13 @@ export const createUser = mutation({
       last_login: undefined,
       updated_at: undefined,
       is_account_activated: true,
+    });
+
+    await ctx.runMutation(api.notifications.createNotification, {
+      partnerId: args.partner_id,
+      type: "success",
+      title: "User created successfully",
+      message: `User with email ${args.email} has been created successfully`,
     });
 
     return {

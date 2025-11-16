@@ -1,6 +1,7 @@
 // convex/campaign.ts
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+import { api } from "./_generated/api";
 import { generateWhatsAppQRCode, generatePaymentQRCode ,socialPostGenerator} from "../src/services/qrCodeService";
 
 
@@ -69,6 +70,13 @@ export const createCampaign = mutation({
       duration_start: args.duration_start,
       duration_end: args.duration_end,
       status: "draft",
+    });
+
+    await ctx.runMutation(api.notifications.createNotification, {
+      partnerId: args.partner_id,
+      type: "campaign",
+      title: "Campaign Created",
+      message: `Your campaign "${args.name}" is now live and ready to go!`,
     });
 
     // 🔹 Generate assets
