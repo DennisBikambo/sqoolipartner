@@ -1,6 +1,7 @@
 // convex/withdrawals.ts
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+import { api } from "./_generated/api";
 
 /**
  * Generate unique withdrawal reference
@@ -315,6 +316,13 @@ export const createWithdrawal = mutation({
         method: args.withdrawal_method,
       }),
       created_at: now,
+    });
+
+    await ctx.runMutation(api.notifications.createNotification, {
+      partnerId: args.partner_id,
+      type: "success",
+      title: "Withdrawal Request",
+      message: "Your withdrawal request has been submitted",
     });
 
     return {

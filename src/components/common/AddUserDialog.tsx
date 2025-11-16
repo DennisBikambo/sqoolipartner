@@ -1,3 +1,7 @@
+// ============================================
+// UPDATED AddUserDialog Component
+// ============================================
+
 'use client';
 
 import { useState } from 'react';
@@ -62,6 +66,7 @@ export default function AddUserDialog({ open, onOpenChange }: AddUserDialogProps
     email: string; 
     password: string; 
     extension: string;
+    name: string;
   } | null>(null);
 
   const { partner } = useAuth();
@@ -143,7 +148,8 @@ export default function AddUserDialog({ open, onOpenChange }: AddUserDialogProps
       setNewUserCreds({ 
         email: formData.email, 
         password: res.generatedPassword,
-        extension: res.extension 
+        extension: res.extension,
+        name: formData.name,
       });
       setShowCredDialog(true);
 
@@ -321,14 +327,18 @@ export default function AddUserDialog({ open, onOpenChange }: AddUserDialogProps
         </DialogContent>
       </Dialog>
 
-      {/* Show Credentials Dialog */}
-      <UserCredentialsDialog
-        open={showCredDialog}
-        onOpenChange={setShowCredDialog}
-        email={newUserCreds?.email || ''}
-        password={newUserCreds?.password || ''}
-        extension={newUserCreds?.extension || ''}
-      />
+      {/* Show Credentials Dialog with all required props */}
+      {newUserCreds && (
+        <UserCredentialsDialog
+          open={showCredDialog}
+          onOpenChange={setShowCredDialog}
+          email={newUserCreds.email}
+          password={newUserCreds.password}
+          extension={newUserCreds.extension}
+          userName={newUserCreds.name}
+          partnerName={partner?.name || 'Your Organization'}
+        />
+      )}
     </>
   );
 }

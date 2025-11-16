@@ -355,7 +355,22 @@ withdrawal_limits: defineTable({
   .index("by_partner_id", ["partner_id"])
   .index("by_is_active", ["is_active"]),
 
+
+  notifications: defineTable({
+    partnerId: v.id("partners"),
+    type: v.string(),
+    title: v.string(),
+    message: v.string(),
+    isRead: v.boolean(),
+    createdAt: v.number(),
+  })
+    .index("by_partner_id", ["partnerId"])
+    .index("by_partnerId_isRead", ["partnerId", "isRead"]),
+
 });
+
+
+
 
 
 
