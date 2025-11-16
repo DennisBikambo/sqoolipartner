@@ -2,6 +2,7 @@
 import { httpRouter } from "convex/server";
 import { httpAction } from "./_generated/server";
 import { api } from "./_generated/api";
+import { handleCreateUser, parseStudentName } from "../src/utils/handleCreateUser";
 
 const http = httpRouter();
 
@@ -117,11 +118,12 @@ http.route({
         phone_number,
         amount,
         transaction_date,
+        email,
       } = await request.json();
 
       const isSuccess = Number(result_code) === 0;
 
-      // 1️⃣ Get the transaction by checkout_request_id
+      // 1️⃣ Lookup transaction
       const txn = await ctx.runQuery(api.transactions.getTransactionByCheckoutRequestId, {
         checkout_request_id,
       });
@@ -133,11 +135,11 @@ http.route({
         );
       }
 
-      // 2️⃣ Update transaction status
+      // 2️⃣ Update transaction
       await ctx.runMutation(api.transactions.updateTransaction, {
         id: txn._id,
         fields: {
-          status: isSuccess ? "Success" : "Failed", 
+          status: isSuccess ? "Success" : "Failed",
           mpesa_code: mpesa_receipt_number || txn.mpesa_code,
           amount: amount ? parseFloat(amount) : txn.amount,
           verified_at: transaction_date || new Date().toISOString(),
@@ -154,11 +156,11 @@ http.route({
         );
       }
 
-      // ✅ SUCCESS LOGIC
+      // TRUE SUCCESS FLOW
       const grossAmount = parseFloat(amount);
       const partnerShare = grossAmount * 0.2;
 
-      // 3️⃣ Get campaign info
+      // Campaign
       const campaign = await ctx.runQuery(api.campaign.getCampaignByPromoCode, {
         promo_code: txn.campaign_code,
       });
@@ -167,8 +169,21 @@ http.route({
         throw new Error(`Campaign not found for code ${txn.campaign_code}`);
       }
 
-      // 4️⃣ Enroll user in program_enrollments
+      // Program (for price per lesson)
+      const program = await ctx.runQuery(api.program.getProgramById, {
+        id: campaign.program_id,
+      });
+
+      if (!program) {
+        throw new Error(`Program not found for campaign ${campaign._id}`);
+      }
+
+      const pricePerLesson = program.pricing;
+      const numberOfLessons = Math.floor(grossAmount / pricePerLesson);
+
+      // Student enroll
       const redeemCode = `R-${Math.floor(100000 + Math.random() * 900000)}`;
+
       await ctx.runMutation(api.program_enrollments.createEnrollment, {
         program_id: campaign.program_id,
         user_id: campaign.user_id,
@@ -182,7 +197,7 @@ http.route({
         },
       });
 
-      // 5️⃣ Record partner revenue
+      // Partner revenue
       await ctx.runMutation(api.partner_revenue.logRevenue, {
         partner_id: campaign.partner_id,
         user_id: campaign.user_id,
@@ -192,11 +207,42 @@ http.route({
         gross_amount: grossAmount,
       });
 
-      // 6️⃣ Update partner’s wallet
+      // Wallet
       await ctx.runMutation(api.wallet.updateWalletBalance, {
         partner_id: campaign.partner_id,
         amount_to_add: partnerShare,
       });
+
+      // 3️⃣ CREATE USER IN LARAVEL
+      const { first_name, last_name } = parseStudentName(txn.student_name);
+
+      // const autoEmail = email || `${phone_number}@sqooli.com`;
+
+      const userCreationResult = await handleCreateUser({
+        first_name,
+        last_name,
+        email: email,
+        phone_number: phone_number || txn.phone_number,
+        redeem_code: redeemCode,
+        metadata: {
+          amount_paid: grossAmount,
+          no_of_lessons: numberOfLessons,
+          price_per_lesson: pricePerLesson,
+          campaign_id: campaign._id,
+        },
+      });
+
+      if (!userCreationResult.success) {
+        console.error("Failed to create user in Laravel:", userCreationResult.error);
+      }
+
+      // Extract credentials (new Laravel format)
+      const userCredentials = userCreationResult.success
+        ? {
+            email: userCreationResult.data?.email,
+            password: userCreationResult.data?.password,
+          }
+        : undefined;
 
       return new Response(
         JSON.stringify({
@@ -205,6 +251,14 @@ http.route({
           redeem_code: redeemCode,
           partner_share: partnerShare,
           gross_amount: grossAmount,
+          number_of_lessons: numberOfLessons,
+          price_per_lesson: pricePerLesson,
+
+          user_created: userCreationResult.success,
+          user_credentials: userCredentials,
+          user_creation_error: userCreationResult.success
+            ? undefined
+            : userCreationResult.error,
         }),
         { status: 200, headers: { "Content-Type": "application/json" } }
       );
@@ -223,10 +277,12 @@ http.route({
 
 
 
+
 /**
- * GET /education-insights
- * Provides aggregated educational data for AI agents (e.g., n8n)
- * Includes campaigns, programs, subjects, curricula, and lesson cost
+ * POST /education-insights
+ * Provides comprehensive educational data for AI agents (e.g., n8n)
+ * This endpoint is the primary reference for campaign pricing, program details,
+ * and enrollment information used by AI systems to assist customers
  */
 http.route({
   path: "/education-insights",
@@ -244,53 +300,176 @@ http.route({
         ctx.runQuery(api.curricula.listCurricula),
       ]);
 
-      // 2️⃣ Determine expired vs active campaigns
       const now = new Date();
+
+      // 2️⃣ Build program lookup map with full details
+      const programMap = new Map(
+        programs.map((p) => {
+          const curriculum = curricula.find((c) => c._id === p.curriculum_id);
+          return [
+            p._id,
+            {
+              ...p,
+              curriculum_name: curriculum?.name || "Unknown",
+              subject_list: p.subjects,
+            },
+          ];
+        })
+      );
+
+      // 3️⃣ Enrich campaigns with complete program and pricing details
       const enrichedCampaigns = campaigns.map((c) => {
         const isExpired = new Date(c.duration_end) < now;
+        const program = programMap.get(c.program_id);
+        const pricePerLesson = program?.pricing || 0;
+        
         return {
-          ...c,
-          is_expired: isExpired,
+          campaign_id: c._id,
+          campaign_name: c.name,
+          promo_code: c.promo_code,
           status: isExpired ? "expired" : c.status,
+          is_expired: isExpired,
+          duration_start: c.duration_start,
+          duration_end: c.duration_end,
+          partner_id: c.partner_id,
+          
+          // Program details
+          program_id: c.program_id,
+          program_name: program?.name || "Unknown",
+          curriculum_name: program?.curriculum_name || "Unknown",
+          subjects: program?.subject_list || [],
+          
+          // Pricing information
+          price_per_lesson: pricePerLesson,
+          minimum_payment: pricePerLesson, // 1 lesson minimum
+          example_payments: {
+            one_lesson: pricePerLesson,
+            five_lessons: pricePerLesson * 5,
+            ten_lessons: pricePerLesson * 10,
+            twenty_lessons: pricePerLesson * 20,
+          },
+          
+          // Timetable (if available)
+          timetable: program?.timetable || {},
         };
       });
 
-      // 3️⃣ Compute summary
-      const totalPrograms = programs.length;
-      const totalSubjects = subjects.length;
-      const totalCampaigns = campaigns.length;
-      const activeCampaigns = enrichedCampaigns.filter((c) => !c.is_expired && c.status === "active").length;
+      interface PricingTier {
+          price_per_lesson: number;
+          programs: {
+            program_id: string;
+            program_name: string;
+            curriculum: string;
+            subjects: string[];
+          }[];
+          active_campaigns: {
+            campaign_name: string;
+            promo_code: string;
+            duration_end: string;
+          }[];
+      }
+      // 4️⃣ Create pricing tiers grouped by price point
+      const pricingTiers = programs.reduce((acc, p) => {
+        const price = p.pricing;
+        if (!acc[price]) {
+          acc[price] = {
+            price_per_lesson: price,
+            programs: [],
+            active_campaigns: [],
+          };
+        }
+        
+        acc[price].programs.push({
+          program_id: p._id,
+          program_name: p.name,
+          curriculum: curricula.find((c) => c._id === p.curriculum_id)?.name || "Unknown",
+          subjects: p.subjects,
+        });
+        
+        // Add active campaigns for this pricing tier
+        const activeCampaignsForPrice = enrichedCampaigns.filter(
+          (ec) => ec.program_id === p._id && ec.status === "active" && !ec.is_expired
+        );
+        
+        acc[price].active_campaigns.push(...activeCampaignsForPrice.map(c => ({
+          campaign_name: c.campaign_name,
+          promo_code: c.promo_code,
+          duration_end: c.duration_end,
+        })));
+        
+        return acc;
+      }, {} as Record<number, PricingTier>);
 
-      const LESSON_COST = 200; 
+      // 5️⃣ Compute summary statistics
+      const activeCampaigns = enrichedCampaigns.filter((c) => !c.is_expired && c.status === "active");
+      const pricingOptions = Object.keys(pricingTiers).map(Number).sort((a, b) => a - b);
+      const minPrice = Math.min(...pricingOptions);
+      const maxPrice = Math.max(...pricingOptions);
 
-      // 4️⃣ Generate summary insights for reasoning agents
+      // 6️⃣ Generate AI-friendly insights
       const insights = {
-        overview: {
-          total_programs: totalPrograms,
-          total_subjects: totalSubjects,
-          total_campaigns: totalCampaigns,
-          active_campaigns: activeCampaigns,
-          lesson_cost_kes: LESSON_COST,
+        summary: {
+          total_programs: programs.length,
+          total_subjects: subjects.length,
+          total_campaigns: campaigns.length,
+          active_campaigns: activeCampaigns.length,
+          pricing_tiers: pricingOptions.length,
         },
-        notes: [
-          `Each lesson costs KES ${LESSON_COST}.`,
-          `${totalPrograms} programs are currently available.`,
-          `${totalSubjects} subjects are offered across all curricula.`,
-          `${activeCampaigns} campaigns are active and open for enrollment.`,
-          `Expired or inactive campaigns should not be used for new enrollments.`,
+        
+        pricing_overview: {
+          min_price_per_lesson: minPrice,
+          max_price_per_lesson: maxPrice,
+          available_price_points: pricingOptions,
+          pricing_tiers: Object.entries(pricingTiers).map(([price, data]) => ({
+            price_per_lesson: Number(price),
+            programs_count: data.programs.length,
+            active_campaigns_count: data.active_campaigns.length,
+            programs: data.programs,
+            campaigns: data.active_campaigns,
+          })).sort((a, b) => a.price_per_lesson - b.price_per_lesson),
+        },
+        
+        ai_agent_instructions: [
+          `When a customer inquires about pricing, reference the campaign they're interested in to determine the exact price per lesson.`,
+          `Each campaign is linked to a specific program, which determines its pricing.`,
+          `Minimum payment is 1 lesson worth (price_per_lesson), but customers can pay for multiple lessons at once.`,
+          `To calculate total cost: number_of_lessons × price_per_lesson`,
+          `To calculate lessons from payment: Math.floor(payment_amount ÷ price_per_lesson)`,
+          `Only recommend active campaigns (status="active" and is_expired=false).`,
+          `Use the promo_code field when directing customers to make payments.`,
+          `Each campaign has a duration_end date - do not recommend expired campaigns.`,
         ],
+        
+        common_queries: {
+          "How much does it cost?": "The cost depends on which campaign/program the student enrolls in. Prices range from KES {minPrice} to KES {maxPrice} per lesson.",
+          "Can I pay for multiple lessons?": "Yes! Customers can pay for as many lessons as they want. The system calculates: payment_amount ÷ price_per_lesson.",
+          "Which campaign should I choose?": "Recommend based on: curriculum match, subjects offered, price point, and campaign availability (check duration_end).",
+          "What subjects are available?": "Check the 'subjects' array for each campaign to see which subjects are included in that program.",
+        },
       };
 
+      // 7️⃣ Build comprehensive response
       return new Response(
         JSON.stringify({
           success: true,
+          timestamp: new Date().toISOString(),
           insights,
-          data: {
-            campaigns: enrichedCampaigns,
-            programs,
-            subjects,
-            curricula,
-          },
+          
+          // Active campaigns for quick reference
+          active_campaigns: activeCampaigns,
+          
+          // All campaigns with full enrichment
+          all_campaigns: enrichedCampaigns,
+          
+          // Programs with curriculum info
+          programs: programs.map(p => ({
+            ...p,
+            curriculum_name: curricula.find(c => c._id === p.curriculum_id)?.name || "Unknown",
+          })),
+          
+          // Reference data
+          subjects,
+          curricula,
         }),
         { status: 200, headers: { "Content-Type": "application/json" } }
       );
