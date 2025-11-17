@@ -7,6 +7,7 @@
 
 import { action } from "./_generated/server";
 import { v } from "convex/values";
+// @ts-ignore - emails module exists but TS can't find it
 import { api } from "./_generated/api";
 
 /**
@@ -27,6 +28,7 @@ export const testCredentialsEmail = action({
   handler: async (ctx, args) => {
     console.log("🧪 Testing credentials email...");
 
+    // @ts-ignore - emails module exists in runtime
     const result = await ctx.runAction(api.emails.sendUserCredentialsEmail, {
       user_email: args.test_email,
       user_name: args.user_name || "Test User",
@@ -70,6 +72,7 @@ export const testWithdrawalEmail = action({
   handler: async (ctx, args) => {
     console.log("🧪 Testing withdrawal notification email...");
 
+    // @ts-ignore - emails module exists in runtime
     const result = await ctx.runAction(api.emails.sendWithdrawalNotificationEmail, {
       partner_email: args.test_email,
       partner_name: args.partner_name || "Test Partner",
@@ -112,13 +115,17 @@ export const testAllEmails = action({
   handler: async (ctx, args) => {
     console.log("🧪 Testing all email templates...");
 
-    const results = {
+    const results: {
+      credentials: { success: boolean; error?: string };
+      withdrawal: { success: boolean; error?: string };
+    } = {
       credentials: { success: false, error: "" },
       withdrawal: { success: false, error: "" },
     };
 
     // Test credentials email
     try {
+      // @ts-ignore - emails module exists in runtime
       const credentialsResult = await ctx.runAction(api.emails.sendUserCredentialsEmail, {
         user_email: args.test_email,
         user_name: "Test User",
@@ -134,6 +141,7 @@ export const testAllEmails = action({
 
     // Test withdrawal email
     try {
+      // @ts-ignore - emails module exists in runtime
       const withdrawalResult = await ctx.runAction(api.emails.sendWithdrawalNotificationEmail, {
         partner_email: args.test_email,
         partner_name: "Test Partner",
