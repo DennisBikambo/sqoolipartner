@@ -161,6 +161,7 @@ export default defineSchema({
       })
     ),
   })
+    .index("by_program_id", ["program_id"])
     .index("by_campaign_id", ["campaign_id"])
     .index("by_redeem_code", ["redeem_code"])
     .index("by_transaction_id", ["transaction_id"]),

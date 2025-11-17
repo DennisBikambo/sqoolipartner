@@ -1,12 +1,12 @@
 // app/programs/section.tsx
 "use client";
 
-import { useState, useEffect } from "react";
-import { useQuery, useConvex } from "convex/react";
+import { useState } from "react";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Input } from "../components/ui/input";
 import { Button } from "../components/ui/button";
-import { Search, SlidersHorizontal, Plus, BookOpen, GraduationCap, Settings } from "lucide-react";
+import { Search, SlidersHorizontal, Plus, BookOpen, GraduationCap, Settings, MoreHorizontal, Edit } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -33,116 +33,118 @@ import CreateCurriculumDialog from "../components/common/CreateCurriculumDialog"
 import ManageCurriculaDialog from "../components/common/ManageCurriculaDialog";
 import CreateSubjectDialog from "../components/common/CreateSubjectDialog";
 import ManageSubjectsDialog from "../components/common/ManageSubjectsDialog";
-import type { CampaignProps } from '../types/global.types';
+import EditProgramDialog from "../components/common/EditProgramDialog";
+import type { Doc, Id } from "../../convex/_generated/dataModel";
+import { toast } from "sonner";
 
-type Program = {
-  _id: string;
-  name: string;
-  curriculum_id: string;
-  start_date: string;
-  end_date: string;
-  pricing: number;
-  subjects: string[];
-  timetable: Record<string, { subject: string; time: string }[]>;
-  created_at: string;
-  updated_at?: string;
-};
+type Program = Doc<'programs'>;
+
+function ProgramRow({ program, onEdit }: { program: Program; onEdit: (program: Program) => void; }) {
+  const campaigns = useQuery(api.campaign.getCampaignsByProgram, { programId: program._id });
+  const purchasesCount = useQuery(api.program.getPurchasesCount, { program_id: program._id });
+  const deleteProgram = useMutation(api.program.deleteProgram);
+
+  const handleDelete = () => {
+    toast.promise(deleteProgram({ id: program._id }), {
+      loading: "Deleting program...",
+      success: "Program deleted successfully!",
+      error: "Failed to delete program.",
+    });
+  };
+
+  return (
+    <TableRow className="border-b border-muted/30 last:border-0">
+      <TableCell className="py-6">
+        <div>
+          <p className="text-xs text-muted-foreground mb-1">Program</p>
+          <p className="text-sm font-medium text-foreground">
+            {program.name}
+          </p>
+        </div>
+      </TableCell>
+      <TableCell className="py-6">
+        <div>
+          <p className="text-xs text-muted-foreground mb-1">Campaigns</p>
+          <p className="text-sm font-medium text-foreground">
+            {campaigns?.length || 0}
+          </p>
+        </div>
+      </TableCell>
+      <TableCell className="py-6">
+        <div>
+          <p className="text-xs text-muted-foreground mb-1">Engagements</p>
+          <p className="text-sm font-medium text-foreground">
+            {purchasesCount}
+          </p>
+        </div>
+      </TableCell>
+      <TableCell className="py-6">
+        <div>
+          <p className="text-xs text-muted-foreground mb-1">Purchases</p>
+          <p className="text-sm font-medium text-foreground">
+            {purchasesCount}
+          </p>
+        </div>
+      </TableCell>
+      <TableCell>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon">
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => onEdit(program)}>
+              <Edit className="h-4 w-4 mr-2" />
+              View/Edit
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleDelete} className="text-red-500">
+              Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </TableCell>
+    </TableRow>
+  );
+}
 
 export default function ProgramsSection() {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState<"active" | "inactive">("active");
   const [currentPage, setCurrentPage] = useState(1);
-  const [enrollmentCounts, setEnrollmentCounts] = useState<Record<string, number>>({});
   const [showCreateProgramDialog, setShowCreateProgramDialog] = useState(false);
   const [showCreateCurriculumDialog, setShowCreateCurriculumDialog] = useState(false);
   const [showManageCurriculaDialog, setShowManageCurriculaDialog] = useState(false);
   const [showCreateSubjectDialog, setShowCreateSubjectDialog] = useState(false);
   const [showManageSubjectsDialog, setShowManageSubjectsDialog] = useState(false);
+  const [editingProgram, setEditingProgram] = useState<Program | null>(null);
+
   const itemsPerPage = 8;
 
   const { user } = useAuth();
   const { canWrite, hasPermission } = usePermissions();
-  const convex = useConvex();
   const programs = useQuery(api.program.listPrograms) as Program[] | undefined;
-  const campaigns = useQuery(api.campaign.getAllCampaigns) as CampaignProps[] | undefined;
 
-  // Check if user can create programs (super admin or has programs.write/admin permission)
   const isSuperAdmin = isConvexUser(user) && user.role === 'super_admin';
   const canCreatePrograms = isSuperAdmin || canWrite('programs') || hasPermission('programs.admin');
 
-  // Fetch enrollment counts for each program
-  useEffect(() => {
-    if (!programs || !campaigns) return;
-
-    async function fetchEnrollmentCounts() {
-      const counts: Record<string, number> = {};
-
-      for (const program of programs!) {
-        // Find all campaigns for this program
-        const programCampaigns = campaigns?.filter(
-          (c) => c.program_id === program._id
-        ) || [];
-
-        let totalEnrollments = 0;
-
-        // Fetch enrollments for each campaign
-        for (const campaign of programCampaigns) {
-          try {
-            const enrollments = await convex.query(
-              api.program_enrollments.listByCampaign,
-              { campaignId: campaign._id }
-            );
-            totalEnrollments += enrollments.length;
-          } catch (error) {
-            console.error(`Error fetching enrollments for campaign ${campaign._id}:`, error);
-          }
-        }
-
-        counts[program._id] = totalEnrollments;
-      }
-
-      setEnrollmentCounts(counts);
-    }
-
-    fetchEnrollmentCounts();
-  }, [programs, campaigns, convex]);
-
-  // Filter programs based on search and active/inactive status
   const filteredPrograms = programs?.filter((program) => {
     const matchesSearch = program.name
       .toLowerCase()
       .includes(searchQuery.toLowerCase());
     
-    // Check if program is active based on end_date
     const isActive = new Date(program.end_date) >= new Date();
     const matchesTab = activeTab === "active" ? isActive : !isActive;
 
     return matchesSearch && matchesTab;
   });
 
-  // Pagination
   const totalPages = Math.ceil((filteredPrograms?.length || 0) / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedPrograms = filteredPrograms?.slice(
     startIndex,
     startIndex + itemsPerPage
   );
-
-  // Count campaigns for each program
-  const getCampaignsCount = (programId: string) => {
-    return campaigns?.filter((c) => c.program_id === programId).length || 0;
-  };
-
-  // Count engagements (enrollments) for each program
-  const getEngagementsCount = (programId: string) => {
-    return enrollmentCounts[programId] || 0;
-  };
-
-  // Count purchases for each program (placeholder)
-  const getPurchasesCount = () => {
-    // get this from actual purchases/transactions data
-    return 23;
-  };
 
   if (programs === undefined) {
     return <Loading message="Loading programs..." size="lg" />;
@@ -155,7 +157,6 @@ export default function ProgramsSection() {
         <h1 className="text-2xl font-semibold text-foreground">Programs</h1>
 
         <div className="flex items-center gap-3">
-          {/* Super Admin: Management Dropdown */}
           {isSuperAdmin && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -190,7 +191,6 @@ export default function ProgramsSection() {
             </DropdownMenu>
           )}
 
-          {/* Create Program Button (Super Admin or users with programs.write/admin permission) */}
           {canCreatePrograms && (
             <Button
               onClick={() => setShowCreateProgramDialog(true)}
@@ -264,52 +264,17 @@ export default function ProgramsSection() {
               <TableHead>Campaigns</TableHead>
               <TableHead>Engagements</TableHead>
               <TableHead>Purchases</TableHead>
+              <TableHead></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {paginatedPrograms && paginatedPrograms.length > 0 ? (
               paginatedPrograms.map((program) => (
-                <TableRow 
-                  key={program._id} 
-                  className="border-b border-muted/30 last:border-0"
-                >
-                  <TableCell className="py-6">
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-1">Program</p>
-                      <p className="text-sm font-medium text-foreground">
-                        {program.name}
-                      </p>
-                    </div>
-                  </TableCell>
-                  <TableCell className="py-6">
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-1">Campaigns</p>
-                      <p className="text-sm font-medium text-foreground">
-                        {getCampaignsCount(program._id)}
-                      </p>
-                    </div>
-                  </TableCell>
-                  <TableCell className="py-6">
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-1">Engagements</p>
-                      <p className="text-sm font-medium text-foreground">
-                        {getEngagementsCount(program._id)}
-                      </p>
-                    </div>
-                  </TableCell>
-                  <TableCell className="py-6">
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-1">Purchases</p>
-                      <p className="text-sm font-medium text-foreground">
-                        {getPurchasesCount()}
-                      </p>
-                    </div>
-                  </TableCell>
-                </TableRow>
+                <ProgramRow key={program._id} program={program} onEdit={setEditingProgram} />
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={4} className="text-center py-8">
+                <TableCell colSpan={5} className="text-center py-8">
                   <p className="text-sm text-muted-foreground">
                     No programs found
                   </p>
@@ -352,6 +317,15 @@ export default function ProgramsSection() {
         <CreateProgramDialog
           open={showCreateProgramDialog}
           onOpenChange={setShowCreateProgramDialog}
+        />
+      )}
+
+      {/* Edit Program Dialog */}
+      {editingProgram && (
+        <EditProgramDialog
+          open={!!editingProgram}
+          onOpenChange={() => setEditingProgram(null)}
+          program={editingProgram}
         />
       )}
 

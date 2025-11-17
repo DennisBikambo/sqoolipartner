@@ -144,6 +144,16 @@ export const getCampaignsByPartner = query({
   },
 });
 
+export const getCampaignsByProgram = query({
+    args: { programId: v.id("programs") },
+    handler: async (ctx, args) => {
+        return await ctx.db
+            .query("campaigns")
+            .withIndex("by_program_id", (q) => q.eq("program_id", args.programId))
+            .collect();
+    },
+});
+
 export const getCampaignsByUser = query({
   args: { user_id: v.id("users") },
   handler: async (ctx, args) => {
@@ -201,16 +211,6 @@ export const getCampaignByPromoCode = query({
     return await ctx.db
       .query("campaigns")
       .withIndex("by_promo_code", (q) => q.eq("promo_code", args.promo_code))
-      .first();
-  },
-});
-
-export const getCampaignByPartner = query({
-  args: { partnerId: v.id("partners") },
-  handler: async (ctx, args) => {
-    return await ctx.db
-      .query("campaigns")
-      .withIndex("by_partner_id", (q) => q.eq("partner_id", args.partnerId))
       .first();
   },
 });

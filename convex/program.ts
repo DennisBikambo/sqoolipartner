@@ -50,3 +50,14 @@ export const deleteProgram = mutation({
     await ctx.db.delete(args.id);
   },
 });
+
+export const getPurchasesCount = query({
+  args: { program_id: v.id("programs") },
+  handler: async (ctx, args) => {
+    const enrollments = await ctx.db
+      .query("program_enrollments")
+      .withIndex("by_program_id", (q) => q.eq("program_id", args.program_id))
+      .collect();
+    return enrollments.length;
+  },
+});
