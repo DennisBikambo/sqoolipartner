@@ -30,6 +30,7 @@ import type * as seedProgram from "../seedProgram.js";
 import type * as seedRoles from "../seedRoles.js";
 import type * as session from "../session.js";
 import type * as subjects from "../subjects.js";
+import type * as testEmails from "../testEmails.js";
 import type * as transactions from "../transactions.js";
 import type * as updateExistingPartner from "../updateExistingPartner.js";
 import type * as user from "../user.js";
@@ -66,6 +67,7 @@ declare const fullApi: ApiFromModules<{
   seedRoles: typeof seedRoles;
   session: typeof session;
   subjects: typeof subjects;
+  testEmails: typeof testEmails;
   transactions: typeof transactions;
   updateExistingPartner: typeof updateExistingPartner;
   user: typeof user;

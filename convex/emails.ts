@@ -21,206 +21,271 @@ export const sendUserCredentialsEmail = action({
   handler: async (ctx, args) => {
     const loginUrl = `${'https://sqooli.org'}/signIn?extension=${args.extension}`;
 
-    // Create email HTML
-    const html = `
-      <!DOCTYPE html>
-      <html>
+    const htmlContent = `
+     <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+      <html dir="ltr" lang="en">
         <head>
-          <style>
-            body {
-              font-family: Arial, sans-serif;
-              line-height: 1.6;
-              color: #333;
-              background-color: #f4f4f4;
-              margin: 0;
-              padding: 0;
-            }
-            .container {
-              max-width: 600px;
-              margin: 20px auto;
-              background: white;
-              border-radius: 8px;
-              overflow: hidden;
-              box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            }
-            .header {
-              background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
-              color: white;
-              padding: 40px 30px;
-              text-align: center;
-            }
-            .header h1 {
-              margin: 0;
-              font-size: 28px;
-            }
-            .content {
-              padding: 30px;
-            }
-            .credentials-box {
-              background: #f8fafc;
-              border: 2px solid #e2e8f0;
-              border-radius: 8px;
-              padding: 20px;
-              margin: 20px 0;
-            }
-            .credential-item {
-              margin: 15px 0;
-              padding: 12px;
-              background: white;
-              border-radius: 6px;
-              border: 1px solid #e2e8f0;
-            }
-            .credential-label {
-              font-size: 12px;
-              color: #64748b;
-              font-weight: 600;
-              text-transform: uppercase;
-              margin-bottom: 5px;
-            }
-            .credential-value {
-              font-size: 16px;
-              color: #0f172a;
-              font-weight: 600;
-              font-family: 'Courier New', monospace;
-            }
-            .button {
-              display: inline-block;
-              background: #0ea5e9;
-              color: white;
-              padding: 14px 28px;
-              text-decoration: none;
-              border-radius: 8px;
-              font-weight: 600;
-              margin: 20px 0;
-              text-align: center;
-            }
-            .warning-box {
-              background: #fef3c7;
-              border: 1px solid #fbbf24;
-              border-radius: 8px;
-              padding: 15px;
-              margin: 20px 0;
-            }
-            .warning-box p {
-              margin: 0;
-              color: #92400e;
-              font-size: 14px;
-            }
-            .footer {
-              text-align: center;
-              padding: 20px;
-              color: #64748b;
-              font-size: 14px;
-              background: #f8fafc;
-            }
-            .steps {
-              margin: 20px 0;
-            }
-            .step {
-              display: flex;
-              align-items: start;
-              margin: 15px 0;
-            }
-            .step-number {
-              background: #0ea5e9;
-              color: white;
-              width: 28px;
-              height: 28px;
-              border-radius: 50%;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              font-weight: 600;
-              flex-shrink: 0;
-              margin-right: 12px;
-            }
-            .step-content {
-              flex: 1;
-            }
-          </style>
+          <meta content="width=device-width" name="viewport" />
+          <link
+            rel="preload"
+            as="image"
+            href="https://sqooli.org/logo-white.png" />
+          <meta content="text/html; charset=UTF-8" http-equiv="Content-Type" />
+          <meta name="x-apple-disable-message-reformatting" />
+          <meta content="IE=edge" http-equiv="X-UA-Compatible" />
+          <meta name="x-apple-disable-message-reformatting" />
+          <meta
+            content="telephone=no,address=no,email=no,date=no,url=no"
+            name="format-detection" />
         </head>
         <body>
-          <div class="container">
-            <div class="header">
-              <h1>Welcome to Sqooli! 🎉</h1>
-              <p style="margin: 10px 0 0 0; opacity: 0.9;">Your account is ready</p>
-            </div>
-            
-            <div class="content">
-              <p>Hi <strong>${args.user_name}</strong>,</p>
-              <p>Your account has been created for <strong>${args.partner_name}</strong>. Below are your login credentials:</p>
-              
-              <div class="credentials-box">
-                <h3 style="margin-top: 0; color: #0f172a;">Your Login Credentials</h3>
-                
-                <div class="credential-item">
-                  <div class="credential-label">Email</div>
-                  <div class="credential-value">${args.user_email}</div>
-                </div>
-                
-                <div class="credential-item">
-                  <div class="credential-label">Password</div>
-                  <div class="credential-value">${args.password}</div>
-                </div>
-                
-                <div class="credential-item">
-                  <div class="credential-label">Extension (Login ID)</div>
-                  <div class="credential-value">${args.extension}</div>
-                </div>
-              </div>
-              
-              <div class="warning-box">
-                <p><strong>⚠️ Important:</strong> Please save these credentials securely. You'll need the extension to log in.</p>
-              </div>
-              
-              <div class="steps">
-                <h3 style="color: #0f172a;">How to Log In:</h3>
-                
-                <div class="step">
-                  <div class="step-number">1</div>
-                  <div class="step-content">
-                    <strong>Click the login button below</strong> or use your unique login link
-                  </div>
-                </div>
-                
-                <div class="step">
-                  <div class="step-number">2</div>
-                  <div class="step-content">
-                    <strong>Enter your email and password</strong> from above
-                  </div>
-                </div>
-                
-                <div class="step">
-                  <div class="step-number">3</div>
-                  <div class="step-content">
-                    <strong>The extension will auto-fill</strong> from the link
-                  </div>
-                </div>
-              </div>
-              
-              <center>
-                <a href="${loginUrl}" class="button">
-                  Log In Now
-                </a>
-              </center>
-              
-              <p style="margin-top: 30px; font-size: 14px; color: #64748b;">
-                If the button doesn't work, copy and paste this link into your browser:<br/>
-                <span style="color: #0ea5e9; word-break: break-all;">${loginUrl}</span>
-              </p>
-              
-              <p style="margin-top: 30px; font-size: 14px; color: #64748b;">
-                If you didn't expect this email or need help, please contact your administrator.
-              </p>
-            </div>
-            
-            <div class="footer">
-              <p>This is an automated email from Sqooli Partners Dashboard</p>
-              <p style="font-size: 12px; color: #94a3b8; margin-top: 10px;">
-                © ${new Date().getFullYear()} Sqooli. All rights reserved.
-              </p>
+          <!--$--><!--html--><!--head-->
+          <div
+            style="display:none;overflow:hidden;line-height:1px;opacity:0;max-height:0;max-width:0"
+            data-skip-in-text="true">
+            Your partner account
+            <div>
+               ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿
             </div>
           </div>
+          <!--body-->
+          <table
+            border="0"
+            width="100%"
+            cellpadding="0"
+            cellspacing="0"
+            role="presentation"
+            align="center">
+            <tbody>
+              <tr>
+                <td>
+                  <table
+                    align="center"
+                    width="100%"
+                    border="0"
+                    cellpadding="0"
+                    cellspacing="0"
+                    role="presentation">
+                    <tbody>
+                      <tr>
+                        <td>
+                          <table
+                            width="100%"
+                            border="0"
+                            cellpadding="0"
+                            cellspacing="0"
+                            role="presentation"
+                            style="width:100%">
+                            <tbody>
+                              <tr>
+                                <td>
+                                  <div
+                                    style="margin:0;padding:0;background-color:rgb(246,249,252)">
+                                    <table
+                                      align="center"
+                                      width="100%"
+                                      border="0"
+                                      cellpadding="0"
+                                      cellspacing="0"
+                                      role="presentation"
+                                      style="margin-top:0;margin-right:auto;margin-bottom:0;margin-left:auto;padding-top:0;padding-right:0;padding-bottom:0;padding-left:0">
+                                      <tbody>
+                                        <tr>
+                                          <td>
+                                            <tr style="margin:0;padding:0">
+                                              <td
+                                                data-id="__react-email-column"
+                                                style="margin:0;padding:0;background-color:rgb(246,249,252);padding-bottom:10px;padding-top:10px">
+                                                <div
+                                                  style="margin:0;padding:0;display:none;overflow:hidden;line-height:1px;opacity:0;max-height:0;max-width:0">
+                                                  <p style="margin:0;padding:0">
+                                                    <span
+                                                      >Dropbox reset your
+                                                      password</span
+                                                    >
+                                                  </p>
+                                                  <div style="margin:0;padding:0">
+                                                    <p style="margin:0;padding:0">
+                                                      <span
+                                                        > ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿</span
+                                                      >
+                                                    </p>
+                                                  </div>
+                                                </div>
+                                                <table
+                                                  align="center"
+                                                  width="100%"
+                                                  border="0"
+                                                  cellpadding="0"
+                                                  cellspacing="0"
+                                                  role="presentation"
+                                                  style="margin-top:0;margin-right:auto;margin-bottom:0;margin-left:auto;padding-top:45px;padding-right:45px;padding-bottom:45px;padding-left:45px;max-width:37.5em;background-color:rgb(255,255,255);border-style:solid;border-width:1px;border-color:rgb(240,240,240)">
+                                                  <tbody>
+                                                    <tr>
+                                                      <td>
+                                                        <tr
+                                                          style="margin:0;padding:0;width:100%">
+                                                          <td
+                                                            data-id="__react-email-column"
+                                                            style="margin:0;padding:0">
+                                                            <table
+                                                              align="center"
+                                                              width="100%"
+                                                              border="0"
+                                                              cellpadding="0"
+                                                              cellspacing="0"
+                                                              role="presentation"
+                                                              style="margin-top:0;margin-right:auto;margin-bottom:0;margin-left:auto;padding-top:0;padding-right:0;padding-bottom:0;padding-left:0">
+                                                              <tbody>
+                                                                <tr>
+                                                                  <td>
+                                                                    <tr
+                                                                      style="margin:0;padding:0">
+                                                                      <td
+                                                                        data-id="__react-email-column"
+                                                                        style="margin:0;padding:0">
+                                                                        <table
+                                                                          align="center"
+                                                                          width="100%"
+                                                                          border="0"
+                                                                          cellpadding="0"
+                                                                          cellspacing="0"
+                                                                          role="presentation">
+                                                                          <tbody
+                                                                            style="width:100%">
+                                                                            <tr
+                                                                              style="width:100%">
+                                                                              <td
+                                                                                align="start"
+                                                                                data-id="__react-email-column">
+                                                                                <img
+                                                                                  alt='Sqooli'
+                                                                                  height="30"
+                                                                                  src="https://sqooli.org/logo-white.png"
+                                                                                  style="display:block;outline:none;border:none;text-decoration:none"
+                                                                                  width="146" />
+                                                                              </td>
+                                                                            </tr>
+                                                                          </tbody>
+                                                                        </table>
+                                                                        <p
+                                                                          style="margin:0;padding:0;font-size:16px;line-height:26px;font-family:Open Sans,HelveticaNeue-Light,Helvetica Neue Light,Helvetica Neue,Helvetica,Arial,Lucida Grande,sans-serif;font-weight:300;color:rgb(64,64,64);margin-top:16px;margin-bottom:16px">
+                                                                          <br /><span
+                                                                            >Hi </span
+                                                                          >${args.partner_name}<span>
+                                                                            ,</span
+                                                                          >
+                                                                        </p>
+                                                                        <p
+                                                                          style="margin:0;padding:0;font-size:16px;line-height:26px;font-family:Open Sans,HelveticaNeue-Light,Helvetica Neue Light,Helvetica Neue,Helvetica,Arial,Lucida Grande,sans-serif;font-weight:300;color:rgb(64,64,64);margin-top:16px;margin-bottom:16px">
+                                                                          <span
+                                                                            >Your
+                                                                            account
+                                                                            has
+                                                                            successfully
+                                                                            been
+                                                                            created,
+                                                                            please use
+                                                                            the
+                                                                            credentials
+                                                                            and link
+                                                                            below to
+                                                                            login:</span
+                                                                          ><br /><br /><span
+                                                                            >Username: </span
+                                                                          >${args.user_name}<span
+                                                                          > </span
+                                                                          ><br /><span
+                                                                            >Password: </span
+                                                                          >${args.password}<span
+                                                                          > </span
+                                                                          ><br /><br /><span
+                                                                            >Link: </span
+                                                                          >${loginUrl}<span
+                                                                          > </span>
+                                                                        </p>
+                                                                        <p
+                                                                          style="margin:0;padding:0">
+                                                                          <span
+                                                                            ><a
+                                                                              href="${loginUrl}"
+                                                                              rel="noopener noreferrer nofollow"
+                                                                              style="color:rgb(255,255,255);text-decoration-line:none;line-height:100%;text-decoration:none;display:block;max-width:100%;background-color:rgb(0,126,230);border-radius:0.25rem;font-size:15px;text-align:center;font-family:Open Sans,Helvetica Neue,Arial;width:210px;padding-bottom:14px;padding-top:14px;padding-right:7px;padding-left:7px"
+                                                                              target="_blank"
+                                                                              >Login</a
+                                                                            ></span
+                                                                          >
+                                                                        </p>
+                                                                        <p
+                                                                          style="margin:0;padding:0;font-size:16px;line-height:26px;font-family:Open Sans,HelveticaNeue-Light,Helvetica Neue Light,Helvetica Neue,Helvetica,Arial,Lucida Grande,sans-serif;font-weight:300;color:rgb(64,64,64);margin-top:16px;margin-bottom:16px">
+                                                                          <span
+                                                                            >If you
+                                                                            have any
+                                                                            issues,
+                                                                            please
+                                                                            reach out
+                                                                            by sending
+                                                                            us an
+                                                                            email or
+                                                                            reaching
+                                                                            out to us
+                                                                            via the
+                                                                            number
+                                                                            provided
+                                                                            on our
+                                                                            website.</span
+                                                                          ><br /><br /><span
+                                                                            >To keep
+                                                                            your
+                                                                            account
+                                                                            secure,
+                                                                            please
+                                                                            don&#x27;t
+                                                                            forward
+                                                                            this email
+                                                                            to
+                                                                            anyone.</span
+                                                                          >
+                                                                        </p>
+                                                                        <p
+                                                                          style="margin:0;padding:0;font-size:16px;line-height:26px;font-family:Open Sans,HelveticaNeue-Light,Helvetica Neue Light,Helvetica Neue,Helvetica,Arial,Lucida Grande,sans-serif;font-weight:300;color:rgb(64,64,64);margin-top:16px;margin-bottom:16px">
+                                                                          <span
+                                                                            >Thanks!</span
+                                                                          >
+                                                                        </p>
+                                                                      </td>
+                                                                    </tr>
+                                                                  </td>
+                                                                </tr>
+                                                              </tbody>
+                                                            </table>
+                                                          </td>
+                                                        </tr>
+                                                      </td>
+                                                    </tr>
+                                                  </tbody>
+                                                </table>
+                                              </td>
+                                            </tr>
+                                          </td>
+                                        </tr>
+                                      </tbody>
+                                    </table>
+                                  </div>
+                                  <p style="margin:0;padding:0"><br /></p>
+                                </td>
+                              </tr>
+                            </tbody>
+                          </table>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <!--/$-->
         </body>
       </html>
     `;
@@ -230,13 +295,267 @@ export const sendUserCredentialsEmail = action({
         from: "Sqooli <noreply@sqooli.org>",
         to: args.user_email,
         subject: `Your Sqooli Account Credentials - ${args.partner_name}`,
-        html,
+        html: htmlContent,
       });
 
       console.log(`Credentials email sent to ${args.user_email}`);
       return { success: true };
     } catch (error: unknown) {
       console.error("Failed to send credentials email:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      return { success: false, error: errorMessage };
+    }
+  },
+});
+
+/**
+ * Send withdrawal notification email
+ */
+export const sendWithdrawalNotificationEmail = action({
+  args: {
+    partner_email: v.string(),
+    partner_name: v.string(),
+    amount: v.number(),
+    reference_number: v.string(),
+    withdrawal_method: v.string(),
+    destination_account: v.string(),
+    processing_days: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const processingDays = args.processing_days?.toString() || "3-5";
+
+    const htmlContent = `
+      <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+      <html dir="ltr" lang="en">
+        <head>
+          <meta content="width=device-width" name="viewport" />
+          <link
+            rel="preload"
+            as="image"
+            href="https://sqooli.org/logo-white.png" />
+          <meta content="text/html; charset=UTF-8" http-equiv="Content-Type" />
+          <meta name="x-apple-disable-message-reformatting" />
+          <meta content="IE=edge" http-equiv="X-UA-Compatible" />
+          <meta name="x-apple-disable-message-reformatting" />
+          <meta
+            content="telephone=no,address=no,email=no,date=no,url=no"
+            name="format-detection" />
+        </head>
+        <body>
+          <!--$--><!--html--><!--head-->
+          <div
+            style="display:none;overflow:hidden;line-height:1px;opacity:0;max-height:0;max-width:0"
+            data-skip-in-text="true">
+            Your withdrawal request has been submitted.
+            <div>
+              <!-- Preview text spacer -->
+              ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌V
+              ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿
+            </div>
+          </div>
+          <!--body-->
+          <table
+            border="0"
+            width="100%"
+            cellpadding="0"
+            cellspacing="0"
+            role="presentation"
+            align="center">
+            <tbody>
+              <tr>
+                <td>
+                  <table
+                    align="center"
+                    width="100%"
+                    border="0"
+                    cellpadding="0"
+                    cellspacing="0"
+                    role="presentation">
+                    <tbody>
+                      <tr>
+                        <td>
+                          <table
+                            width="100%"
+                            border="0"
+                            cellpadding="0"
+                            cellspacing="0"
+                            role="presentation"
+                            style="width:100%">
+                            <tbody>
+                              <tr>
+                                <td>
+                                  <div
+                                    style="margin:0;padding:0;background-color:rgb(246,249,252)">
+                                    <table
+                                      align="center"
+                                      width="100%"
+                                      border="0"
+                                      cellpadding="0"
+                                      cellspacing="0"
+                                      role="presentation"
+                                      style="margin-top:0;margin-right:auto;margin-bottom:0;margin-left:auto;padding-top:0;padding-right:0;padding-bottom:0;padding-left:0">
+                                      <tbody>
+                                        <tr>
+                                          <td>
+                                            <tr style="margin:0;padding:0">
+                                              <td
+                                                data-id="__react-email-column"
+                                                style="margin:0;padding:0;background-color:rgb(246,249,252);padding-bottom:10px;padding-top:10px">
+                                              
+                                                <table
+                                                  align="center"
+                                                  width="100%"
+                                                  border="0"
+                                                  cellpadding="0"
+                                                  cellspacing="0"
+                                                  role="presentation"
+                                                  style="margin-top:0;margin-right:auto;margin-bottom:0;margin-left:auto;padding-top:45px;padding-right:45px;padding-bottom:45px;padding-left:45px;max-width:37.5em;background-color:rgb(255,255,255);border-style:solid;border-width:1px;border-color:rgb(240,240,240)">
+                                                  <tbody>
+                                                    <tr>
+                                                      <td>
+                                                        <tr
+                                                          style="margin:0;padding:0;width:100%">
+                                                          <td
+                                                            data-id="__react-email-column"
+                                                            style="margin:0;padding:0">
+                                                            <table
+                                                              align="center"
+                                                              width="100%"
+                                                              border="0"
+                                                              cellpadding="0"
+                                                              cellspacing="0"
+                                                              role="presentation"
+                                                              style="margin-top:0;margin-right:auto;margin-bottom:0;margin-left:auto;padding-top:0;padding-right:0;padding-bottom:0;padding-left:0">
+                                                              <tbody>
+                                                                <tr>
+                                                                  <td>
+                                                                    <tr
+                                                                      style="margin:0;padding:0">
+                                                                      <td
+                                                                        data-id="__react-email-column"
+                                                                        style="margin:0;padding:0">
+                                                                        <table
+                                                                          align="center"
+                                                                          width="100%"
+                                                                          border="0"
+                                                                          cellpadding="0"
+                                                                          cellspacing="0"
+                                                                          role="presentation">
+                                                                          <tbody
+                                                                            style="width:100%">
+                                                                            <tr
+                                                                              style="width:100%">
+                                                                              <td
+                                                                                align="start"
+                                                                                data-id="__react-email-column">
+                                                                                <img
+                                                                                  alt='Sqooli'
+                                                                                  height="30"
+                                                                                  src="https://sqooli.org/logo-white.png"
+                                                                                  style="display:block;outline:none;border:none;text-decoration:none"
+                                                                                  width="146" />
+                                                                              </td>
+                                                                            </tr>
+                                                                          </tbody>
+                                                                        </table>
+                                                                        <h1
+                                                                          style="margin:0;padding:0;font-size:24px;line-height:32px;font-family:Open Sans,HelveticaNeue-Light,Helvetica Neue Light,Helvetica Neue,Helvetica,Arial,Lucida Grande,sans-serif;font-weight:400;color:rgb(64,64,64);margin-top:24px;margin-bottom:16px">
+                                                                          Withdrawal Request Submitted
+                                                                        </h1>
+                                                                        <p
+                                                                          style="margin:0;padding:0;font-size:16px;line-height:26px;font-family:Open Sans,HelveticaNeue-Light,Helvetica Neue Light,Helvetica Neue,Helvetica,Arial,Lucida Grande,sans-serif;font-weight:300;color:rgb(64,64,64);margin-top:16px;margin-bottom:16px">
+                                                                          <span>Hello </span
+                                                                          >${args.partner_name}<span>,</span>
+                                                                        </p>
+                                                                        <p
+                                                                          style="margin:0;padding:0;font-size:16px;line-height:26px;font-family:Open Sans,HelveticaNeue-Light,Helvetica Neue Light,Helvetica Neue,Helvetica,Arial,Lucida Grande,sans-serif;font-weight:300;color:rgb(64,64,64);margin-top:16px;margin-bottom:16px">
+                                                                          <span>Your withdrawal request has been received and is being processed. You will receive a confirmation email once it's complete.</span>
+                                                                        </p>
+
+                                                                        <p
+                                                                          style="margin:0;padding:0;font-size:16px;line-height:26px;font-family:Open Sans,HelveticaNeue-Light,Helvetica Neue Light,Helvetica Neue,Helvetica,Arial,Lucida Grande,sans-serif;font-weight:300;color:rgb(64,64,64);margin-top:24px;margin-bottom:16px; font-weight: 600;">
+                                                                          Withdrawal Details:
+                                                                        </p>
+
+                                                                        <p
+                                                                          style="margin:0;padding:0;font-size:16px;line-height:24px;font-family:Open Sans,HelveticaNeue-Light,Helvetica Neue Light,Helvetica Neue,Helvetica,Arial,Lucida Grande,sans-serif;font-weight:300;color:rgb(64,64,64);margin-top:8px;margin-bottom:8px">
+                                                                          <span><strong>Amount:</strong> KES</span>${args.amount.toLocaleString()}<br>
+                                                                          <span><strong>Reference Number:</strong> </span>${args.reference_number}<br>
+                                                                          <span><strong>Withdrawal Method:</strong> </span>${args.withdrawal_method}<br>
+                                                                          <span><strong>Destination Account:</strong> </span>${args.destination_account}<br>
+                                                                        </p>
+                                                                      
+                                                                        <p
+                                                                          style="margin:0;padding:0;font-size:16px;line-height:26px;font-family:Open Sans,HelveticaNeue-Light,Helvetica Neue Light,Helvetica Neue,Helvetica,Arial,Lucida Grande,sans-serif;font-weight:300;color:rgb(64,64,64);margin-top:16px;margin-bottom:16px">
+                                                                          <span>If you
+                                                                            have any
+                                                                            issues,
+                                                                            please
+                                                                            reach out
+                                                                            by sending
+                                                                            us an
+                                                                            email or
+                                                                            reaching
+                                                                            out to us
+                                                                            via the
+                                                                            number
+                                                                            provided
+                                                                            on our
+                                                                            website.</span>
+                                                                        </p>
+                                                                        <p
+                                                                          style="margin:0;padding:0;font-size:16px;line-height:26px;font-family:Open Sans,HelveticaNeue-Light,Helvetica Neue Light,Helvetica Neue,Helvetica,Arial,Lucida Grande,sans-serif;font-weight:300;color:rgb(64,64,64);margin-top:16px;margin-bottom:16px">
+                                                                          <span>Thanks!</span>
+                                                                        </p>
+                                                                      </td>
+                                                                    </tr>
+                                                                  </td>
+                                                                </tr>
+                                                              </tbody>
+                                                            </table>
+                                                          </td>
+                                                        </tr>
+                                                      </td>
+                                                    </tr>
+                                                  </tbody>
+                                                </table>
+                                              </td>
+                                            </tr>
+                                          </td>
+                                        </tr>
+                                      </tbody>
+                                    </table>
+                                  </div>
+                                  <p style="margin:0;padding:0"><br /></p>
+                                </td>
+                              </tr>
+                            </tbody>
+                          </table>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <!--/$-->
+        </body>
+      </html>
+    `;
+
+    try {
+      await resend.sendEmail(ctx, {
+        from: "Sqooli <noreply@sqooli.org>",
+        to: args.partner_email,
+        subject: `Withdrawal Request Submitted - ${args.reference_number}`,
+        html: htmlContent,
+      });
+
+      console.log(`Withdrawal notification email sent to ${args.partner_email}`);
+      return { success: true };
+    } catch (error: unknown) {
+      console.error("Failed to send withdrawal notification email:", error);
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
       return { success: false, error: errorMessage };
     }

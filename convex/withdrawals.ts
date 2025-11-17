@@ -325,6 +325,23 @@ export const createWithdrawal = mutation({
       message: "Your withdrawal request has been submitted",
     });
 
+    // Send withdrawal notification email
+    const partner = await ctx.db.get(partner_id);
+    const user = await ctx.db.get(args.user_id);
+
+    if (partner && user && user.email) {
+      // Run email action asynchronously (don't block the withdrawal creation)
+      ctx.scheduler.runAfter(0, api.emails.sendWithdrawalNotificationEmail, {
+        partner_email: user.email,
+        partner_name: partner.partner_name,
+        amount,
+        reference_number,
+        withdrawal_method: args.withdrawal_method,
+        destination_account: args.destination_details.account_number,
+        processing_days: limit.processing_days,
+      });
+    }
+
     return {
       withdrawalId,
       reference_number,
