@@ -333,7 +333,7 @@ export const createWithdrawal = mutation({
       // Run email action asynchronously (don't block the withdrawal creation)
       ctx.scheduler.runAfter(0, api.emails.sendWithdrawalNotificationEmail, {
         partner_email: user.email,
-        partner_name: partner.partner_name,
+        partner_name: partner.name,
         amount,
         reference_number,
         withdrawal_method: args.withdrawal_method,

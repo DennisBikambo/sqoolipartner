@@ -322,8 +322,6 @@ export const sendWithdrawalNotificationEmail = action({
     processing_days: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    const processingDays = args.processing_days?.toString() || "3-5";
-
     const htmlContent = `
       <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
       <html dir="ltr" lang="en">
