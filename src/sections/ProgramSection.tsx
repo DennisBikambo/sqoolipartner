@@ -34,7 +34,7 @@ import ManageCurriculaDialog from "../components/common/ManageCurriculaDialog";
 import CreateSubjectDialog from "../components/common/CreateSubjectDialog";
 import ManageSubjectsDialog from "../components/common/ManageSubjectsDialog";
 import EditProgramDialog from "../components/common/EditProgramDialog";
-import type { Doc, Id } from "../../convex/_generated/dataModel";
+import type { Doc } from "../../convex/_generated/dataModel";
 import { toast } from "sonner";
 
 type Program = Doc<'programs'>;

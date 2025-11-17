@@ -23,8 +23,8 @@ export default function OnboardingPage() {
     partner?._id ? { partnerId: partner._id } : "skip"
   );
   const campaign = useQuery(
-    api.campaign.getCampaignByPartner,
-    partner?._id ? { partnerId: partner._id } : "skip"
+    api.campaign.getCampaignsByPartner,
+    partner?._id ? { partner_id: partner._id } : "skip"
   );
 
   const completeOnboarding = useMutation(api.partner.completeOnboarding);
