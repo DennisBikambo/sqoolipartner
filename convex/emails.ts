@@ -29,7 +29,7 @@ export const sendUserCredentialsEmail = action({
           <link
             rel="preload"
             as="image"
-            href="https://sqooli.org/logo-white.png" />
+            href="https://resend-attachments.s3.amazonaws.com/gFrCHn8THmN6gbB" />
           <meta content="text/html; charset=UTF-8" http-equiv="Content-Type" />
           <meta name="x-apple-disable-message-reformatting" />
           <meta content="IE=edge" http-equiv="X-UA-Compatible" />
@@ -161,7 +161,7 @@ export const sendUserCredentialsEmail = action({
                                                                                 <img
                                                                                   alt='Sqooli'
                                                                                   height="30"
-                                                                                  src="https://sqooli.org/logo-white.png"
+                                                                                  src="https://resend-attachments.s3.amazonaws.com/gFrCHn8THmN6gbB"
                                                                                   style="display:block;outline:none;border:none;text-decoration:none"
                                                                                   width="146" />
                                                                               </td>
@@ -332,7 +332,7 @@ export const sendWithdrawalNotificationEmail = action({
           <link
             rel="preload"
             as="image"
-            href="https://sqooli.org/logo-white.png" />
+            href="https://resend-attachments.s3.amazonaws.com/gFrCHn8THmN6gbB" />
           <meta content="text/html; charset=UTF-8" http-equiv="Content-Type" />
           <meta name="x-apple-disable-message-reformatting" />
           <meta content="IE=edge" http-equiv="X-UA-Compatible" />
@@ -451,7 +451,7 @@ export const sendWithdrawalNotificationEmail = action({
                                                                                 <img
                                                                                   alt='Sqooli'
                                                                                   height="30"
-                                                                                  src="https://sqooli.org/logo-white.png"
+                                                                                  src="https://resend-attachments.s3.amazonaws.com/gFrCHn8THmN6gbB"
                                                                                   style="display:block;outline:none;border:none;text-decoration:none"
                                                                                   width="146" />
                                                                               </td>
