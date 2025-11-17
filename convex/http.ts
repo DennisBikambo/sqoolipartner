@@ -2,7 +2,6 @@
 import { httpRouter } from "convex/server";
 import { httpAction } from "./_generated/server";
 import { api } from "./_generated/api";
-import { handleCreateUser, parseStudentName } from "../src/utils/handleCreateUser";
 
 const http = httpRouter();
 
@@ -105,6 +104,8 @@ http.route({
 /**
  * PATCH /mpesa-callback
  * Called by n8n after parsing M-Pesa callback data
+ * Now only handles transaction updates and partner revenue
+ * User creation will be handled by the AI agent after this completes
  */
 http.route({
   path: "/mpesa-callback",
@@ -118,7 +119,6 @@ http.route({
         phone_number,
         amount,
         transaction_date,
-        email,
       } = await request.json();
 
       const isSuccess = Number(result_code) === 0;
@@ -150,17 +150,19 @@ http.route({
         return new Response(
           JSON.stringify({
             success: true,
-            message: "Transaction marked as expired (failed payment).",
+            message: "Transaction marked as failed.",
+            payment_status: "failed",
+            transaction_id: txn._id,
           }),
           { status: 200, headers: { "Content-Type": "application/json" } }
         );
       }
 
-      // TRUE SUCCESS FLOW
+      // ✅ TRUE SUCCESS FLOW - No user creation here anymore
       const grossAmount = parseFloat(amount);
       const partnerShare = grossAmount * 0.2;
 
-      // Campaign
+      // Get campaign details
       const campaign = await ctx.runQuery(api.campaign.getCampaignByPromoCode, {
         promo_code: txn.campaign_code,
       });
@@ -169,7 +171,7 @@ http.route({
         throw new Error(`Campaign not found for code ${txn.campaign_code}`);
       }
 
-      // Program (for price per lesson)
+      // Get program details (for price per lesson)
       const program = await ctx.runQuery(api.program.getProgramById, {
         id: campaign.program_id,
       });
@@ -184,7 +186,7 @@ http.route({
       // Generate redeem code
       const redeemCode = `R-${Math.floor(100000 + Math.random() * 900000)}`;
 
-      // Student enroll (only if campaign has a user_id)
+      // Student enrollment (only if campaign has a user_id)
       if (campaign.user_id) {
         await ctx.runMutation(api.program_enrollments.createEnrollment, {
           program_id: campaign.program_id,
@@ -210,58 +212,39 @@ http.route({
         });
       }
 
-      // Wallet
+      // Update wallet
       await ctx.runMutation(api.wallet.updateWalletBalance, {
         partner_id: campaign.partner_id,
         amount_to_add: partnerShare,
       });
 
-      // 3️⃣ CREATE USER IN LARAVEL
-      const { first_name, last_name } = parseStudentName(txn.student_name);
-
-      // const autoEmail = email || `${phone_number}@sqooli.com`;
-
-      const userCreationResult = await handleCreateUser({
-        first_name,
-        last_name,
-        email: email,
-        phone_number: phone_number || txn.phone_number,
-        redeem_code: redeemCode,
-        metadata: {
-          amount_paid: grossAmount,
-          no_of_lessons: numberOfLessons,
-          price_per_lesson: pricePerLesson,
-          campaign_id: campaign._id,
-        },
-      });
-
-      if (!userCreationResult.success) {
-        console.error("Failed to create user in Laravel:", userCreationResult.error);
-      }
-
-      // Extract credentials (new Laravel format)
-      const userCredentials = userCreationResult.success
-        ? {
-            email: userCreationResult.data?.email,
-            password: userCreationResult.data?.password,
-          }
-        : undefined;
-
+      // ✅ Return data that the AI agent will need to create the user
       return new Response(
         JSON.stringify({
           success: true,
           message: "Payment processed successfully",
-          redeem_code: redeemCode,
-          partner_share: partnerShare,
-          gross_amount: grossAmount,
-          number_of_lessons: numberOfLessons,
-          price_per_lesson: pricePerLesson,
-
-          user_created: userCreationResult.success,
-          user_credentials: userCredentials,
-          user_creation_error: userCreationResult.success
-            ? undefined
-            : userCreationResult.error,
+          payment_status: "success",
+          transaction_id: txn._id,
+          
+          // Data for agent to create user
+          user_creation_data: {
+            student_name: txn.student_name,
+            phone_number: phone_number || txn.phone_number,
+            redeem_code: redeemCode,
+            amount_paid: grossAmount,
+            no_of_lessons: numberOfLessons,
+            price_per_lesson: pricePerLesson,
+            campaign_id: campaign._id,
+          },
+          
+          // Payment summary
+          payment_summary: {
+            partner_share: partnerShare,
+            gross_amount: grossAmount,
+            number_of_lessons: numberOfLessons,
+            price_per_lesson: pricePerLesson,
+            redeem_code: redeemCode,
+          },
         }),
         { status: 200, headers: { "Content-Type": "application/json" } }
       );
@@ -277,7 +260,6 @@ http.route({
     }
   }),
 });
-
 
 
 
