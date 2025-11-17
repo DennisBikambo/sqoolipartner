@@ -225,42 +225,42 @@ export default function Wallet({
     </Card>
 
     {/* Dialogs */}
-    {wallet && user && (
+    {wallet && partner && (
       <PinVerificationDialog
         open={pinDialogOpen}
         onClose={() => setPinDialogOpen(false)}
         correctPin={wallet.pin}
-        userId={partner?._id as Id<"partners">}
+        userId={partner._id as Id<"partners">}
         onSuccess={() => setShowBalance(true)}
       />
     )}
 
-    {user && isConvexUser(user) && (
+    {partner?._id && (
       <WalletSetupDialog
         open={showSetupDialog}
         onClose={() => setShowSetupDialog(false)}
-        partnerId={partner?._id as Id<"partners">}
-        userId={user._id}
+        partnerId={partner._id as Id<"partners">}
+        userId={isConvexUser(user) ? user._id : partner._id as any}
       />
     )}
 
-    {partner?._id && wallet && user && isConvexUser(user) && (
+    {partner?._id && wallet && (
       <WithdrawalDialog
         open={withdrawalDialogOpen}
         onClose={() => setWithdrawalDialogOpen(false)}
         wallet={wallet}
         partnerId={partner._id}
-        userId={user._id}
+        userId={isConvexUser(user) ? user._id : partner._id as any}
       />
     )}
 
-    {wallet && partner?._id && user && isConvexUser(user) && (
+    {wallet && partner?._id && (
       <WalletEditDialog
         open={editDialogOpen}
         onClose={() => setEditDialogOpen(false)}
         wallet={wallet}
         partnerId={partner._id}
-        userId={user._id}
+        userId={isConvexUser(user) ? user._id : partner._id as any}
       />
     )}
   </>

@@ -19,8 +19,11 @@ import { PermissionWrapper } from '../components/common/PermissionWrapper';
 import AddUserDialog from '../components/common/AddUserDialog';
 import { ConfirmDialog } from '../components/common/ConfirmationDialog';
 import ViewUserDialog, { type ViewUser } from '../components/common/ViewUserDialog';
+import PartnerManagement from '../components/common/PartnerManagement';
+import { isConvexUser } from '../types/auth.types';
 
 export default function UserSection() {
+  const { user } = useAuth();
   const [showAddModal, setShowAddModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [auditSearchQuery, setAuditSearchQuery] = useState('');
@@ -133,6 +136,12 @@ export default function UserSection() {
   // Loading state
   if (!partnerId || users === undefined) {
     return <Loading message="Loading users..." size="md" />;
+  }
+
+  // Super admin sees Partner Management instead of regular user management
+  const isSuperAdmin = isConvexUser(user) && user.role === 'super_admin';
+  if (isSuperAdmin) {
+    return <PartnerManagement />;
   }
 
   return (

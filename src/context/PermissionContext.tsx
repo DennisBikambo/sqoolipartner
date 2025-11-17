@@ -19,6 +19,7 @@ export interface PermissionContextType {
   hasLevel: (level: 'read' | 'write' | 'admin' | 'full') => boolean;
   canRead: (category: string) => boolean;
   canWrite: (category: string) => boolean;
+  isSuperAdmin: () => boolean;
   loading: boolean;
 }
 

@@ -181,31 +181,34 @@ http.route({
       const pricePerLesson = program.pricing;
       const numberOfLessons = Math.floor(grossAmount / pricePerLesson);
 
-      // Student enroll
+      // Generate redeem code
       const redeemCode = `R-${Math.floor(100000 + Math.random() * 900000)}`;
 
-      await ctx.runMutation(api.program_enrollments.createEnrollment, {
-        program_id: campaign.program_id,
-        user_id: campaign.user_id,
-        campaign_id: campaign._id,
-        redeem_code: redeemCode,
-        transaction_id: txn._id,
-        status: "redeemed",
-        meta: {
-          phone: phone_number || txn.phone_number,
-          payment_amount: grossAmount,
-        },
-      });
+      // Student enroll (only if campaign has a user_id)
+      if (campaign.user_id) {
+        await ctx.runMutation(api.program_enrollments.createEnrollment, {
+          program_id: campaign.program_id,
+          user_id: campaign.user_id,
+          campaign_id: campaign._id,
+          redeem_code: redeemCode,
+          transaction_id: txn._id,
+          status: "redeemed",
+          meta: {
+            phone: phone_number || txn.phone_number,
+            payment_amount: grossAmount,
+          },
+        });
 
-      // Partner revenue
-      await ctx.runMutation(api.partner_revenue.logRevenue, {
-        partner_id: campaign.partner_id,
-        user_id: campaign.user_id,
-        campaign_id: campaign._id,
-        transaction_id: txn._id,
-        amount: partnerShare,
-        gross_amount: grossAmount,
-      });
+        // Partner revenue
+        await ctx.runMutation(api.partner_revenue.logRevenue, {
+          partner_id: campaign.partner_id,
+          user_id: campaign.user_id,
+          campaign_id: campaign._id,
+          transaction_id: txn._id,
+          amount: partnerShare,
+          gross_amount: grossAmount,
+        });
+      }
 
       // Wallet
       await ctx.runMutation(api.wallet.updateWalletBalance, {

@@ -36,6 +36,7 @@ import { toast } from 'sonner';
 interface AddUserDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  partnerIdOverride?: Id<'partners'>; // For super admins managing users for specific partners
 }
 
 interface FormData {
@@ -52,7 +53,7 @@ interface FormData {
     | 'merchant_admin';
 }
 
-export default function AddUserDialog({ open, onOpenChange }: AddUserDialogProps) {
+export default function AddUserDialog({ open, onOpenChange, partnerIdOverride }: AddUserDialogProps) {
   const [formData, setFormData] = useState<FormData>({
     name: '',
     email: '',
@@ -70,7 +71,8 @@ export default function AddUserDialog({ open, onOpenChange }: AddUserDialogProps
   } | null>(null);
 
   const { partner } = useAuth();
-  const partnerId = partner?._id;
+  // Use partnerIdOverride if provided (for super admin context), otherwise use current partner
+  const partnerId = partnerIdOverride || partner?._id;
 
   const permissions = useQuery(api.permission.getAllPermissions);
   const defaultPermissions = useQuery(api.permission.getPermissions, { is_default: true });
@@ -261,7 +263,7 @@ export default function AddUserDialog({ open, onOpenChange }: AddUserDialogProps
                           <Checkbox
                             checked={allSelected}
                             onCheckedChange={() => handleToggleCategory(category, perms)}
-                            className={someSelected && !allSelected ? 'opacity-50' : ''}
+                            className={someSelected && !allSelected ? 'opacity-50' : 'border border-black'}
                           />
                           <h4 className="text-sm font-semibold text-foreground">
                             {getCategoryDisplayName(category)}

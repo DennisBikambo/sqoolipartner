@@ -15,6 +15,7 @@ import Wallet from "../components/common/Wallet";
 // import { Avatar, AvatarFallback } from "../components/ui/avatar";
 import { NoCampaignCard } from "../components/common/NoCampaignCard";
 import CreateCampaignWizard from "../components/common/CreateCampaign";
+import CreateProgramDialog from "../components/common/CreateProgramDialog";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { Lock, AlertCircle, TrendingUp, TrendingDown, Award, DollarSign } from "lucide-react";
 
@@ -28,12 +29,13 @@ export default function DashboardSection({
   const { user, partner } = useAuth();
   const { hasPermission } = usePermissions();
   const [showCreateWizard, setShowCreateWizard] = useState(false);
+  const [showCreateProgramDialog, setShowCreateProgramDialog] = useState(false);
 
   // Permission checks
   const isDashboardAdmin = hasPermission("dashboard.admin");
-  const canViewFullDashboard = hasPermission("dashboard.view");
+  const canViewFullDashboard = hasPermission("dashboard.read"); // Fixed: was dashboard.view
   const canViewDashboard = isDashboardAdmin || canViewFullDashboard;
-  const canCreateCampaigns = hasPermission("campaign.write");
+  const canCreateCampaigns = hasPermission("campaigns.write"); // Fixed: was campaign.write
 
   // Fetch campaigns
   const campaigns = useQuery(
@@ -134,14 +136,26 @@ export default function DashboardSection({
             </p>
           )}
         </div>
-        {canCreateCampaigns && (
-          <Button
-            onClick={() => setShowCreateWizard(true)}
-            className="bg-primary text-primary-foreground hover:bg-primary/90"
-          >
-            + New Campaign
-          </Button>
-        )}
+        <div className="flex items-center gap-3">
+          {/* Super Admin: Create Program */}
+          {isConvexUser(user) && user.role === 'super_admin' && (
+            <Button
+              onClick={() => setShowCreateProgramDialog(true)}
+              variant="outline"
+            >
+              + New Program
+            </Button>
+          )}
+          {/* Create Campaign */}
+          {canCreateCampaigns && (
+            <Button
+              onClick={() => setShowCreateWizard(true)}
+              className="bg-primary text-primary-foreground hover:bg-primary/90"
+            >
+              + New Campaign
+            </Button>
+          )}
+        </div>
       </div>
 
       {showCreateWizard && partner?._id && canCreateCampaigns && user && isConvexUser(user) && (
@@ -458,6 +472,12 @@ export default function DashboardSection({
           </div>
         </div>
       )}
+
+      {/* Create Program Dialog (Super Admin only) */}
+      <CreateProgramDialog
+        open={showCreateProgramDialog}
+        onOpenChange={setShowCreateProgramDialog}
+      />
     </div>
   );
 }

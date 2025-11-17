@@ -34,9 +34,14 @@ export function PermissionWrapper({
   fallback = null,
   fallbackProps = {},
 }: PermissionWrapperProps) {
-  const { hasPermission, hasCategory, hasLevel, canRead, canWrite, loading } = usePermissions();
+  const { hasPermission, hasCategory, hasLevel, canRead, canWrite, isSuperAdmin, loading } = usePermissions();
 
   if (loading) return null;
+
+  // Super admin always has access - bypass all permission checks
+  if (isSuperAdmin()) {
+    return <>{children}</>;
+  }
 
   let hasAccess = false;
 

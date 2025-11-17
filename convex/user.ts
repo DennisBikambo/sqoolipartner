@@ -40,6 +40,7 @@ export const createUser = mutation({
     name: v.string(),
     phone: v.optional(v.string()),
     role: v.union(
+      v.literal("super_admin"),
       v.literal("partner_admin"),
       v.literal("accountant"),
       v.literal("campaign_manager"),
@@ -48,7 +49,7 @@ export const createUser = mutation({
       v.literal("master_agent"),
       v.literal("merchant_admin")
     ),
-    permission_ids: v.array(v.id("permissions")), 
+    permission_ids: v.array(v.id("permissions")),
   },
   handler: async (ctx, args) => {
     const existingUser = await ctx.db
@@ -146,6 +147,7 @@ export const updateUser = mutation({
     phone: v.optional(v.string()),
     role: v.optional(
       v.union(
+        v.literal("super_admin"),
         v.literal("partner_admin"),
         v.literal("accountant"),
         v.literal("campaign_manager"),

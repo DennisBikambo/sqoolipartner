@@ -138,7 +138,7 @@ export interface ConvexUser {
   email: string;
   name: string;
   phone?: string;
-  role: "partner_admin" | "accountant" | "campaign_manager" | "viewer" | "super_agent" | "master_agent" | "merchant_admin";
+  role: "super_admin" | "partner_admin" | "accountant" | "campaign_manager" | "viewer" | "super_agent" | "master_agent" | "merchant_admin";
   permission_ids: Id<"permissions">[];
   extension: string;
   is_active: boolean;

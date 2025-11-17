@@ -41,7 +41,7 @@ export default function CreateCampaignWizard({
   onClose,
 }: {
   partnerId: Id<"partners">;
-  user_id: Id<"users">;
+  user_id?: Id<"users">;
   open: boolean;
   onClose?: () => void;
 }) {
@@ -176,7 +176,7 @@ export default function CreateCampaignWizard({
 
       const insertedId = await createCampaign({
         partner_id: partnerId,
-        user_id: user_id,
+        ...(user_id && { user_id }),
         program_id: state.program_id as Id<"programs">,
         name: state.name,
         duration_start: state.duration_start,
@@ -190,7 +190,7 @@ export default function CreateCampaignWizard({
 
       localStorage.removeItem(storageKey);
       setSuccess("Campaign created successfully! Assets have been generated.");
-      
+
       setTimeout(() => {
         setSuccess(null);
         onClose?.();

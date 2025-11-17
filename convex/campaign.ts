@@ -14,7 +14,7 @@ export const createCampaign = mutation({
   args: {
     partner_id: v.id("partners"),
     program_id: v.id("programs"),
-    user_id: v.id("users"),
+    user_id: v.optional(v.id("users")),
     name: v.string(),
     duration_start: v.string(),
     duration_end: v.string(),

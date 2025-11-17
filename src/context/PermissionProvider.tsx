@@ -47,27 +47,37 @@ export function PermissionProvider({ children }: { children: ReactNode }) {
 
   const loading = authLoading || (userPermissionIds.length > 0 && rawPermissions === undefined);
 
+  // Check if user is super admin (has full access)
+  const isSuperAdmin = (): boolean => {
+    return permissions.some((p) => p.category === "all_access" || p.level === "full");
+  };
+
   // Check if user has exact permission by key
   const hasPermission = (permissionKey: string): boolean => {
+    if (isSuperAdmin()) return true;
     return permissions.some((p) => p.key === permissionKey);
   };
 
   // Check if user has exact level in a category
   const hasLevel = (level: "read" | "write" | "admin" | "full"): boolean => {
+    if (isSuperAdmin()) return true;
     return permissions.some((p) => p.level === level);
   };
 
   // Check if user has permission in a category
   const hasCategory = (category: string): boolean => {
+    if (isSuperAdmin()) return true;
     return permissions.some((p) => p.category === category);
   };
 
   // Strict read/write checks
   const canRead = (category: string): boolean => {
+    if (isSuperAdmin()) return true;
     return permissions.some((p) => p.category === category && p.level === "read");
   };
 
   const canWrite = (category: string): boolean => {
+    if (isSuperAdmin()) return true;
     return permissions.some((p) => p.category === category && p.level === "write");
   };
 
@@ -80,6 +90,7 @@ export function PermissionProvider({ children }: { children: ReactNode }) {
         hasLevel,
         canRead,
         canWrite,
+        isSuperAdmin,
         loading,
       }}
     >

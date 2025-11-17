@@ -67,15 +67,12 @@ const navigationItems: NavItem[] = [
   },
 ];
 
-export function AppSidebar({ 
+export function AppSidebar({
   activeItem = 'dashboard',
   onSelect
 }: AppSidebarProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const { hasPermission, hasCategory, permissions, loading,hasLevel } = usePermissions();
-
-
-
+  const { hasPermission, hasCategory, permissions, loading, isSuperAdmin } = usePermissions();
 
   const handleSelect = (id: string, isLocked: boolean) => {
     if (isLocked) {
@@ -90,7 +87,9 @@ export function AppSidebar({
     // If still loading permissions, deny access temporarily
     if (loading || !permissions) return false;
 
-    if (hasLevel('full')) return true;
+    // Super admin always has access
+    if (isSuperAdmin()) return true;
+
     if (item.requiredPermission && hasPermission(item.requiredPermission)) return true;
     if (item.requiredCategory && hasCategory(item.requiredCategory)) return true;
 

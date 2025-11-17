@@ -1,5 +1,5 @@
 "use client";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -48,22 +48,29 @@ export default function CampaignSection() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showCreateWizard, setShowCreateWizard] = useState(false);
+  const [hasLoaded, setHasLoaded] = useState(false);
 
   const { user,partner } = useAuth();
   const { canRead, canWrite, loading: permissionsLoading } = usePermissions();
-  
+
   // Permission checks
   const canViewCampaigns = canRead("campaigns");
   const canManageCampaigns = canWrite("campaigns");
 
-
-
+  // Fetch campaigns using query
   const campaigns = useQuery(
-    api.campaign.getCampaignsByUser,
-    isConvexUser(user) && user?._id && canViewCampaigns ? { user_id: user._id } : "skip"
+    api.campaign.getCampaignsByPartner,
+    partner?._id && canViewCampaigns ? { partner_id: partner._id } : "skip"
   );
 
   const updateCampaignStatus = useMutation(api.campaign.updateCampaignStatus);
+
+  // Track when campaigns have loaded at least once
+  useEffect(() => {
+    if (campaigns !== undefined) {
+      setHasLoaded(true);
+    }
+  }, [campaigns]);
 
   // Format date
   const formatDate = (dateStr: string) => {
@@ -114,6 +121,7 @@ export default function CampaignSection() {
       toast.success('Campaign marked as expired');
       setShowConfirm(false);
       setCampaignToDelete(null);
+      // Campaigns will auto-refresh via Convex reactivity
     } catch (err) {
       console.log(err);
       toast.error('Failed to update campaign');
@@ -156,8 +164,9 @@ export default function CampaignSection() {
     );
   }
 
-  // Show loading if campaigns are still loading
-  if (campaigns === undefined) {
+  // Show loading spinner only if we haven't loaded data yet
+  // Once loaded, show the UI even if campaigns is undefined (reactivity will update it)
+  if (!hasLoaded && campaigns === undefined) {
     return <Loading message="Loading campaigns..." size="md" />;
   }
 
@@ -194,7 +203,7 @@ export default function CampaignSection() {
           <div className="flex items-center gap-2 bg-muted/50 px-4 py-2 rounded-lg">
             <AlertCircle className="h-4 w-4 text-muted-foreground" />
             <p className="text-sm text-muted-foreground">
-              <span className="font-medium text-foreground">View-only mode:</span> You can view campaigns but cannot create or delete them.
+              <span className="font-medium text-foreground">View-only mode:</span> You can view campaigns but cannot create or manage them.
             </p>
           </div>
         )}
@@ -390,7 +399,7 @@ export default function CampaignSection() {
                 {filteredCampaigns.length > 0 && (
                   <div className="flex items-center justify-between px-6 py-4 border-t border-border">
                     <div className="text-sm text-muted-foreground">
-                      Showing {filteredCampaigns.length} of {campaigns.length} campaigns
+                      Showing {filteredCampaigns.length} of {campaigns?.length || 0} campaigns
                     </div>
                     <div className="flex items-center gap-2">
                       <Button variant="outline" size="sm" disabled>
@@ -417,12 +426,12 @@ export default function CampaignSection() {
       />
 
       {/* Create Campaign Wizard - Only render if user has permission */}
-      {partner?._id && canManageCampaigns && user && isConvexUser(user) && (
+      {partner?._id && canManageCampaigns && (
         <CreateCampaignWizard
           open={showCreateWizard}
           onClose={() => setShowCreateWizard(false)}
           partnerId={partner._id}
-          user_id={user._id} 
+          user_id={user && isConvexUser(user) ? user._id : undefined}
         />
       )}
 

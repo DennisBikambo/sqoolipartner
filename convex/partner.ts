@@ -68,13 +68,13 @@ export const register = mutation({
     if (existing) {
       throw new Error("Email already exists");
     }
-     
-    const defaultPermission = await ctx.db
-      .query("permissions")
-      .filter((q) => q.eq(q.field("is_default"), true))
-      .first();
-    if (!defaultPermission) {
-      throw new Error("Default permission not found");
+
+    // Get ALL permissions for new partners (partner_admin level access)
+    const allPermissions = await ctx.db.query("permissions").collect();
+    const allPermissionIds = allPermissions.map((p) => p._id);
+
+    if (allPermissionIds.length === 0) {
+      throw new Error("No permissions found. Please run seedPermissions first.");
     }
 
     const partnerId = await ctx.db.insert("partners", {
@@ -84,7 +84,7 @@ export const register = mutation({
       phone: args.phone,
       username: args.username,
       is_first_login: true,
-      permission_ids: [defaultPermission._id],
+      permission_ids: allPermissionIds, // Assign ALL permissions to new partners
     });
 
     return {

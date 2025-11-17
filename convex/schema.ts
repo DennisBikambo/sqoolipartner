@@ -26,6 +26,7 @@ export default defineSchema({
     phone: v.optional(v.string()),
     extension:v.string(),
     role: v.union(
+      v.literal("super_admin"),
       v.literal("partner_admin"),
       v.literal("accountant"),
       v.literal("campaign_manager"),
@@ -103,10 +104,10 @@ export default defineSchema({
    * Tracks all marketing or partnership campaigns tied to programs.
    */
   campaigns: defineTable({
-    name: v.string(), 
-    program_id: v.id('programs'), 
-    partner_id: v.id("partners"), 
-    user_id: v.id("users"),
+    name: v.string(),
+    program_id: v.id('programs'),
+    partner_id: v.id("partners"),
+    user_id: v.optional(v.id("users")),
     promo_code: v.string(), 
     target_signups: v.number(), 
     daily_target: v.number(), 

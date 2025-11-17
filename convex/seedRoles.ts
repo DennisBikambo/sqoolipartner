@@ -21,13 +21,6 @@ export const seedDefaultRoles = mutation({
     // Get all permissions to map them to roles
     const allPermissions = await ctx.db.query("permissions").collect();
 
-    // Helper function to get permission IDs by keys
-    const getPermissionIdsByKeys = (keys: string[]) => {
-      return allPermissions
-        .filter((p) => keys.includes(p.key))
-        .map((p) => p._id);
-    };
-
     // Helper function to get all permissions in certain categories
     const getPermissionsByCategories = (
       categories: string[],
@@ -46,6 +39,16 @@ export const seedDefaultRoles = mutation({
 
     // Define default roles with their permissions
     const defaultRoles = [
+      {
+        name: "super_admin",
+        display_name: "Super Administrator",
+        description:
+          "Ultimate administrative access with all permissions across the entire system. Can manage all partners, users, campaigns, wallet, programs, and settings without restrictions.",
+        permission_ids: allPermissions.map((p) => p._id), // All permissions including all_access.full
+        is_system_role: true,
+        is_active: true,
+        created_at: now,
+      },
       {
         name: "partner_admin",
         display_name: "Partner Administrator",
@@ -188,6 +191,7 @@ export const seedDefaultRoles = mutation({
 export const getRolePermissions = mutation({
   args: {
     role_name: v.union(
+      v.literal("super_admin"),
       v.literal("partner_admin"),
       v.literal("accountant"),
       v.literal("campaign_manager"),

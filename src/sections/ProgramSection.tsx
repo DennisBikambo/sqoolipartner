@@ -6,7 +6,15 @@ import { useQuery, useConvex } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Input } from "../components/ui/input";
 import { Button } from "../components/ui/button";
-import { Search, SlidersHorizontal } from "lucide-react";
+import { Search, SlidersHorizontal, Plus, BookOpen, GraduationCap, Settings } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "../components/ui/dropdown-menu";
 import {
   Table,
   TableBody,
@@ -17,6 +25,14 @@ import {
 } from "../components/ui/table";
 
 import { Loading } from "../components/common/Loading";
+import { useAuth } from "../hooks/useAuth";
+import { usePermissions } from "../hooks/usePermission";
+import { isConvexUser } from "../types/auth.types";
+import CreateProgramDialog from "../components/common/CreateProgramDialog";
+import CreateCurriculumDialog from "../components/common/CreateCurriculumDialog";
+import ManageCurriculaDialog from "../components/common/ManageCurriculaDialog";
+import CreateSubjectDialog from "../components/common/CreateSubjectDialog";
+import ManageSubjectsDialog from "../components/common/ManageSubjectsDialog";
 import type { CampaignProps } from '../types/global.types';
 
 type Program = {
@@ -37,11 +53,22 @@ export default function ProgramsSection() {
   const [activeTab, setActiveTab] = useState<"active" | "inactive">("active");
   const [currentPage, setCurrentPage] = useState(1);
   const [enrollmentCounts, setEnrollmentCounts] = useState<Record<string, number>>({});
+  const [showCreateProgramDialog, setShowCreateProgramDialog] = useState(false);
+  const [showCreateCurriculumDialog, setShowCreateCurriculumDialog] = useState(false);
+  const [showManageCurriculaDialog, setShowManageCurriculaDialog] = useState(false);
+  const [showCreateSubjectDialog, setShowCreateSubjectDialog] = useState(false);
+  const [showManageSubjectsDialog, setShowManageSubjectsDialog] = useState(false);
   const itemsPerPage = 8;
 
+  const { user } = useAuth();
+  const { canWrite, hasPermission } = usePermissions();
   const convex = useConvex();
   const programs = useQuery(api.program.listPrograms) as Program[] | undefined;
   const campaigns = useQuery(api.campaign.getAllCampaigns) as CampaignProps[] | undefined;
+
+  // Check if user can create programs (super admin or has programs.write/admin permission)
+  const isSuperAdmin = isConvexUser(user) && user.role === 'super_admin';
+  const canCreatePrograms = isSuperAdmin || canWrite('programs') || hasPermission('programs.admin');
 
   // Fetch enrollment counts for each program
   useEffect(() => {
@@ -113,7 +140,7 @@ export default function ProgramsSection() {
 
   // Count purchases for each program (placeholder)
   const getPurchasesCount = () => {
-    // This would come from your actual purchases/transactions data
+    // get this from actual purchases/transactions data
     return 23;
   };
 
@@ -124,8 +151,56 @@ export default function ProgramsSection() {
   return (
     <div className="space-y-6 p-6">
       {/* Header */}
-      <div>
+      <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold text-foreground">Programs</h1>
+
+        <div className="flex items-center gap-3">
+          {/* Super Admin: Management Dropdown */}
+          {isSuperAdmin && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline">
+                  <Settings className="h-4 w-4 mr-2" />
+                  Manage
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel>Curricula</DropdownMenuLabel>
+                <DropdownMenuItem onClick={() => setShowCreateCurriculumDialog(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create Curriculum
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setShowManageCurriculaDialog(true)}>
+                  <BookOpen className="h-4 w-4 mr-2" />
+                  Manage Curricula
+                </DropdownMenuItem>
+
+                <DropdownMenuSeparator />
+
+                <DropdownMenuLabel>Subjects</DropdownMenuLabel>
+                <DropdownMenuItem onClick={() => setShowCreateSubjectDialog(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create Subject
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setShowManageSubjectsDialog(true)}>
+                  <GraduationCap className="h-4 w-4 mr-2" />
+                  Manage Subjects
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+
+          {/* Create Program Button (Super Admin or users with programs.write/admin permission) */}
+          {canCreatePrograms && (
+            <Button
+              onClick={() => setShowCreateProgramDialog(true)}
+              className="bg-primary text-primary-foreground hover:bg-primary/90"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              New Program
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Search and Filter */}
@@ -270,6 +345,42 @@ export default function ProgramsSection() {
             </Button>
           </div>
         </div>
+      )}
+
+      {/* Create Program Dialog */}
+      {canCreatePrograms && (
+        <CreateProgramDialog
+          open={showCreateProgramDialog}
+          onOpenChange={setShowCreateProgramDialog}
+        />
+      )}
+
+      {/* Curriculum Dialogs (Super Admin only) */}
+      {isSuperAdmin && (
+        <>
+          <CreateCurriculumDialog
+            open={showCreateCurriculumDialog}
+            onOpenChange={setShowCreateCurriculumDialog}
+          />
+          <ManageCurriculaDialog
+            open={showManageCurriculaDialog}
+            onOpenChange={setShowManageCurriculaDialog}
+          />
+        </>
+      )}
+
+      {/* Subject Dialogs (Super Admin only) */}
+      {isSuperAdmin && (
+        <>
+          <CreateSubjectDialog
+            open={showCreateSubjectDialog}
+            onOpenChange={setShowCreateSubjectDialog}
+          />
+          <ManageSubjectsDialog
+            open={showManageSubjectsDialog}
+            onOpenChange={setShowManageSubjectsDialog}
+          />
+        </>
       )}
     </div>
   );
