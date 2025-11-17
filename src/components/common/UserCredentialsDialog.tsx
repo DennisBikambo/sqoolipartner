@@ -43,7 +43,7 @@ export function UserCredentialsDialog({
     setIsSendingEmail(true);
     try {
       const result = await sendCredentialsEmail({
-        user_email: "azharahmedtakoy4444@gmail.com", 
+        user_email: email,
         user_name: userName,
         password: password,
         extension: extension,
