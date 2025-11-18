@@ -93,7 +93,7 @@ export default function CampaignSection() {
         searchQuery === "" ||
         campaign._id.toLowerCase().includes(searchQuery.toLowerCase()) ||
         campaign.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        campaign.promo_code.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (campaign.promo_code && campaign.promo_code.toLowerCase().includes(searchQuery.toLowerCase())) ||
         formatDate(campaign.duration_start)
           .toLowerCase()
           .includes(searchQuery.toLowerCase());

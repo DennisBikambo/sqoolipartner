@@ -141,11 +141,12 @@ export function CampaignDetailDialog({
   };
 
   const handleCopy = () => {
+    const promoCode = campaign.promo_code || "";
     if (onCopy) {
       toast.success('Promo code copied to clipboard');
-      onCopy(campaign.promo_code);
+      onCopy(promoCode);
     } else {
-      navigator.clipboard.writeText(campaign.promo_code);
+      navigator.clipboard.writeText(promoCode);
     }
   };
 

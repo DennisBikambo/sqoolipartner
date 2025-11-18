@@ -108,25 +108,25 @@ export default defineSchema({
     program_id: v.id('programs'),
     partner_id: v.id("partners"),
     user_id: v.optional(v.id("users")),
-    promo_code: v.string(), 
-    target_signups: v.number(), 
-    daily_target: v.number(), 
+    promo_code: v.optional(v.string()), // Optional: backward compatibility for existing campaigns
+    target_signups: v.number(),
+    daily_target: v.number(),
     bundled_offers: v.object({
-      min_lessons: v.number(), 
-      total_price: v.number(), 
+      min_lessons: v.number(),
+      total_price: v.number(),
     }),
     discount_rule: v.object({
       price_per_lesson: v.number(),
-      min_amount: v.optional(v.number()), 
+      min_amount: v.optional(v.number()),
     }),
-    revenue_projection: v.number(), 
+    revenue_projection: v.number(),
     revenue_share: v.object({
-      partner_percentage: v.number(), 
-      sqooli_percentage: v.number(), 
+      partner_percentage: v.number(),
+      sqooli_percentage: v.number(),
     }),
-    whatsapp_number: v.string(), 
-    duration_start: v.string(), 
-    duration_end: v.string(), 
+    whatsapp_number: v.string(),
+    duration_start: v.string(),
+    duration_end: v.string(),
     status: v.union(
       v.literal("draft"),
       v.literal("active"),
@@ -137,6 +137,22 @@ export default defineSchema({
     .index("by_user_id", ["user_id"])
     .index("by_program_id", ["program_id"])
     .index("by_promo_code", ["promo_code"]),
+
+  /**
+   * PROMO CODES TABLE
+   * ------------------------
+   * Stores multiple promo codes per campaign (e.g., different codes for different radio stations)
+   */
+  promo_codes: defineTable({
+    campaign_id: v.id("campaigns"),
+    code: v.string(), // e.g., "RADIOAFRICA2025"
+    label: v.string(), // e.g., "Radio Africa"
+    description: v.optional(v.string()),
+    is_active: v.boolean(),
+    created_at: v.string(),
+  })
+    .index("by_campaign_id", ["campaign_id"])
+    .index("by_code", ["code"]),
 
   /**
    * PROGRAM ENROLLMENTS TABLE

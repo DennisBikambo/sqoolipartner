@@ -12,7 +12,7 @@ import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 import { Alert, AlertDescription } from "../ui/alert";
 import { Badge } from "../ui/badge";
 import { Separator } from "../ui/separator";
-import { Check, Target, DollarSign, Sparkles, FileText, X, AlertCircle, Loader2, Hash, MessageSquare } from "lucide-react";
+import { Check, Target, DollarSign, Sparkles, FileText, X, AlertCircle, Loader2, Hash, MessageSquare, Plus, Trash2 } from "lucide-react";
 
 const steps = [
   { id: 0, title: "Program", icon: FileText, description: "Choose your program" },
@@ -22,6 +22,12 @@ const steps = [
   { id: 4, title: "Review", icon: Check, description: "Confirm & create" }
 ];
 
+interface PromoCode {
+  code: string;
+  label: string;
+  description?: string;
+}
+
 interface WizardState {
   program_id: Id<"programs"> | "";
 
@@ -30,8 +36,9 @@ interface WizardState {
   duration_end: string;
   target_signups: number;
   whatsapp_number: string;
-  promo_code: string;
+  promo_code: string; // Legacy: backward compatibility
   auto_promo: boolean;
+  promo_codes: PromoCode[]; // New: support multiple promo codes
 }
 
 export default function CreateCampaignWizard({
@@ -47,6 +54,7 @@ export default function CreateCampaignWizard({
 }) {
   const storageKey = useMemo(() => `campaign-wizard:${String(partnerId)}`, [partnerId]);
   const createCampaign = useMutation(api.campaign.createCampaign);
+  const createPromoCodeMutation = useMutation(api.promoCode.createPromoCode);
   const { track } = useActivityTracker(partnerId);
   const programs = useQuery(api.program.listPrograms);
 
@@ -64,6 +72,7 @@ export default function CreateCampaignWizard({
     whatsapp_number: "+254104010203",
     promo_code: "",
     auto_promo: true,
+    promo_codes: [],
   });
 
   // Set initial program when programs load
@@ -130,7 +139,7 @@ export default function CreateCampaignWizard({
   const canNext = () => {
     if (step === 0) return Boolean(state.program_id);
     if (step === 1) return Boolean(state.name && state.duration_start && state.duration_end && state.target_signups && state.whatsapp_number);
-    if (step === 2) return Boolean(state.auto_promo || state.promo_code);
+    if (step === 2) return Boolean((state.auto_promo || state.promo_code) || state.promo_codes.length > 0);
     return true;
   };
 
@@ -156,10 +165,33 @@ export default function CreateCampaignWizard({
       whatsapp_number: "+15551575355",
       promo_code: "",
       auto_promo: true,
+      promo_codes: [],
     });
     setStep(0);
     setError(null);
     setSuccess(null);
+  };
+
+  // Promo code management functions
+  const addPromoCode = (promoCode: PromoCode) => {
+    setState((s) => ({
+      ...s,
+      promo_codes: [...s.promo_codes, promoCode],
+    }));
+  };
+
+  const removePromoCode = (index: number) => {
+    setState((s) => ({
+      ...s,
+      promo_codes: s.promo_codes.filter((_, i) => i !== index),
+    }));
+  };
+
+  const updatePromoCodeAt = (index: number, promoCode: PromoCode) => {
+    setState((s) => ({
+      ...s,
+      promo_codes: s.promo_codes.map((pc, i) => (i === index ? promoCode : pc)),
+    }));
   };
 
   const handleCreate = async () => {
@@ -174,6 +206,7 @@ export default function CreateCampaignWizard({
 
       const finalPromoCode = state.auto_promo ? autoPromoCode : state.promo_code;
 
+      // Create the campaign
       const insertedId = await createCampaign({
         partner_id: partnerId,
         ...(user_id && { user_id }),
@@ -185,6 +218,18 @@ export default function CreateCampaignWizard({
         whatsapp_number: state.whatsapp_number,
         promo_code: finalPromoCode || undefined,
       });
+
+      // Create multiple promo codes if any were added
+      if (state.promo_codes.length > 0) {
+        for (const promoCode of state.promo_codes) {
+          await createPromoCodeMutation({
+            campaign_id: insertedId,
+            code: promoCode.code,
+            label: promoCode.label,
+            description: promoCode.description,
+          });
+        }
+      }
 
       track({ type: "campaign_created", payload: { campaignId: String(insertedId), name: state.name } });
 
@@ -410,11 +455,12 @@ export default function CreateCampaignWizard({
           {/* Step 2: Promo code */}
           {step === 2 && (
             <div className="space-y-4">
+              {/* Legacy single promo code option */}
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-base">Promo Code Generation</CardTitle>
+                  <CardTitle className="text-base">Single Promo Code (Legacy)</CardTitle>
                   <CardDescription>
-                    This unique code will track all transactions from your campaign
+                    Generate one promo code for your entire campaign
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -459,11 +505,116 @@ export default function CreateCampaignWizard({
                 </CardContent>
               </Card>
 
+              <Separator />
+
+              {/* Multiple promo codes option */}
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="text-base">Multiple Promo Codes</CardTitle>
+                      <CardDescription>
+                        Create different promo codes for different radio stations or partners
+                      </CardDescription>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        const code = `${state.name.replace(/\s+/g, "").toUpperCase().slice(0, 6)}${Math.floor(100 + Math.random() * 900)}`;
+                        addPromoCode({
+                          code,
+                          label: `Station ${state.promo_codes.length + 1}`,
+                          description: "",
+                        });
+                      }}
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Promo Code
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {state.promo_codes.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground text-sm">
+                      No promo codes added yet. Click "Add Promo Code" to create one.
+                    </div>
+                  ) : (
+                    state.promo_codes.map((pc, index) => (
+                      <div
+                        key={index}
+                        className="p-4 border rounded-lg space-y-3 bg-card"
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1 space-y-3">
+                            <div className="grid grid-cols-2 gap-3">
+                              <div className="space-y-2">
+                                <Label htmlFor={`promo-label-${index}`}>
+                                  Label (e.g., Radio Station Name)
+                                </Label>
+                                <Input
+                                  id={`promo-label-${index}`}
+                                  value={pc.label}
+                                  onChange={(e) =>
+                                    updatePromoCodeAt(index, { ...pc, label: e.target.value })
+                                  }
+                                  placeholder="E.g. Radio Africa"
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <Label htmlFor={`promo-code-${index}`}>Promo Code</Label>
+                                <Input
+                                  id={`promo-code-${index}`}
+                                  value={pc.code}
+                                  onChange={(e) =>
+                                    updatePromoCodeAt(index, {
+                                      ...pc,
+                                      code: e.target.value.toUpperCase(),
+                                    })
+                                  }
+                                  placeholder="E.g. AFRICA2025"
+                                  className="font-mono"
+                                />
+                              </div>
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor={`promo-desc-${index}`}>
+                                Description (Optional)
+                              </Label>
+                              <Input
+                                id={`promo-desc-${index}`}
+                                value={pc.description || ""}
+                                onChange={(e) =>
+                                  updatePromoCodeAt(index, {
+                                    ...pc,
+                                    description: e.target.value,
+                                  })
+                                }
+                                placeholder="E.g. For Radio Africa listeners"
+                              />
+                            </div>
+                          </div>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => removePromoCode(index)}
+                            className="ml-2 text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </CardContent>
+              </Card>
+
               <Alert>
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>
-                  This promo code will be used in all marketing materials and payment instructions.
-                  Parents will use it to redeem their lessons after payment.
+                  {state.promo_codes.length > 0
+                    ? "Multiple promo codes allow you to track performance from different sources (radio stations, partners, etc.)"
+                    : "Promo codes will be used in all marketing materials and payment instructions. Parents will use them to redeem their lessons after payment."}
                 </AlertDescription>
               </Alert>
             </div>
@@ -581,10 +732,29 @@ export default function CreateCampaignWizard({
                     </>
                   )}
                   <Separator />
-                  <div className="flex justify-between py-2">
-                    <span className="text-muted-foreground">Promo Code:</span>
-                    <Badge variant="secondary" className="font-mono">{finalPromoCode}</Badge>
-                  </div>
+                  {state.promo_codes.length > 0 ? (
+                    <div className="py-2">
+                      <span className="text-muted-foreground">Promo Codes:</span>
+                      <div className="mt-2 space-y-2">
+                        {state.promo_codes.map((pc, index) => (
+                          <div key={index} className="flex items-center justify-between bg-muted/30 p-2 rounded">
+                            <div>
+                              <div className="text-sm font-medium">{pc.label}</div>
+                              {pc.description && (
+                                <div className="text-xs text-muted-foreground">{pc.description}</div>
+                              )}
+                            </div>
+                            <Badge variant="secondary" className="font-mono">{pc.code}</Badge>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex justify-between py-2">
+                      <span className="text-muted-foreground">Promo Code:</span>
+                      <Badge variant="secondary" className="font-mono">{finalPromoCode}</Badge>
+                    </div>
+                  )}
                   <Separator />
                   <div className="flex justify-between py-2">
                     <span className="text-muted-foreground">WhatsApp:</span>

@@ -24,6 +24,7 @@ import type * as permission from "../permission.js";
 import type * as program from "../program.js";
 import type * as program_enrollments from "../program_enrollments.js";
 import type * as program_subjects from "../program_subjects.js";
+import type * as promoCode from "../promoCode.js";
 import type * as role from "../role.js";
 import type * as seedPermissions from "../seedPermissions.js";
 import type * as seedProgram from "../seedProgram.js";
@@ -61,6 +62,7 @@ declare const fullApi: ApiFromModules<{
   program: typeof program;
   program_enrollments: typeof program_enrollments;
   program_subjects: typeof program_subjects;
+  promoCode: typeof promoCode;
   role: typeof role;
   seedPermissions: typeof seedPermissions;
   seedProgram: typeof seedProgram;

@@ -239,11 +239,13 @@ export const getCampaignEarnings = query({
         
 
         // Get all transactions for this campaign
-        const transactions = await ctx.db
-          .query("transactions")
-          .withIndex("by_campaign_code", (q) => q.eq("campaign_code", campaign.promo_code))
-          .filter((q) => q.eq(q.field("status"), "Success"))
-          .collect();
+        const transactions = campaign.promo_code
+          ? await ctx.db
+              .query("transactions")
+              .withIndex("by_campaign_code", (q) => q.eq("campaign_code", campaign.promo_code!))
+              .filter((q) => q.eq(q.field("status"), "Success"))
+              .collect()
+          : [];
         
 
         

@@ -378,7 +378,7 @@ http.route({
         
         acc[price].active_campaigns.push(...activeCampaignsForPrice.map(c => ({
           campaign_name: c.campaign_name,
-          promo_code: c.promo_code,
+          promo_code: c.promo_code || "",
           duration_end: c.duration_end,
         })));
         
