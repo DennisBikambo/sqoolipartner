@@ -61,7 +61,7 @@ export default function CreateCampaignWizard({
     duration_start: "",
     duration_end: "",
     target_signups: 10000,
-    whatsapp_number: "+254753113000",
+    whatsapp_number: "+254104010203",
     promo_code: "",
     auto_promo: true,
   });
