@@ -2,6 +2,7 @@
 import { httpRouter } from "convex/server";
 import { httpAction } from "./_generated/server";
 import { api } from "./_generated/api";
+import type { Id } from "./_generated/dataModel";
 
 const http = httpRouter();
 
@@ -487,6 +488,126 @@ http.route({
       }),
       { status: 200, headers: { "Content-Type": "application/json" } }
     );
+  }),
+});
+
+
+/**
+ * POST /check-transaction
+ * Checks transaction status by transaction ID
+ * Used by AI agent to verify payment completion
+ */
+http.route({
+  path: "/check-transaction",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    try {
+      const { transaction_id } = await request.json();
+
+      if (!transaction_id) {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: "Missing required field: transaction_id",
+          }),
+          { status: 400, headers: { "Content-Type": "application/json" } }
+        );
+      }
+
+      // Convert string to Id<"transactions">
+      const txnId = transaction_id as Id<"transactions">;
+
+      // Get transaction by ID
+      const txn = await ctx.runQuery(api.transactions.getTransactionById, {
+        id: txnId,
+      });
+
+      if (!txn) {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: "Transaction not found",
+          }),
+          { status: 404, headers: { "Content-Type": "application/json" } }
+        );
+      }
+
+      // Check for Success status (capital S)
+      if (txn.status === "Success") {
+        const campaign = await ctx.runQuery(api.campaign.getCampaignByPromoCode, {
+          promo_code: txn.campaign_code,
+        });
+
+        if (!campaign) {
+          return new Response(
+            JSON.stringify({
+              success: false,
+              error: "Campaign not found",
+            }),
+            { status: 404, headers: { "Content-Type": "application/json" } }
+          );
+        }
+
+        const program = await ctx.runQuery(api.program.getProgramById, {
+          id: campaign.program_id,
+        });
+
+        if (!program) {
+          return new Response(
+            JSON.stringify({
+              success: false,
+              error: "Program not found",
+            }),
+            { status: 404, headers: { "Content-Type": "application/json" } }
+          );
+        }
+
+        const pricePerLesson = program.pricing;
+        const numberOfLessons = Math.floor(txn.amount / pricePerLesson);
+        const redeemCode = `R-${txn.phone_number}`;
+
+        return new Response(
+          JSON.stringify({
+            success: true,
+            transaction_status: "Success",
+            payment_complete: true,
+            user_creation_data: {
+              student_name: txn.student_name,
+              phone_number: txn.phone_number,
+              redeem_code: redeemCode,
+              amount_paid: txn.amount,
+              no_of_lessons: numberOfLessons,
+              price_per_lesson: pricePerLesson,
+              campaign_id: campaign._id,
+            },
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } }
+        );
+      }
+
+      // Transaction not successful - handle "pending" (lowercase), "Failed" (capital F)
+      return new Response(
+        JSON.stringify({
+          success: true,
+          transaction_status: txn.status,
+          payment_complete: false,
+          message: txn.status === "pending"
+            ? "Payment is still processing. Please wait." 
+            : `Payment ${txn.status.toLowerCase()}. Please try again or contact support.`,
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      );
+
+    } catch (error) {
+      console.error("Error checking transaction:", error);
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: error instanceof Error ? error.message : "Internal server error",
+        }),
+        { status: 500, headers: { "Content-Type": "application/json" } }
+      );
+    }
   }),
 });
 
