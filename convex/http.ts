@@ -2,7 +2,7 @@
 import { httpRouter } from "convex/server";
 import { httpAction } from "./_generated/server";
 import { api } from "./_generated/api";
-import type { Id } from "./_generated/dataModel";
+// import type { Id } from "./_generated/dataModel";
 
 const http = httpRouter();
 
@@ -494,45 +494,45 @@ http.route({
 
 /**
  * POST /check-transaction
- * Checks transaction status by transaction ID
- * Used by AI agent to verify payment completion
+ * Checks transaction status by M-Pesa code
+ * Users receive this code via SMS after payment - much more reliable than remembering transaction_id!
  */
 http.route({
   path: "/check-transaction",
   method: "POST",
   handler: httpAction(async (ctx, request) => {
     try {
-      const { transaction_id } = await request.json();
+      const { mpesa_code } = await request.json();
 
-      if (!transaction_id) {
+      if (!mpesa_code) {
         return new Response(
           JSON.stringify({
             success: false,
-            error: "Missing required field: transaction_id",
+            error: "Missing required field: mpesa_code",
+            agent_message: "I need your M-Pesa confirmation code to verify the payment. Please share the code from your M-Pesa SMS.",
           }),
           { status: 400, headers: { "Content-Type": "application/json" } }
         );
       }
 
-      // Convert string to Id<"transactions">
-      const txnId = transaction_id as Id<"transactions">;
-
-      // Get transaction by ID
-      const txn = await ctx.runQuery(api.transactions.getTransactionById, {
-        id: txnId,
+      // Get transaction by M-Pesa code
+      const txn = await ctx.runQuery(api.transactions.getTransactionByMpesaCode, {
+        mpesa_code: mpesa_code.toUpperCase(), // Normalize to uppercase
       });
 
       if (!txn) {
         return new Response(
           JSON.stringify({
             success: false,
+            payment_verified: false,
             error: "Transaction not found",
+            agent_message: "I couldn't find a payment with that M-Pesa code. Please double-check the code from your SMS (ALL CAPS, starts with T).",
           }),
           { status: 404, headers: { "Content-Type": "application/json" } }
         );
       }
 
-      // Check for Success status (capital S)
+      // ✅ PAYMENT SUCCESSFUL
       if (txn.status === "Success") {
         const campaign = await ctx.runQuery(api.campaign.getCampaignByPromoCode, {
           promo_code: txn.campaign_code,
@@ -542,7 +542,9 @@ http.route({
           return new Response(
             JSON.stringify({
               success: false,
+              payment_verified: false,
               error: "Campaign not found",
+              agent_message: "Payment was successful but I couldn't find the campaign details. Please contact support.",
             }),
             { status: 404, headers: { "Content-Type": "application/json" } }
           );
@@ -556,7 +558,9 @@ http.route({
           return new Response(
             JSON.stringify({
               success: false,
+              payment_verified: false,
               error: "Program not found",
+              agent_message: "Payment was successful but I couldn't find the program details. Please contact support.",
             }),
             { status: 404, headers: { "Content-Type": "application/json" } }
           );
@@ -564,51 +568,144 @@ http.route({
 
         const pricePerLesson = program.pricing;
         const numberOfLessons = Math.floor(txn.amount / pricePerLesson);
-        const redeemCode = `R-${txn.phone_number}`;
+
+        // 🔥 GET EXISTING REDEEM CODE FROM ENROLLMENT (if exists)
+        const enrollment = await ctx.runQuery(api.program_enrollments.getEnrollmentByTransactionId, {
+          transaction_id: txn._id,
+        });
+
+        // Use existing redeem code if enrollment exists, otherwise generate new one
+        const redeemCode = enrollment?.redeem_code || `R-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
 
         return new Response(
           JSON.stringify({
             success: true,
+            payment_verified: true,
+            payment_status: "success",
             transaction_status: "Success",
-            payment_complete: true,
+            
+            // Clear message for the agent
+            agent_message: `✅ Payment confirmed! ${txn.student_name} paid KES ${txn.amount} for ${numberOfLessons} lessons.`,
+            
+            // All data needed to create user account
             user_creation_data: {
               student_name: txn.student_name,
               phone_number: txn.phone_number,
-              redeem_code: redeemCode,
+              redeem_code: redeemCode, // ✅ Use existing or generate new
               amount_paid: txn.amount,
               no_of_lessons: numberOfLessons,
               price_per_lesson: pricePerLesson,
               campaign_id: campaign._id,
             },
+            
+            // Human-readable summary
+            payment_details: {
+              student_name: txn.student_name,
+              phone: txn.phone_number,
+              amount: `KES ${txn.amount}`,
+              lessons: numberOfLessons,
+              price_per_lesson: `KES ${pricePerLesson}`,
+              campaign: campaign.name,
+              mpesa_code: txn.mpesa_code,
+              redeem_code: redeemCode, // ✅ Use existing or generate new
+            },
+            
+            // Next step instruction for agent
+            next_action: "ask_for_email",
+            next_action_prompt: "Ask the user for their email address to create their account.",
           }),
           { status: 200, headers: { "Content-Type": "application/json" } }
         );
       }
 
-      // Transaction not successful - handle "pending" (lowercase), "Failed" (capital F)
+      // ⏳ PAYMENT STILL PENDING
+      if (txn.status === "pending") {
+        return new Response(
+          JSON.stringify({
+            success: true,
+            payment_verified: false,
+            payment_status: "pending",
+            transaction_status: "pending",
+            
+            agent_message: "Your payment is still processing. M-Pesa usually takes 20-45 seconds. Please wait a moment.",
+            
+            payment_details: {
+              student_name: txn.student_name,
+              phone: txn.phone_number,
+              amount: `KES ${txn.amount}`,
+              status: "Processing",
+            },
+            
+            next_action: "wait_and_retry",
+            next_action_prompt: "Tell the user to wait 30 seconds and share their M-Pesa code again to recheck.",
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } }
+        );
+      }
+
+      // ❌ PAYMENT FAILED
+      if (txn.status === "Failed") {
+        return new Response(
+          JSON.stringify({
+            success: true,
+            payment_verified: false,
+            payment_status: "failed",
+            transaction_status: "Failed",
+            
+            agent_message: "Payment failed. This usually means the transaction was cancelled or the PIN was incorrect.",
+            
+            payment_details: {
+              student_name: txn.student_name,
+              phone: txn.phone_number,
+              amount: `KES ${txn.amount}`,
+              status: "Failed",
+            },
+            
+            next_action: "offer_retry",
+            next_action_prompt: "Ask the user if they would like to try the payment again.",
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } }
+        );
+      }
+
+      // 🤷 UNKNOWN STATUS (fallback)
       return new Response(
         JSON.stringify({
           success: true,
+          payment_verified: false,
+          payment_status: "unknown",
           transaction_status: txn.status,
-          payment_complete: false,
-          message: txn.status === "pending"
-            ? "Payment is still processing. Please wait." 
-            : `Payment ${txn.status.toLowerCase()}. Please try again or contact support.`,
+          
+          agent_message: `Transaction status is "${txn.status}". This is an unexpected status. Please contact support.`,
+          
+          payment_details: {
+            student_name: txn.student_name,
+            phone: txn.phone_number,
+            amount: `KES ${txn.amount}`,
+            status: txn.status,
+          },
+          
+          next_action: "contact_support",
+          next_action_prompt: "Tell the user to contact support for assistance.",
         }),
         { status: 200, headers: { "Content-Type": "application/json" } }
       );
 
     } catch (error) {
       console.error("Error checking transaction:", error);
+      
       return new Response(
         JSON.stringify({
           success: false,
+          payment_verified: false,
           error: error instanceof Error ? error.message : "Internal server error",
+          agent_message: "An error occurred while checking the transaction. Please make sure you shared the correct M-Pesa code from your SMS.",
         }),
         { status: 500, headers: { "Content-Type": "application/json" } }
       );
     }
   }),
 });
+
 
 export default http;
