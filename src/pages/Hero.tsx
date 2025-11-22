@@ -221,7 +221,7 @@ export default function Hero() {
 
       {/* Partner Logos Section */}
       <section className="py-12 lg:py-16 bg-white dark:bg-background">
-        <div className="max-w-7xl mx-auto px-6 lg:px-20">
+        <div className="max-w-7xl mx-auto px-6">
           <PartnerCarousel />
         </div>
       </section>

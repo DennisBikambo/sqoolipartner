@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Copy, Mail, Loader2, CheckCircle } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../../components/ui/dialog';
 import { Button } from '../../components/ui/button';
@@ -63,6 +63,26 @@ export function UserCredentialsDialog({
       setIsSendingEmail(false);
     }
   };
+
+  // Automatically send email when dialog opens
+  useEffect(() => {
+    if (open && email && !emailSent) {
+      // Send email automatically after a short delay
+      const timer = setTimeout(() => {
+        handleSendEmail();
+      }, 500);
+
+      return () => clearTimeout(timer);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, email]);
+
+  // Reset email sent state when dialog closes
+  useEffect(() => {
+    if (!open) {
+      setEmailSent(false);
+    }
+  }, [open]);
 
   const loginUrl = `${window.location.origin}/signIn?extension=${extension}`;
 
