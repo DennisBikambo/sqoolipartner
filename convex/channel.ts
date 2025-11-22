@@ -61,7 +61,12 @@ export const updateChannel = mutation({
   },
   handler: async (ctx, args) => {
     const { id, ...updates } = args;
-    const updateData: any = {};
+    const updateData: Partial<{
+      name: string;
+      code: string;
+      subchanells: string[];
+      description: string;
+    }> = {};
     
     if (updates.name !== undefined) updateData.name = updates.name;
     if (updates.code !== undefined) updateData.code = updates.code;
