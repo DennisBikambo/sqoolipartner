@@ -105,10 +105,12 @@ export default defineSchema({
    */
   campaigns: defineTable({
     name: v.string(),
+    description:v.optional(v.string()),
+    channel_id: v.id("channels"),
     program_id: v.id('programs'),
     partner_id: v.id("partners"),
     user_id: v.optional(v.id("users")),
-    promo_code: v.optional(v.string()), // Optional: backward compatibility for existing campaigns
+    promo_code: v.optional(v.string()), 
     target_signups: v.number(),
     daily_target: v.number(),
     bundled_offers: v.object({
@@ -404,6 +406,15 @@ withdrawal_limits: defineTable({
   })
     .index("by_partner_id", ["partnerId"])
     .index("by_partnerId_isRead", ["partnerId", "isRead"]),
+
+
+  channels: defineTable({
+    partnerId: v.id("partners"),
+    name: v.string(),
+    code:v.string(),
+    subchanells:v.array(v.string()),
+    description: v.string(),
+  }).index("by_partner_id", ["partnerId"]),
 
 });
 

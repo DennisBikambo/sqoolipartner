@@ -2,8 +2,7 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { api } from "./_generated/api";
-import { generateWhatsAppQRCode, generatePaymentQRCode ,socialPostGenerator} from "../src/services/qrCodeService";
-
+import { generateWhatsAppQRCode, generatePaymentQRCode } from "../src/services/qrCodeService";
 
 function generatePromoCode(base: string): string {
   const random = Math.floor(100 + Math.random() * 900);
@@ -16,11 +15,10 @@ export const createCampaign = mutation({
     program_id: v.id("programs"),
     user_id: v.optional(v.id("users")),
     name: v.string(),
-    duration_start: v.string(),
-    duration_end: v.string(),
+    description: v.optional(v.string()),
     target_signups: v.number(),
-    whatsapp_number: v.string(),
-    promo_code: v.optional(v.string()),
+    channel_id: v.id("channels"),
+    subchannel: v.optional(v.string()),
   },
 
   handler: async (ctx, args) => {
@@ -30,14 +28,10 @@ export const createCampaign = mutation({
     const program = await ctx.db.get(args.program_id);
     if (!program) throw new Error("Program not found");
 
-    const start = new Date(args.duration_start);
-    const end = new Date(args.duration_end);
-    const programStart = new Date(program.start_date);
-    const programEnd = new Date(program.end_date);
-    if (start < programStart || end > programEnd) {
-      throw new Error("Campaign duration must be within program duration");
-    }
+    const channel = await ctx.db.get(args.channel_id);
+    if (!channel) throw new Error("Channel not found");
 
+    // Auto-generate promo code
     let promoCode = generatePromoCode(args.name);
     promoCode = promoCode.toUpperCase();
 
@@ -47,17 +41,41 @@ export const createCampaign = mutation({
       .first();
     if (existing) throw new Error("Promo code already exists");
 
+    // Auto-calculate campaign metrics based on program
+    const duration_start = program.start_date;
+    const duration_end = program.end_date;
+    
+    const start = new Date(duration_start);
+    const end = new Date(duration_end);
     const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
     const dailyTarget = Math.ceil(args.target_signups / days);
-    const bundledOffers = { min_lessons: 5, total_price: 1000 };
-    const discountRule = { price_per_lesson: 200 };
-    const revenueProjection = args.target_signups * 1000;
-    const revenueShare = { partner_percentage: 20, sqooli_percentage: 80 };
+    
+    // Pricing from program
+    const pricePerLesson = program.pricing;
+    const bundledOffers = { 
+      min_lessons: 5, 
+      total_price: pricePerLesson * 5 
+    };
+    const discountRule = { 
+      price_per_lesson: pricePerLesson 
+    };
+    
+    // Revenue calculations
+    const revenueProjection = args.target_signups * bundledOffers.total_price;
+    const revenueShare = { 
+      partner_percentage: 20, 
+      sqooli_percentage: 80 
+    };
+
+    // Use partner's default WhatsApp number or system default
+    const whatsapp_number = partner.phone || "+254104010203";
 
     const campaignId = await ctx.db.insert("campaigns", {
       name: args.name,
+      description: args.description,
       program_id: args.program_id,
       partner_id: args.partner_id,
+      channel_id: args.channel_id,
       user_id: args.user_id,
       promo_code: promoCode,
       target_signups: args.target_signups,
@@ -66,9 +84,9 @@ export const createCampaign = mutation({
       discount_rule: discountRule,
       revenue_projection: revenueProjection,
       revenue_share: revenueShare,
-      whatsapp_number: args.whatsapp_number,
-      duration_start: args.duration_start,
-      duration_end: args.duration_end,
+      whatsapp_number: whatsapp_number,
+      duration_start: duration_start,
+      duration_end: duration_end,
       status: "draft",
     });
 
@@ -76,24 +94,25 @@ export const createCampaign = mutation({
       partnerId: args.partner_id,
       type: "campaign",
       title: "Campaign Created",
-      message: `Your campaign "${args.name}" is now live and ready to go!`,
+      message: `Your campaign "${args.name}" has been created and is pending approval.`,
     });
 
-    // 🔹 Generate assets
-    const whatsappQRUrl = await generateWhatsAppQRCode(args.whatsapp_number, promoCode, args.name);
-    const paymentQRUrl = await generatePaymentQRCode("4092033", 1000, promoCode);
-    const socialPosterUrl = socialPostGenerator({
-      campaignName: args.name,
-      promoCode,
-      whatsappNumber: args.whatsapp_number,
-      programName: program.name,
-    });
+    // Generate only WhatsApp and Payment QR codes
+    const whatsappQRUrl = await generateWhatsAppQRCode(whatsapp_number, promoCode, args.name);
+    const paymentQRUrl = await generatePaymentQRCode("4092033", bundledOffers.total_price, promoCode);
 
     const now = Date.now();
     const assetTemplates = [
-      { type: "qr_code" as const, content: "WhatsApp QR Code", url: whatsappQRUrl },
-      { type: "qr_code" as const, content: "Payment QR Code", url: paymentQRUrl },
-      { type: "social_post" as const, content: "Branded campaign poster", url: socialPosterUrl },
+      { 
+        type: "qr_code" as const, 
+        content: "WhatsApp QR Code", 
+        url: whatsappQRUrl 
+      },
+      { 
+        type: "how_to_pay" as const, 
+        content: `Paybill: 4092033\nAccount: [Transaction ID]\nAmount: KES ${bundledOffers.total_price}\nPromo Code: ${promoCode}`, 
+        url: paymentQRUrl 
+      },
     ];
 
     for (const asset of assetTemplates) {
@@ -109,7 +128,6 @@ export const createCampaign = mutation({
     return campaignId;
   },
 });
-
 
 /**
  * READ all campaigns
@@ -145,13 +163,13 @@ export const getCampaignsByPartner = query({
 });
 
 export const getCampaignsByProgram = query({
-    args: { programId: v.id("programs") },
-    handler: async (ctx, args) => {
-        return await ctx.db
-            .query("campaigns")
-            .withIndex("by_program_id", (q) => q.eq("program_id", args.programId))
-            .collect();
-    },
+  args: { programId: v.id("programs") },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("campaigns")
+      .withIndex("by_program_id", (q) => q.eq("program_id", args.programId))
+      .collect();
+  },
 });
 
 export const getCampaignsByUser = query({
@@ -220,25 +238,19 @@ export const getCampaignEarnings = query({
     partner_id: v.id("partners"),
   },
   handler: async (ctx, { partner_id }) => {
-    // Get all campaigns for this partner
     const campaigns = await ctx.db
       .query("campaigns")
       .withIndex("by_partner_id", (q) => q.eq("partner_id", partner_id))
       .collect();
 
-    // Get earnings for each campaign
     const campaignEarnings = await Promise.all(
       campaigns.map(async (campaign) => {
-        // Get all enrollments for this campaign
         const enrollments = await ctx.db
           .query("program_enrollments")
           .withIndex("by_campaign_id", (q) => q.eq("campaign_id", campaign._id))
           .filter((q) => q.eq(q.field("status"), "redeemed"))
           .collect();
-        
-        
 
-        // Get all transactions for this campaign
         const transactions = campaign.promo_code
           ? await ctx.db
               .query("transactions")
@@ -246,11 +258,7 @@ export const getCampaignEarnings = query({
               .filter((q) => q.eq(q.field("status"), "Success"))
               .collect()
           : [];
-        
 
-        
-
-        // Calculate total earnings (20% of transaction amounts)
         const totalRevenue = transactions.reduce((sum, t) => sum + t.amount, 0);
         const partnerEarnings = totalRevenue * (campaign.revenue_share.partner_percentage / 100);
 
@@ -270,7 +278,6 @@ export const getCampaignEarnings = query({
       })
     );
 
-    // Sort by earnings (highest first)
     return campaignEarnings.sort((a, b) => b.partner_earnings - a.partner_earnings);
   },
 });
