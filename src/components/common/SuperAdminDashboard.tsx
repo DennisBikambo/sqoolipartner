@@ -21,12 +21,10 @@ import {
 } from "lucide-react";
 
 interface SuperAdminDashboardProps {
-  activeItem: string;
   setActiveItem: (item: string) => void;
 }
 
 export default function SuperAdminDashboard({
-  activeItem,
   setActiveItem,
 }: SuperAdminDashboardProps) {
   const [showCreateProgramDialog, setShowCreateProgramDialog] = useState(false);

@@ -89,7 +89,6 @@ export default function DashboardSection({
   if (isSuperAdmin) {
     return (
       <SuperAdminDashboard
-        activeItem={activeItem}
         setActiveItem={setActiveItem}
       />
     );
