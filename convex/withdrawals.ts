@@ -476,3 +476,97 @@ export const getTotalWithdrawals = query({
     };
   },
 });
+
+export const getAllWithdrawals = query({
+  handler: async (ctx) => {
+    return await ctx.db.query("withdrawals").order("desc").collect();
+  },
+});
+
+// Approve withdrawal (Super Admin only)
+export const approveWithdrawal = mutation({
+  args: {
+    withdrawal_id: v.id("withdrawals"),
+    mpesa_receipt: v.string(),
+  },
+  handler: async (ctx, args) => {
+    // Get the withdrawal
+    const withdrawal = await ctx.db.get(args.withdrawal_id);
+    if (!withdrawal) {
+      throw new Error("Withdrawal not found");
+    }
+
+    if (withdrawal.status !== "pending") {
+      throw new Error("Withdrawal is not pending");
+    }
+
+    // Get the wallet
+    const wallet = await ctx.db.get(withdrawal.wallet_id);
+    if (!wallet) {
+      throw new Error("Wallet not found");
+    }
+
+    // Check if wallet has sufficient balance
+    if (wallet.balance < withdrawal.amount) {
+      throw new Error("Insufficient balance in wallet");
+    }
+
+    // Update wallet: deduct from balance
+    await ctx.db.patch(withdrawal.wallet_id, {
+      balance: wallet.balance - withdrawal.amount,
+      updated_at: new Date().toISOString(),
+    });
+
+    // Update withdrawal status
+    await ctx.db.patch(args.withdrawal_id, {
+      status: "completed",
+      mpesa_receipt: args.mpesa_receipt,
+      processed_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    });
+
+    return { success: true };
+  },
+});
+
+// Reject withdrawal (Super Admin only)
+export const rejectWithdrawal = mutation({
+  args: {
+    withdrawal_id: v.id("withdrawals"),
+    reason: v.string(),
+  },
+  handler: async (ctx, args) => {
+    // Get the withdrawal
+    const withdrawal = await ctx.db.get(args.withdrawal_id);
+    if (!withdrawal) {
+      throw new Error("Withdrawal not found");
+    }
+
+    if (withdrawal.status !== "pending") {
+      throw new Error("Withdrawal is not pending");
+    }
+
+    // Get the wallet
+    const wallet = await ctx.db.get(withdrawal.wallet_id);
+    if (!wallet) {
+      throw new Error("Wallet not found");
+    }
+
+    // Update wallet: move pending balance back to available balance
+    await ctx.db.patch(withdrawal.wallet_id, {
+      balance: wallet.balance + withdrawal.amount,
+      pending_balance: wallet.pending_balance - withdrawal.amount,
+      updated_at: new Date().toISOString(),
+    });
+
+    // Update withdrawal status
+    await ctx.db.patch(args.withdrawal_id, {
+      status: "cancelled",
+      failed_reason: args.reason,
+      processed_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    });
+
+    return { success: true };
+  },
+});

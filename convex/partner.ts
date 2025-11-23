@@ -73,6 +73,16 @@ export const register = mutation({
     const allPermissions = await ctx.db.query("permissions").collect();
     const allPermissionIds = allPermissions.map((p) => p._id);
 
+
+    // Get default permissions for new partners (partner_admin level access)
+    const defaultPermissions = await ctx.db.query("permissions").filter((q) => q.eq(q.field("is_default"), true)).collect();
+    const defaultPermissionIds = defaultPermissions.map((p) => p._id);
+
+    // Create and update permissions for new partner
+    const userPermissions = await ctx.db.query("permissions").filter((q) => q.eq(q.field("category"), "users")).collect();
+    const userPermissionIds = userPermissions.map((p) => p._id);
+    const totalPartnerPermissions = defaultPermissionIds.concat(userPermissionIds);
+
     if (allPermissionIds.length === 0) {
       throw new Error("No permissions found. Please run seedPermissions first.");
     }
@@ -84,7 +94,7 @@ export const register = mutation({
       phone: args.phone,
       username: args.username,
       is_first_login: true,
-      permission_ids: allPermissionIds, // Assign ALL permissions to new partners
+      permission_ids: totalPartnerPermissions, 
     });
 
     return {

@@ -87,7 +87,7 @@ export const createCampaign = mutation({
       whatsapp_number: whatsapp_number,
       duration_start: duration_start,
       duration_end: duration_end,
-      status: "draft",
+      status: "active",
     });
 
     await ctx.runMutation(api.notifications.createNotification, {

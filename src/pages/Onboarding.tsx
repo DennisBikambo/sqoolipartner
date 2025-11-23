@@ -33,6 +33,7 @@ export default function OnboardingPage() {
     if (partner && wallet && campaign) {
       completeOnboarding({ partnerId: partner._id });
       navigate("/dashboard");
+      window.location.reload(); 
     }
   }, [wallet, campaign, partner, completeOnboarding, navigate]);
 
@@ -40,6 +41,7 @@ export default function OnboardingPage() {
     if (!partner?._id) return;
     await completeOnboarding({ partnerId: partner._id });
     navigate("/dashboard");
+    window.location.reload(); 
   };
 
   return (

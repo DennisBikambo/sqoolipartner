@@ -174,30 +174,28 @@ export default function CreateCampaignWizard({
   const selectedChannel = channels?.find(c => c._id === state.channel_id);
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4">
-      <Card className="w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
-        <CardHeader className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-2 sm:p-4">
+      <Card className="w-full max-w-xl max-h-[95vh] sm:max-h-[90vh] overflow-hidden flex flex-col">
+        <CardHeader className="border-b border-border px-4 sm:px-6 py-4">
           <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-2xl font-bold">Create Campaign Link</h2>
-            </div>
+            <h2 className="text-lg sm:text-xl font-semibold text-card-foreground">Create Campaign Link</h2>
             <Button
               variant="ghost"
               size="icon"
               onClick={() => { resetWizard(); onClose?.(); }}
-              className="text-primary-foreground hover:bg-primary-foreground/20"
+              className="text-muted-foreground hover:text-foreground"
             >
               <X className="h-5 w-5" />
             </Button>
           </div>
         </CardHeader>
 
-        <CardContent className="flex-1 overflow-y-auto p-6">
+        <CardContent className="flex-1 overflow-y-auto p-4 sm:p-6">
           {/* Step 0: Campaign Details */}
           {step === 0 && (
-            <div className="space-y-5">
+            <div className="space-y-4 sm:space-y-6">
               <div className="space-y-2">
-                <Label htmlFor="campaign-name" className="text-sm font-medium">
+                <Label htmlFor="campaign-name" className="text-sm font-medium text-muted-foreground">
                   Campaign Name
                 </Label>
                 <Input
@@ -205,12 +203,12 @@ export default function CreateCampaignWizard({
                   value={state.name}
                   onChange={(e) => setState((s) => ({ ...s, name: e.target.value }))}
                   placeholder="Enter campaign name"
-                  className="h-10"
+                  className="h-10 sm:h-11"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="program" className="text-sm font-medium">
+                <Label htmlFor="program" className="text-sm font-medium text-muted-foreground">
                   Program
                 </Label>
                 <select
@@ -220,7 +218,7 @@ export default function CreateCampaignWizard({
                     ...s, 
                     program_id: e.target.value as Id<"programs"> 
                   }))}
-                  className="w-full h-10 px-3 rounded-md border border-input bg-background"
+                  className="w-full h-10 sm:h-11 px-3 rounded-md border border-input bg-background"
                 >
                   <option value="">Select...</option>
                   {programs?.map((p) => (
@@ -231,9 +229,9 @@ export default function CreateCampaignWizard({
                 </select>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="channel" className="text-sm font-medium">
+                  <Label htmlFor="channel" className="text-sm font-medium text-muted-foreground">
                     Channel
                   </Label>
                   <select
@@ -247,7 +245,7 @@ export default function CreateCampaignWizard({
                         subchannel: "" // Reset subchannel when channel changes
                       }));
                     }}
-                    className="w-full h-10 px-3 rounded-md border border-input bg-background"
+                    className="w-full h-10 sm:h-11 px-3 rounded-md border border-input bg-background"
                   >
                     <option value="">Select...</option>
                     {channels?.map((c) => (
@@ -259,14 +257,14 @@ export default function CreateCampaignWizard({
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="subchannel" className="text-sm font-medium">
+                  <Label htmlFor="subchannel" className="text-sm font-medium text-muted-foreground">
                     Sub-channel (optional)
                   </Label>
                   <select
                     id="subchannel"
                     value={state.subchannel}
                     onChange={(e) => setState((s) => ({ ...s, subchannel: e.target.value }))}
-                    className="w-full h-10 px-3 rounded-md border border-input bg-background"
+                    className="w-full h-10 sm:h-11 px-3 rounded-md border border-input bg-background"
                     disabled={!state.channel_id || !selectedChannel?.subchanells?.length}
                   >
                     <option value="">Select...</option>
@@ -280,7 +278,7 @@ export default function CreateCampaignWizard({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="description" className="text-sm font-medium">
+                <Label htmlFor="description" className="text-sm font-medium text-muted-foreground">
                   About Campaign
                 </Label>
                 <Textarea
@@ -288,12 +286,12 @@ export default function CreateCampaignWizard({
                   value={state.description}
                   onChange={(e) => setState((s) => ({ ...s, description: e.target.value }))}
                   placeholder="Enter a description..."
-                  className="min-h-[100px] resize-none"
+                  className="min-h-[120px] resize-none"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="target" className="text-sm font-medium">
+                <Label htmlFor="target" className="text-sm font-medium text-muted-foreground">
                   Target Signups
                 </Label>
                 <Input
@@ -305,31 +303,31 @@ export default function CreateCampaignWizard({
                     ...s, 
                     target_signups: Number(e.target.value) 
                   }))}
-                  className="h-10"
+                  className="h-10 sm:h-11"
                 />
               </div>
 
               {calculations && (
-                <Alert className="bg-blue-50 border-blue-200">
+                <Alert className="bg-accent/10 border-accent/20">
                   <AlertDescription>
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between">
-                        <span className="text-gray-600">Campaign Duration:</span>
+                        <span className="text-muted-foreground">Campaign Duration:</span>
                         <strong>{calculations.days} days</strong>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-gray-600">Daily Target:</span>
+                        <span className="text-muted-foreground">Daily Target:</span>
                         <strong>{calculations.dailyTarget} signups/day</strong>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-gray-600">Bundle Price:</span>
+                        <span className="text-muted-foreground">Bundle Price:</span>
                         <strong>KES {calculations.bundlePrice.toLocaleString()}</strong>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-gray-600">Revenue Projection:</span>
+                        <span className="text-muted-foreground">Revenue Projection:</span>
                         <strong>KES {calculations.revenueProjection.toLocaleString()}</strong>
                       </div>
-                      <div className="flex justify-between text-blue-600">
+                      <div className="flex justify-between text-primary">
                         <span>Your Share (20%):</span>
                         <strong>KES {calculations.partnerShare.toLocaleString()}</strong>
                       </div>
@@ -346,18 +344,18 @@ export default function CreateCampaignWizard({
               <h3 className="text-lg font-semibold mb-4">Review Campaign Details</h3>
               
               <div className="space-y-3">
-                <div className="flex justify-between py-2 border-b">
-                  <span className="text-gray-600">Campaign Name:</span>
+                <div className="flex justify-between py-2 border-b border-border">
+                  <span className="text-muted-foreground">Campaign Name:</span>
                   <span className="font-semibold">{state.name}</span>
                 </div>
                 
-                <div className="flex justify-between py-2 border-b">
-                  <span className="text-gray-600">Program:</span>
+                <div className="flex justify-between py-2 border-b border-border">
+                  <span className="text-muted-foreground">Program:</span>
                   <span className="font-semibold">{selectedProgram?.name}</span>
                 </div>
                 
-                <div className="flex justify-between py-2 border-b">
-                  <span className="text-gray-600">Channel:</span>
+                <div className="flex justify-between py-2 border-b border-border">
+                  <span className="text-muted-foreground">Channel:</span>
                   <span className="font-semibold">
                     {selectedChannel?.name}
                     {state.subchannel && ` > ${state.subchannel}`}
@@ -366,36 +364,36 @@ export default function CreateCampaignWizard({
                 
                 {calculations && (
                   <>
-                    <div className="flex justify-between py-2 border-b">
-                      <span className="text-gray-600">Duration:</span>
+                    <div className="flex justify-between py-2 border-b border-border">
+                      <span className="text-muted-foreground">Duration:</span>
                       <span className="font-semibold">
                         {calculations.duration_start} → {calculations.duration_end}
                       </span>
                     </div>
                     
-                    <div className="flex justify-between py-2 border-b">
-                      <span className="text-gray-600">Target Signups:</span>
+                    <div className="flex justify-between py-2 border-b border-border">
+                      <span className="text-muted-foreground">Target Signups:</span>
                       <span className="font-semibold">{state.target_signups.toLocaleString()}</span>
                     </div>
                     
-                    <div className="flex justify-between py-2 border-b">
-                      <span className="text-gray-600">Daily Target:</span>
+                    <div className="flex justify-between py-2 border-b border-border">
+                      <span className="text-muted-foreground">Daily Target:</span>
                       <span className="font-semibold">{calculations.dailyTarget} signups/day</span>
                     </div>
                     
-                    <div className="flex justify-between py-2 border-b">
-                      <span className="text-gray-600">Price per Lesson:</span>
+                    <div className="flex justify-between py-2 border-b border-border">
+                      <span className="text-muted-foreground">Price per Lesson:</span>
                       <span className="font-semibold">KES {calculations.pricePerLesson}</span>
                     </div>
                     
-                    <div className="flex justify-between py-2 border-b">
-                      <span className="text-gray-600">Bundle (5 lessons):</span>
+                    <div className="flex justify-between py-2 border-b border-border">
+                      <span className="text-muted-foreground">Bundle (5 lessons):</span>
                       <span className="font-semibold">KES {calculations.bundlePrice}</span>
                     </div>
                     
-                    <div className="flex justify-between py-2 border-b bg-blue-50 px-3 rounded">
+                    <div className="flex justify-between py-2 border-b border-border bg-muted px-3 rounded">
                       <span className="font-medium">Your Expected Earnings:</span>
-                      <span className="font-bold text-blue-600">
+                      <span className="font-bold text-primary">
                         KES {calculations.partnerShare.toLocaleString()}
                       </span>
                     </div>
@@ -403,7 +401,7 @@ export default function CreateCampaignWizard({
                 )}
                 
                 <div className="py-2">
-                  <span className="text-gray-600">Description:</span>
+                  <span className="text-muted-foreground">Description:</span>
                   <p className="mt-1 text-sm">{state.description}</p>
                 </div>
               </div>
@@ -423,23 +421,23 @@ export default function CreateCampaignWizard({
           )}
         </CardContent>
 
-        <CardFooter className="bg-gray-50 flex justify-between border-t">
+        <CardFooter className="bg-muted flex justify-between border-t border-border px-4 sm:px-6 py-3 sm:py-4">
           {step > 0 && (
-            <Button variant="outline" onClick={prev}>
+            <Button variant="outline" onClick={prev} className="h-9 sm:h-10">
               Back
             </Button>
           )}
           
           {step === 0 && (
             <div className="w-full flex justify-end">
-              <Button onClick={next} disabled={!canNext()}>
+              <Button onClick={next} disabled={!canNext()} className="h-9 sm:h-10">
                 Continue
               </Button>
             </div>
           )}
 
           {step === 1 && (
-            <Button onClick={handleCreate} disabled={isSaving} className="ml-auto">
+            <Button onClick={handleCreate} disabled={isSaving} className="ml-auto h-9 sm:h-10">
               {isSaving ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />

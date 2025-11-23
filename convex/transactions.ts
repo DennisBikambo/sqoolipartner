@@ -94,3 +94,9 @@ export const getRecentTransactionByPhone = query({
     return transactions[0] || null;
   },
 });
+
+export const getAllTransactions = query({
+  handler: async (ctx) => {
+    return await ctx.db.query("transactions").collect();
+  },
+});

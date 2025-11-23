@@ -1,223 +1,206 @@
-'use client';
-
-import { useState, useEffect } from 'react';
-import { Copy, Mail, Loader2, CheckCircle } from 'lucide-react';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../../components/ui/dialog';
-import { Button } from '../../components/ui/button';
+import { useState } from 'react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '../ui/dialog';
+import { Button } from '../ui/button';
+import { Copy, Check, Mail, Lock, User, Hash, Building2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { Input } from '../ui/input';
-import { Label } from '../ui/label';
-import { useAction } from 'convex/react';
-import { api } from '../../../convex/_generated/api';
 
 interface UserCredentialsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   email: string;
   password: string;
-  extension: string;
   userName: string;
   partnerName: string;
+  extension?: string;
+  username?: string;
 }
 
-export function UserCredentialsDialog({ 
-  open, 
-  onOpenChange, 
-  email, 
-  password, 
-  extension,
+export function UserCredentialsDialog({
+  open,
+  onOpenChange,
+  email,
+  password,
   userName,
   partnerName,
+  extension,
+  username,
 }: UserCredentialsDialogProps) {
-  const [isSendingEmail, setIsSendingEmail] = useState(false);
-  const [emailSent, setEmailSent] = useState(false);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
 
-  const sendCredentialsEmail = useAction(api.emails.sendUserCredentialsEmail);
-
-  const handleCopy = (text: string, label: string) => {
+  const copyToClipboard = (text: string, field: string) => {
     navigator.clipboard.writeText(text);
-    toast.success(`${label} copied to clipboard!`);
+    setCopiedField(field);
+    toast.success(`${field} copied to clipboard!`);
+    setTimeout(() => setCopiedField(null), 2000);
   };
 
-  const handleSendEmail = async () => {
-    setIsSendingEmail(true);
-    try {
-      const result = await sendCredentialsEmail({
-        user_email: email,
-        user_name: userName,
-        password: password,
-        extension: extension,
-        partner_name: partnerName,
-      });
+  const copyAllCredentials = () => {
+    const credentials = [
+      `Partner Organization: ${partnerName}`,
+      `User Name: ${userName}`,
+      `Email: ${email}`,
+      username ? `Username: ${username}` : null,
+      extension ? `Extension: ${extension}` : null,
+      `Password: ${password}`,
+    ].filter(Boolean).join('\n');
 
-      if (result.success) {
-        setEmailSent(true);
-        toast.success('Credentials sent to user email! 📧');
-      } else {
-        toast.error('Failed to send email. Please try again.');
-      }
-    } catch (error: unknown) {
-      console.error('Error sending credentials email:', error);
-      toast.error('Failed to send email. Please try again.');
-    } finally {
-      setIsSendingEmail(false);
-    }
+    navigator.clipboard.writeText(credentials);
+    toast.success('All credentials copied to clipboard!');
   };
-
-  // Automatically send email when dialog opens
-  useEffect(() => {
-    if (open && email && !emailSent) {
-      // Send email automatically after a short delay
-      const timer = setTimeout(() => {
-        handleSendEmail();
-      }, 500);
-
-      return () => clearTimeout(timer);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, email]);
-
-  // Reset email sent state when dialog closes
-  useEffect(() => {
-    if (!open) {
-      setEmailSent(false);
-    }
-  }, [open]);
-
-  const loginUrl = `${window.location.origin}/signIn?extension=${extension}`;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <span>User Created Successfully</span>
-            <span className="text-2xl">🎉</span>
+            <Check className="h-5 w-5 text-green-600" />
+            Account Created Successfully!
           </DialogTitle>
           <DialogDescription>
-            Save these credentials securely — they won't be shown again.
+            Save these login credentials securely. You'll need them to access the account.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
-          {/* Email Sent Success Banner */}
-          {emailSent && (
-            <div className="flex items-center gap-2 p-3 bg-muted border border-primary rounded-lg">
-              <CheckCircle className="h-5 w-5 text-secondary" />
-              <p className="text-sm text-secondary font-medium">
-                Credentials sent to {email}
-              </p>
+        <div className="space-y-6 py-4">
+          {/* Partner Organization */}
+          <div className="flex items-center gap-4">
+            <Building2 className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+            <div className="flex-1 space-y-1">
+              <p className="text-sm font-medium text-muted-foreground">Partner Organization</p>
+              <p className="font-medium text-foreground">{partnerName}</p>
+            </div>
+          </div>
+
+          {/* User Name */}
+          <div className="flex items-center gap-4">
+            <User className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+            <div className="flex-1 space-y-1">
+              <p className="text-sm font-medium text-muted-foreground">User Name</p>
+              <p className="font-medium text-foreground">{userName}</p>
+            </div>
+          </div>
+
+          {/* Email */}
+          <div className="flex items-center gap-4">
+            <Mail className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+            <div className="flex-1 space-y-1">
+              <p className="text-sm font-medium text-muted-foreground">Email</p>
+              <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg group">
+                <span className="font-mono text-sm text-foreground">{email}</span>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                  onClick={() => copyToClipboard(email, 'Email')}
+                >
+                  {copiedField === 'Email' ? (
+                    <Check className="h-4 w-4 text-green-600" />
+                  ) : (
+                    <Copy className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          {/* Optional Username */}
+          {username && (
+            <div className="flex items-center gap-4">
+              <User className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+              <div className="flex-1 space-y-1">
+                <p className="text-sm font-medium text-muted-foreground">Username</p>
+                <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg group">
+                  <span className="font-mono text-sm text-foreground">{username}</span>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={() => copyToClipboard(username, 'Username')}
+                  >
+                    {copiedField === 'Username' ? (
+                      <Check className="h-4 w-4 text-green-600" />
+                    ) : (
+                      <Copy className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
+              </div>
             </div>
           )}
 
-          {/* Email */}
-          <div className="space-y-2">
-            <Label className="text-sm font-medium">Email</Label>
-            <div className="flex items-center gap-2">
-              <Input value={email} readOnly className="flex-1" />
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => handleCopy(email, 'Email')}
-              >
-                <Copy className="w-4 h-4" />
-              </Button>
+          {/* Optional Extension */}
+          {extension && (
+            <div className="flex items-center gap-4">
+              <Hash className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+              <div className="flex-1 space-y-1">
+                <p className="text-sm font-medium text-muted-foreground">Extension</p>
+                <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg group">
+                  <span className="font-mono text-sm text-foreground">{extension}</span>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={() => copyToClipboard(extension, 'Extension')}
+                  >
+                    {copiedField === 'Extension' ? (
+                      <Check className="h-4 w-4 text-green-600" />
+                    ) : (
+                      <Copy className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Password */}
-          <div className="space-y-2">
-            <Label className="text-sm font-medium">Password</Label>
-            <div className="flex items-center gap-2">
-              <Input value={password} readOnly className="flex-1 font-mono" />
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => handleCopy(password, 'Password')}
-              >
-                <Copy className="w-4 h-4" />
-              </Button>
+          <div className="flex items-center gap-4">
+            <Lock className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+            <div className="flex-1 space-y-1">
+              <p className="text-sm font-medium text-muted-foreground">Password</p>
+              <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg group">
+                <span className="font-mono text-sm text-foreground">{password}</span>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                  onClick={() => copyToClipboard(password, 'Password')}
+                >
+                  {copiedField === 'Password' ? (
+                    <Check className="h-4 w-4 text-green-600" />
+                  ) : (
+                    <Copy className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
             </div>
           </div>
 
-          {/* Extension */}
-          <div className="space-y-2">
-            <Label className="text-sm font-medium">Extension (Login ID)</Label>
-            <div className="flex items-center gap-2">
-              <Input value={extension} readOnly className="flex-1 font-mono" />
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => handleCopy(extension, 'Extension')}
-              >
-                <Copy className="w-4 h-4" />
-              </Button>
-            </div>
-          </div>
-
-          {/* Login URL */}
-          <div className="space-y-2">
-            <Label className="text-sm font-medium">Login Link</Label>
-            <div className="flex items-center gap-2">
-              <Input 
-                value={loginUrl} 
-                readOnly 
-                className="flex-1 text-xs" 
-              />
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => handleCopy(loginUrl, 'Login link')}
-              >
-                <Copy className="w-4 h-4" />
-              </Button>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Share this link with the user for quick login
-            </p>
-          </div>
-
-          {/* Action Buttons */}
-          <div className="flex gap-2 pt-4">
-            <Button 
-              variant="outline" 
-              className="flex-1"
-              onClick={handleSendEmail}
-              // disabled={isSendingEmail || emailSent}
-            >
-              
-              {isSendingEmail ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Sending...
-                </>
-              ) : emailSent ? (
-                <>
-                  <CheckCircle className="w-4 h-4 mr-2" />
-                  Email Sent
-                </>
-              ) : (
-                <>
-                  <Mail className="w-4 h-4 mr-2" />
-                  Send to User
-                </>
-              )}
-            </Button>
-            <Button 
-              className="flex-1 bg-primary"
-              onClick={() => onOpenChange(false)}
-            >
-              Done
-            </Button>
-          </div>
-
-          {/* Warning Note */}
-          <div className="bg-muted  border border-primary/10  rounded-lg p-3">
-            <p className="text-xs text-primary">
-              <strong>Important:</strong> Make sure to save or send these credentials before closing this dialog.
+          {/* Warning - using your exact destructive colors */}
+          <div className="flex items-start gap-3 bg-destructive/10 border border-destructive/20 rounded-lg p-4">
+            <div className="mt-0.5 text-destructive">Warning:</div>
+            <p className="text-xs text-destructive font-medium leading-tight">
+              Important: Save these credentials now. This is the only time you'll see the password.
             </p>
           </div>
         </div>
+
+        <DialogFooter className="flex flex-col gap-3 sm:flex-row sm:justify-between">
+          <Button variant="outline" onClick={copyAllCredentials} className="w-full sm:w-auto order-2 sm:order-1">
+            <Copy className="h-4 w-4 mr-2" />
+            Copy All Credentials
+          </Button>
+          <Button onClick={() => onOpenChange(false)} className="w-full sm:w-auto order-1 sm:order-2">
+            I've Saved the Credentials
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

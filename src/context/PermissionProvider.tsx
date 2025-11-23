@@ -1,6 +1,6 @@
 // PermissionProvider.tsx
 import type { ReactNode } from "react";
-import { PermissionContext, type Permission } from "./PermissionContext";
+import { PermissionContext, type Permission, type UserRole } from "./PermissionContext";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useAuth } from "../hooks/useAuth";
@@ -11,15 +11,19 @@ import { isConvexUser, type Partner } from "../types/auth.types";
 export function PermissionProvider({ children }: { children: ReactNode }) {
   const { user, partner, loading: authLoading, loginMethod } = useAuth();
   const [userPermissionIds, setUserPermissionIds] = useState<Id<"permissions">[]>([]);
+  const [userRole, setUserRole] = useState<UserRole | null>(null);
 
-  // Load permission IDs from user or partner
+  // Load permission IDs and role from user or partner
   useEffect(() => {
     if (loginMethod === "convex" && isConvexUser(user)) {
       setUserPermissionIds(user.permission_ids ?? []);
+      setUserRole(user.role as UserRole);
     } else if (loginMethod === "laravel" && partner) {
       setUserPermissionIds((partner as Partner).permission_ids ?? []);
+      setUserRole((partner as Partner).role as UserRole);
     } else {
       setUserPermissionIds([]);
+      setUserRole(null);
     }
   }, [user, partner, loginMethod]);
 
@@ -49,7 +53,7 @@ export function PermissionProvider({ children }: { children: ReactNode }) {
 
   // Check if user is super admin (has full access)
   const isSuperAdmin = (): boolean => {
-    return permissions.some((p) => p.category === "all_access" || p.level === "full");
+    return userRole === "super_admin" || permissions.some((p) => p.category === "all_access" || p.level === "full");
   };
 
   // Check if user has exact permission by key
@@ -92,6 +96,7 @@ export function PermissionProvider({ children }: { children: ReactNode }) {
         canWrite,
         isSuperAdmin,
         loading,
+        userRole,
       }}
     >
       {children}
