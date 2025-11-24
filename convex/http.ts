@@ -307,7 +307,12 @@ http.route({
       const enrichedCampaigns = campaigns.map((c) => {
         const isExpired = new Date(c.duration_end) < now;
         const program = programMap.get(c.program_id);
-        const pricePerLesson = program?.pricing || 0;
+        const pricePerLesson = c.discount_rule?.price_per_lesson || program?.pricing || 0;
+        
+        // Extract bundled offer info
+        const minLessons = c.bundled_offers?.min_lessons || 1;
+        const totalPrice = c.bundled_offers?.total_price || (pricePerLesson * minLessons);
+        const minimumPayment = totalPrice;
         
         return {
           campaign_id: c._id,
@@ -325,14 +330,28 @@ http.route({
           curriculum_name: program?.curriculum_name || "Unknown",
           subjects: program?.subject_list || [],
           
-          // Pricing information
+          // Pricing information with bundled offers
           price_per_lesson: pricePerLesson,
-          minimum_payment: pricePerLesson, // 1 lesson minimum
+          minimum_lessons: minLessons,
+          minimum_payment: minimumPayment,
+          bundled_offer: {
+            min_lessons: minLessons,
+            total_price: totalPrice,
+            price_per_lesson: pricePerLesson,
+          },
+          
+          // Example payments based on minimum
           example_payments: {
-            one_lesson: pricePerLesson,
+            minimum: totalPrice,
             five_lessons: pricePerLesson * 5,
             ten_lessons: pricePerLesson * 10,
             twenty_lessons: pricePerLesson * 20,
+          },
+          
+          // Revenue share info
+          revenue_share: c.revenue_share || {
+            partner_percentage: 20,
+            sqooli_percentage: 80,
           },
           
           // Timetable (if available)
@@ -352,8 +371,11 @@ http.route({
             campaign_name: string;
             promo_code: string;
             duration_end: string;
+            minimum_lessons: number;
+            minimum_payment: number;
           }[];
       }
+      
       // 4️⃣ Create pricing tiers grouped by price point
       const pricingTiers = programs.reduce((acc, p) => {
         const price = p.pricing;
@@ -381,6 +403,8 @@ http.route({
           campaign_name: c.campaign_name,
           promo_code: c.promo_code || "",
           duration_end: c.duration_end,
+          minimum_lessons: c.minimum_lessons,
+          minimum_payment: c.minimum_payment,
         })));
         
         return acc;
@@ -417,19 +441,22 @@ http.route({
         
         ai_agent_instructions: [
           `When a customer inquires about pricing, reference the campaign they're interested in to determine the exact price per lesson.`,
-          `Each campaign is linked to a specific program, which determines its pricing.`,
-          `Minimum payment is 1 lesson worth (price_per_lesson), but customers can pay for multiple lessons at once.`,
+          `Each campaign has a minimum lesson requirement (usually 5 lessons). Check the minimum_lessons field.`,
+          `The minimum payment is calculated as: minimum_lessons × price_per_lesson (e.g., 5 lessons × KES 200 = KES 1,000).`,
+          `Customers must pay at least the minimum_payment amount for the campaign.`,
           `To calculate total cost: number_of_lessons × price_per_lesson`,
           `To calculate lessons from payment: Math.floor(payment_amount ÷ price_per_lesson)`,
           `Only recommend active campaigns (status="active" and is_expired=false).`,
           `Use the promo_code field when directing customers to make payments.`,
           `Each campaign has a duration_end date - do not recommend expired campaigns.`,
+          `Always inform customers of the minimum lesson requirement before they pay.`,
         ],
         
         common_queries: {
-          "How much does it cost?": "The cost depends on which campaign/program the student enrolls in. Prices range from KES {minPrice} to KES {maxPrice} per lesson.",
-          "Can I pay for multiple lessons?": "Yes! Customers can pay for as many lessons as they want. The system calculates: payment_amount ÷ price_per_lesson.",
-          "Which campaign should I choose?": "Recommend based on: curriculum match, subjects offered, price point, and campaign availability (check duration_end).",
+          "How much does it cost?": "The cost depends on which campaign/program the student enrolls in. Prices range from KES {minPrice} to KES {maxPrice} per lesson. Most campaigns require a minimum of 5 lessons.",
+          "What's the minimum payment?": "Most campaigns require a minimum of 5 lessons. For example, at KES 200 per lesson, the minimum payment is KES 1,000.",
+          "Can I pay for multiple lessons?": "Yes! Customers can pay for as many lessons as they want, as long as they meet the minimum requirement (usually 5 lessons).",
+          "Which campaign should I choose?": "Recommend based on: curriculum match, subjects offered, price point, minimum lesson requirement, and campaign availability (check duration_end).",
           "What subjects are available?": "Check the 'subjects' array for each campaign to see which subjects are included in that program.",
         },
       };
@@ -471,6 +498,7 @@ http.route({
     }
   }),
 });
+
 
 
 /**
