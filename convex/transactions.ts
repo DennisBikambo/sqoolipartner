@@ -100,3 +100,15 @@ export const getAllTransactions = query({
     return await ctx.db.query("transactions").collect();
   },
 });
+
+export const getTransactionsByPhoneNumber = query({
+  args: { phone_number: v.string() },
+  handler: async (ctx, args) => {
+    const transactions = await ctx.db
+      .query("transactions")
+      .filter((q) => q.eq(q.field("phone_number"), args.phone_number))
+      .collect();
+    
+    return transactions;
+  },
+});

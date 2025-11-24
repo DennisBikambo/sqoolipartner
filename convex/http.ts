@@ -736,4 +736,193 @@ http.route({
 });
 
 
+/**
+ * POST /user-transactions
+ * Retrieves ALL transactions and program enrollments for a user by phone number
+ * A user can have multiple transactions, each with their own redeem code and enrollment
+ */
+http.route({
+  path: "/user-transactions",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    try {
+      const { phone_number } = await request.json();
+
+      if (!phone_number) {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: "Missing required field: phone_number",
+          }),
+          { status: 400, headers: { "Content-Type": "application/json" } }
+        );
+      }
+
+      // 🔍 GET ALL TRANSACTIONS for this phone number (can be multiple)
+      const transactions = await ctx.runQuery(api.transactions.getTransactionsByPhoneNumber, {
+        phone_number,
+      });
+
+      if (!transactions || transactions.length === 0) {
+        return new Response(
+          JSON.stringify({
+            success: true,
+            user_found: false,
+            message: "No transactions found for this phone number",
+            phone_number,
+            transactions: [],
+            enrollments: [],
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } }
+        );
+      }
+
+      // 🎓 GET ALL ENROLLMENTS for each transaction (one enrollment per transaction)
+      const enrollmentPromises = transactions.map((txn) =>
+        ctx.runQuery(api.program_enrollments.getEnrollmentByTransactionId, {
+          transaction_id: txn._id,
+        })
+      );
+      const enrollments = await Promise.all(enrollmentPromises);
+
+      // 📚 ENRICH EACH TRANSACTION with campaign, program, and enrollment details
+      const enrichedData = await Promise.all(
+        transactions.map(async (txn, index) => {
+          const enrollment = enrollments[index];
+          
+          const campaign = await ctx.runQuery(api.campaign.getCampaignByPromoCode, {
+            promo_code: txn.campaign_code,
+          });
+
+          let program = null;
+          let curriculum = null;
+          
+          if (campaign) {
+            program = await ctx.runQuery(api.program.getProgramById, {
+              id: campaign.program_id,
+            });
+            
+            if (program) {
+              curriculum = await ctx.runQuery(api.curricula.getCurriculumById, {
+                id: program.curriculum_id,
+              });
+            }
+          }
+
+          const pricePerLesson = program?.pricing || 0;
+          const numberOfLessons = txn.amount > 0 ? Math.floor(txn.amount / pricePerLesson) : 0;
+
+          return {
+            transaction: {
+              id: txn._id,
+              student_name: txn.student_name,
+              phone_number: txn.phone_number,
+              mpesa_code: txn.mpesa_code,
+              amount: txn.amount,
+              campaign_code: txn.campaign_code,
+              status: txn.status,
+              created_at: txn.created_at,
+              verified_at: txn.verified_at,
+            },
+            enrollment: enrollment ? {
+              id: enrollment._id,
+              redeem_code: enrollment.redeem_code,
+              status: enrollment.status,
+              program_id: enrollment.program_id,
+              campaign_id: enrollment.campaign_id,
+            } : null,
+            campaign: campaign ? {
+              id: campaign._id,
+              name: campaign.name,
+              promo_code: campaign.promo_code,
+              status: campaign.status,
+              whatsapp_number: campaign.whatsapp_number,
+            } : null,
+            program: program ? {
+              id: program._id,
+              name: program.name,
+              subjects: program.subjects,
+              pricing: program.pricing,
+              start_date: program.start_date,
+              end_date: program.end_date,
+              timetable: program.timetable,
+            } : null,
+            curriculum: curriculum ? {
+              id: curriculum._id,
+              name: curriculum.name,
+              description: curriculum.description,
+            } : null,
+            computed: {
+              price_per_lesson: pricePerLesson,
+              number_of_lessons: numberOfLessons,
+            },
+          };
+        })
+      );
+
+      // 📊 SUMMARY STATISTICS across all transactions
+      const successfulTransactions = enrichedData.filter(
+        (item) => item.transaction.status === "Success"
+      );
+      
+      const totalAmountPaid = successfulTransactions.reduce(
+        (sum, item) => sum + item.transaction.amount,
+        0
+      );
+      
+      const totalLessons = successfulTransactions.reduce(
+        (sum, item) => sum + item.computed.number_of_lessons,
+        0
+      );
+      
+      // ALL REDEEM CODES (active enrollments)
+      const allRedeemCodes = enrichedData
+        .filter((item) => item.enrollment?.status === "redeemed")
+        .map((item) => ({
+          redeem_code: item.enrollment?.redeem_code,
+          campaign: item.campaign?.name,
+          lessons: item.computed.number_of_lessons,
+          amount_paid: item.transaction.amount,
+        }))
+        .filter((code) => code.redeem_code);
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          user_found: true,
+          phone_number,
+          
+          // SUMMARY of all transactions and enrollments
+          summary: {
+            total_transactions: transactions.length,
+            successful_payments: successfulTransactions.length,
+            pending_payments: transactions.filter(t => t.status === "pending").length,
+            failed_payments: transactions.filter(t => t.status === "Failed").length,
+            total_amount_paid: totalAmountPaid,
+            total_lessons_purchased: totalLessons,
+            total_redeem_codes: allRedeemCodes.length,
+          },
+          
+          // ALL REDEEM CODES (quick reference)
+          redeem_codes: allRedeemCodes,
+          
+          // COMPLETE DATA for each transaction + enrollment
+          transactions_and_enrollments: enrichedData,
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      );
+    } catch (error) {
+      console.error("Error fetching user transactions:", error);
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: error instanceof Error ? error.message : "Internal server error",
+        }),
+        { status: 500, headers: { "Content-Type": "application/json" } }
+      );
+    }
+  }),
+});
+
+
 export default http;
