@@ -2,7 +2,7 @@
 import { httpRouter } from "convex/server";
 import { httpAction } from "./_generated/server";
 import { api } from "./_generated/api";
-import type { Id } from "./_generated/dataModel";
+// import type { Id } from "./_generated/dataModel";
 
 const http = httpRouter();
 
@@ -307,7 +307,12 @@ http.route({
       const enrichedCampaigns = campaigns.map((c) => {
         const isExpired = new Date(c.duration_end) < now;
         const program = programMap.get(c.program_id);
-        const pricePerLesson = program?.pricing || 0;
+        const pricePerLesson = c.discount_rule?.price_per_lesson || program?.pricing || 0;
+        
+        // Extract bundled offer info
+        const minLessons = c.bundled_offers?.min_lessons || 1;
+        const totalPrice = c.bundled_offers?.total_price || (pricePerLesson * minLessons);
+        const minimumPayment = totalPrice;
         
         return {
           campaign_id: c._id,
@@ -325,14 +330,28 @@ http.route({
           curriculum_name: program?.curriculum_name || "Unknown",
           subjects: program?.subject_list || [],
           
-          // Pricing information
+          // Pricing information with bundled offers
           price_per_lesson: pricePerLesson,
-          minimum_payment: pricePerLesson, // 1 lesson minimum
+          minimum_lessons: minLessons,
+          minimum_payment: minimumPayment,
+          bundled_offer: {
+            min_lessons: minLessons,
+            total_price: totalPrice,
+            price_per_lesson: pricePerLesson,
+          },
+          
+          // Example payments based on minimum
           example_payments: {
-            one_lesson: pricePerLesson,
+            minimum: totalPrice,
             five_lessons: pricePerLesson * 5,
             ten_lessons: pricePerLesson * 10,
             twenty_lessons: pricePerLesson * 20,
+          },
+          
+          // Revenue share info
+          revenue_share: c.revenue_share || {
+            partner_percentage: 20,
+            sqooli_percentage: 80,
           },
           
           // Timetable (if available)
@@ -352,8 +371,11 @@ http.route({
             campaign_name: string;
             promo_code: string;
             duration_end: string;
+            minimum_lessons: number;
+            minimum_payment: number;
           }[];
       }
+      
       // 4️⃣ Create pricing tiers grouped by price point
       const pricingTiers = programs.reduce((acc, p) => {
         const price = p.pricing;
@@ -381,6 +403,8 @@ http.route({
           campaign_name: c.campaign_name,
           promo_code: c.promo_code || "",
           duration_end: c.duration_end,
+          minimum_lessons: c.minimum_lessons,
+          minimum_payment: c.minimum_payment,
         })));
         
         return acc;
@@ -417,19 +441,22 @@ http.route({
         
         ai_agent_instructions: [
           `When a customer inquires about pricing, reference the campaign they're interested in to determine the exact price per lesson.`,
-          `Each campaign is linked to a specific program, which determines its pricing.`,
-          `Minimum payment is 1 lesson worth (price_per_lesson), but customers can pay for multiple lessons at once.`,
+          `Each campaign has a minimum lesson requirement (usually 5 lessons). Check the minimum_lessons field.`,
+          `The minimum payment is calculated as: minimum_lessons × price_per_lesson (e.g., 5 lessons × KES 200 = KES 1,000).`,
+          `Customers must pay at least the minimum_payment amount for the campaign.`,
           `To calculate total cost: number_of_lessons × price_per_lesson`,
           `To calculate lessons from payment: Math.floor(payment_amount ÷ price_per_lesson)`,
           `Only recommend active campaigns (status="active" and is_expired=false).`,
           `Use the promo_code field when directing customers to make payments.`,
           `Each campaign has a duration_end date - do not recommend expired campaigns.`,
+          `Always inform customers of the minimum lesson requirement before they pay.`,
         ],
         
         common_queries: {
-          "How much does it cost?": "The cost depends on which campaign/program the student enrolls in. Prices range from KES {minPrice} to KES {maxPrice} per lesson.",
-          "Can I pay for multiple lessons?": "Yes! Customers can pay for as many lessons as they want. The system calculates: payment_amount ÷ price_per_lesson.",
-          "Which campaign should I choose?": "Recommend based on: curriculum match, subjects offered, price point, and campaign availability (check duration_end).",
+          "How much does it cost?": "The cost depends on which campaign/program the student enrolls in. Prices range from KES {minPrice} to KES {maxPrice} per lesson. Most campaigns require a minimum of 5 lessons.",
+          "What's the minimum payment?": "Most campaigns require a minimum of 5 lessons. For example, at KES 200 per lesson, the minimum payment is KES 1,000.",
+          "Can I pay for multiple lessons?": "Yes! Customers can pay for as many lessons as they want, as long as they meet the minimum requirement (usually 5 lessons).",
+          "Which campaign should I choose?": "Recommend based on: curriculum match, subjects offered, price point, minimum lesson requirement, and campaign availability (check duration_end).",
           "What subjects are available?": "Check the 'subjects' array for each campaign to see which subjects are included in that program.",
         },
       };
@@ -473,6 +500,7 @@ http.route({
 });
 
 
+
 /**
  * GET /health
  * Health check endpoint
@@ -494,45 +522,45 @@ http.route({
 
 /**
  * POST /check-transaction
- * Checks transaction status by transaction ID
- * Used by AI agent to verify payment completion
+ * Checks transaction status by M-Pesa code
+ * Users receive this code via SMS after payment - much more reliable than remembering transaction_id!
  */
 http.route({
   path: "/check-transaction",
   method: "POST",
   handler: httpAction(async (ctx, request) => {
     try {
-      const { transaction_id } = await request.json();
+      const { mpesa_code } = await request.json();
 
-      if (!transaction_id) {
+      if (!mpesa_code) {
         return new Response(
           JSON.stringify({
             success: false,
-            error: "Missing required field: transaction_id",
+            error: "Missing required field: mpesa_code",
+            agent_message: "I need your M-Pesa confirmation code to verify the payment. Please share the code from your M-Pesa SMS.",
           }),
           { status: 400, headers: { "Content-Type": "application/json" } }
         );
       }
 
-      // Convert string to Id<"transactions">
-      const txnId = transaction_id as Id<"transactions">;
-
-      // Get transaction by ID
-      const txn = await ctx.runQuery(api.transactions.getTransactionById, {
-        id: txnId,
+      // Get transaction by M-Pesa code
+      const txn = await ctx.runQuery(api.transactions.getTransactionByMpesaCode, {
+        mpesa_code: mpesa_code.toUpperCase(), // Normalize to uppercase
       });
 
       if (!txn) {
         return new Response(
           JSON.stringify({
             success: false,
+            payment_verified: false,
             error: "Transaction not found",
+            agent_message: "I couldn't find a payment with that M-Pesa code. Please double-check the code from your SMS (ALL CAPS, starts with T).",
           }),
           { status: 404, headers: { "Content-Type": "application/json" } }
         );
       }
 
-      // Check for Success status (capital S)
+      // ✅ PAYMENT SUCCESSFUL
       if (txn.status === "Success") {
         const campaign = await ctx.runQuery(api.campaign.getCampaignByPromoCode, {
           promo_code: txn.campaign_code,
@@ -542,7 +570,9 @@ http.route({
           return new Response(
             JSON.stringify({
               success: false,
+              payment_verified: false,
               error: "Campaign not found",
+              agent_message: "Payment was successful but I couldn't find the campaign details. Please contact support.",
             }),
             { status: 404, headers: { "Content-Type": "application/json" } }
           );
@@ -556,7 +586,9 @@ http.route({
           return new Response(
             JSON.stringify({
               success: false,
+              payment_verified: false,
               error: "Program not found",
+              agent_message: "Payment was successful but I couldn't find the program details. Please contact support.",
             }),
             { status: 404, headers: { "Content-Type": "application/json" } }
           );
@@ -564,42 +596,323 @@ http.route({
 
         const pricePerLesson = program.pricing;
         const numberOfLessons = Math.floor(txn.amount / pricePerLesson);
-        const redeemCode = `R-${txn.phone_number}`;
+
+        // 🔥 GET EXISTING REDEEM CODE FROM ENROLLMENT (if exists)
+        const enrollment = await ctx.runQuery(api.program_enrollments.getEnrollmentByTransactionId, {
+          transaction_id: txn._id,
+        });
+
+        // Use existing redeem code if enrollment exists, otherwise generate new one
+        const redeemCode = enrollment?.redeem_code || `R-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
 
         return new Response(
           JSON.stringify({
             success: true,
+            payment_verified: true,
+            payment_status: "success",
             transaction_status: "Success",
-            payment_complete: true,
+            
+            // Clear message for the agent
+            agent_message: `✅ Payment confirmed! ${txn.student_name} paid KES ${txn.amount} for ${numberOfLessons} lessons.`,
+            
+            // All data needed to create user account
             user_creation_data: {
               student_name: txn.student_name,
               phone_number: txn.phone_number,
-              redeem_code: redeemCode,
+              redeem_code: redeemCode, // ✅ Use existing or generate new
               amount_paid: txn.amount,
               no_of_lessons: numberOfLessons,
               price_per_lesson: pricePerLesson,
               campaign_id: campaign._id,
             },
+            
+            // Human-readable summary
+            payment_details: {
+              student_name: txn.student_name,
+              phone: txn.phone_number,
+              amount: `KES ${txn.amount}`,
+              lessons: numberOfLessons,
+              price_per_lesson: `KES ${pricePerLesson}`,
+              campaign: campaign.name,
+              mpesa_code: txn.mpesa_code,
+              redeem_code: redeemCode, // ✅ Use existing or generate new
+            },
+            
+            // Next step instruction for agent
+            next_action: "ask_for_email",
+            next_action_prompt: "Ask the user for their email address to create their account.",
           }),
           { status: 200, headers: { "Content-Type": "application/json" } }
         );
       }
 
-      // Transaction not successful - handle "pending" (lowercase), "Failed" (capital F)
+      // ⏳ PAYMENT STILL PENDING
+      if (txn.status === "pending") {
+        return new Response(
+          JSON.stringify({
+            success: true,
+            payment_verified: false,
+            payment_status: "pending",
+            transaction_status: "pending",
+            
+            agent_message: "Your payment is still processing. M-Pesa usually takes 20-45 seconds. Please wait a moment.",
+            
+            payment_details: {
+              student_name: txn.student_name,
+              phone: txn.phone_number,
+              amount: `KES ${txn.amount}`,
+              status: "Processing",
+            },
+            
+            next_action: "wait_and_retry",
+            next_action_prompt: "Tell the user to wait 30 seconds and share their M-Pesa code again to recheck.",
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } }
+        );
+      }
+
+      // ❌ PAYMENT FAILED
+      if (txn.status === "Failed") {
+        return new Response(
+          JSON.stringify({
+            success: true,
+            payment_verified: false,
+            payment_status: "failed",
+            transaction_status: "Failed",
+            
+            agent_message: "Payment failed. This usually means the transaction was cancelled or the PIN was incorrect.",
+            
+            payment_details: {
+              student_name: txn.student_name,
+              phone: txn.phone_number,
+              amount: `KES ${txn.amount}`,
+              status: "Failed",
+            },
+            
+            next_action: "offer_retry",
+            next_action_prompt: "Ask the user if they would like to try the payment again.",
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } }
+        );
+      }
+
+      // 🤷 UNKNOWN STATUS (fallback)
       return new Response(
         JSON.stringify({
           success: true,
+          payment_verified: false,
+          payment_status: "unknown",
           transaction_status: txn.status,
-          payment_complete: false,
-          message: txn.status === "pending"
-            ? "Payment is still processing. Please wait." 
-            : `Payment ${txn.status.toLowerCase()}. Please try again or contact support.`,
+          
+          agent_message: `Transaction status is "${txn.status}". This is an unexpected status. Please contact support.`,
+          
+          payment_details: {
+            student_name: txn.student_name,
+            phone: txn.phone_number,
+            amount: `KES ${txn.amount}`,
+            status: txn.status,
+          },
+          
+          next_action: "contact_support",
+          next_action_prompt: "Tell the user to contact support for assistance.",
         }),
         { status: 200, headers: { "Content-Type": "application/json" } }
       );
 
     } catch (error) {
       console.error("Error checking transaction:", error);
+      
+      return new Response(
+        JSON.stringify({
+          success: false,
+          payment_verified: false,
+          error: error instanceof Error ? error.message : "Internal server error",
+          agent_message: "An error occurred while checking the transaction. Please make sure you shared the correct M-Pesa code from your SMS.",
+        }),
+        { status: 500, headers: { "Content-Type": "application/json" } }
+      );
+    }
+  }),
+});
+
+
+/**
+ * POST /user-transactions
+ * Retrieves ALL transactions and program enrollments for a user by phone number
+ * A user can have multiple transactions, each with their own redeem code and enrollment
+ */
+http.route({
+  path: "/user-transactions",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    try {
+      const { phone_number } = await request.json();
+
+      if (!phone_number) {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: "Missing required field: phone_number",
+          }),
+          { status: 400, headers: { "Content-Type": "application/json" } }
+        );
+      }
+
+      // 🔍 GET ALL TRANSACTIONS for this phone number (can be multiple)
+      const transactions = await ctx.runQuery(api.transactions.getTransactionsByPhoneNumber, {
+        phone_number,
+      });
+
+      if (!transactions || transactions.length === 0) {
+        return new Response(
+          JSON.stringify({
+            success: true,
+            user_found: false,
+            message: "No transactions found for this phone number",
+            phone_number,
+            transactions: [],
+            enrollments: [],
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } }
+        );
+      }
+
+      // 🎓 GET ALL ENROLLMENTS for each transaction (one enrollment per transaction)
+      const enrollmentPromises = transactions.map((txn) =>
+        ctx.runQuery(api.program_enrollments.getEnrollmentByTransactionId, {
+          transaction_id: txn._id,
+        })
+      );
+      const enrollments = await Promise.all(enrollmentPromises);
+
+      // 📚 ENRICH EACH TRANSACTION with campaign, program, and enrollment details
+      const enrichedData = await Promise.all(
+        transactions.map(async (txn, index) => {
+          const enrollment = enrollments[index];
+          
+          const campaign = await ctx.runQuery(api.campaign.getCampaignByPromoCode, {
+            promo_code: txn.campaign_code,
+          });
+
+          let program = null;
+          let curriculum = null;
+          
+          if (campaign) {
+            program = await ctx.runQuery(api.program.getProgramById, {
+              id: campaign.program_id,
+            });
+            
+            if (program) {
+              curriculum = await ctx.runQuery(api.curricula.getCurriculumById, {
+                id: program.curriculum_id,
+              });
+            }
+          }
+
+          const pricePerLesson = program?.pricing || 0;
+          const numberOfLessons = txn.amount > 0 ? Math.floor(txn.amount / pricePerLesson) : 0;
+
+          return {
+            transaction: {
+              id: txn._id,
+              student_name: txn.student_name,
+              phone_number: txn.phone_number,
+              mpesa_code: txn.mpesa_code,
+              amount: txn.amount,
+              campaign_code: txn.campaign_code,
+              status: txn.status,
+              created_at: txn.created_at,
+              verified_at: txn.verified_at,
+            },
+            enrollment: enrollment ? {
+              id: enrollment._id,
+              redeem_code: enrollment.redeem_code,
+              status: enrollment.status,
+              program_id: enrollment.program_id,
+              campaign_id: enrollment.campaign_id,
+            } : null,
+            campaign: campaign ? {
+              id: campaign._id,
+              name: campaign.name,
+              promo_code: campaign.promo_code,
+              status: campaign.status,
+              whatsapp_number: campaign.whatsapp_number,
+            } : null,
+            program: program ? {
+              id: program._id,
+              name: program.name,
+              subjects: program.subjects,
+              pricing: program.pricing,
+              start_date: program.start_date,
+              end_date: program.end_date,
+              timetable: program.timetable,
+            } : null,
+            curriculum: curriculum ? {
+              id: curriculum._id,
+              name: curriculum.name,
+              description: curriculum.description,
+            } : null,
+            computed: {
+              price_per_lesson: pricePerLesson,
+              number_of_lessons: numberOfLessons,
+            },
+          };
+        })
+      );
+
+      // 📊 SUMMARY STATISTICS across all transactions
+      const successfulTransactions = enrichedData.filter(
+        (item) => item.transaction.status === "Success"
+      );
+      
+      const totalAmountPaid = successfulTransactions.reduce(
+        (sum, item) => sum + item.transaction.amount,
+        0
+      );
+      
+      const totalLessons = successfulTransactions.reduce(
+        (sum, item) => sum + item.computed.number_of_lessons,
+        0
+      );
+      
+      // ALL REDEEM CODES (active enrollments)
+      const allRedeemCodes = enrichedData
+        .filter((item) => item.enrollment?.status === "redeemed")
+        .map((item) => ({
+          redeem_code: item.enrollment?.redeem_code,
+          campaign: item.campaign?.name,
+          lessons: item.computed.number_of_lessons,
+          amount_paid: item.transaction.amount,
+        }))
+        .filter((code) => code.redeem_code);
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          user_found: true,
+          phone_number,
+          
+          // SUMMARY of all transactions and enrollments
+          summary: {
+            total_transactions: transactions.length,
+            successful_payments: successfulTransactions.length,
+            pending_payments: transactions.filter(t => t.status === "pending").length,
+            failed_payments: transactions.filter(t => t.status === "Failed").length,
+            total_amount_paid: totalAmountPaid,
+            total_lessons_purchased: totalLessons,
+            total_redeem_codes: allRedeemCodes.length,
+          },
+          
+          // ALL REDEEM CODES (quick reference)
+          redeem_codes: allRedeemCodes,
+          
+          // COMPLETE DATA for each transaction + enrollment
+          transactions_and_enrollments: enrichedData,
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      );
+    } catch (error) {
+      console.error("Error fetching user transactions:", error);
       return new Response(
         JSON.stringify({
           success: false,
@@ -610,5 +923,6 @@ http.route({
     }
   }),
 });
+
 
 export default http;

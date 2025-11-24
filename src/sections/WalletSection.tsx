@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { useAuth } from "../hooks/useAuth";
 import { useQuery } from "convex/react";
+import { usePermissions } from "../hooks/usePermission";
 import { Loading } from "../components/common/Loading";
 import { api } from "../../convex/_generated/api";
 import Wallet from "../components/common/Wallet";
@@ -9,6 +10,7 @@ import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Badge } from "../components/ui/badge";
 import { maskPhoneNumber } from "../lib/maskPhoneNumber";
+import SuperAdminWalletSection from "../components/common/SuperAdminWalletSection";
 import {
   Table,
   TableBody,
@@ -43,6 +45,7 @@ import {
 import type { Doc } from "../../convex/_generated/dataModel";
 import { toast } from "sonner";
 
+
 export default function WalletSection({
   activeItem,
   setActiveItem
@@ -51,10 +54,12 @@ export default function WalletSection({
   setActiveItem: (item: string) => void;
 }) {
   const { partner } = useAuth();
+  const {userRole} = usePermissions()
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState<"payments" | "withdrawals">("payments");
   const [isWalletOpen, setIsWalletOpen] = useState(false);
 
+  const isSuperAdmin =  userRole === "super_admin";
   const campaigns = useQuery(
     api.campaign.getCampaignsByPartner,
     partner?._id ? { partner_id: partner._id } : "skip"
@@ -192,6 +197,12 @@ export default function WalletSection({
 
   if (campaigns === undefined || transactions === undefined || withdrawals === undefined) {
     return <Loading message="Loading transactions..." size="lg" />;
+  }
+
+  if (isSuperAdmin) {
+    return (
+      <SuperAdminWalletSection />
+    );
   }
 
   return (

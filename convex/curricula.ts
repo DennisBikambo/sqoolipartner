@@ -50,3 +50,11 @@ export const deleteCurriculum = mutation({
     await ctx.db.delete(args.id);
   },
 });
+
+export const getCurriculumById = query({
+  args: { id: v.id("curricula") },
+  handler: async (ctx, args) => {
+    const curriculum = await ctx.db.get(args.id);
+    return curriculum;
+  },
+});

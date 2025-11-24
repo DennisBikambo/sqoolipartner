@@ -415,6 +415,15 @@ withdrawal_limits: defineTable({
     .index("by_partner_id", ["partnerId"])
     .index("by_partnerId_isRead", ["partnerId", "isRead"]),
 
+
+  channels: defineTable({
+    partnerId: v.id("partners"),
+    name: v.string(),
+    code:v.string(),
+    subchanells:v.array(v.string()),
+    description: v.string(),
+  }).index("by_partner_id", ["partnerId"]),
+
 });
 
 

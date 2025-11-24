@@ -12,7 +12,7 @@ import {
   Lock,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { usePermissions } from '../../hooks/usePermission';
 
 interface NavItem {
@@ -20,7 +20,8 @@ interface NavItem {
   label: string;
   icon: React.ElementType;
   requiredPermission?: string; 
-  requiredCategory?: string;   
+  requiredCategory?: string;
+  excludeForRoles?: string[]; // New: roles that should NOT see this item
 }
 
 interface AppSidebarProps {
@@ -40,6 +41,7 @@ const navigationItems: NavItem[] = [
     label: 'Campaigns', 
     icon: Megaphone,
     requiredCategory: 'campaigns',
+    excludeForRoles: ['super_admin'], // Hide for super_admin
   },
   { 
     id: 'programs', 
@@ -72,7 +74,7 @@ export function AppSidebar({
   onSelect
 }: AppSidebarProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const { hasPermission, hasCategory, permissions, loading, isSuperAdmin } = usePermissions();
+  const { hasPermission, hasCategory, permissions, loading, isSuperAdmin, userRole } = usePermissions();
 
   const handleSelect = (id: string, isLocked: boolean) => {
     if (isLocked) {
@@ -87,7 +89,7 @@ export function AppSidebar({
     // If still loading permissions, deny access temporarily
     if (loading || !permissions) return false;
 
-    // Super admin always has access
+    // Super admin always has access (for items they can see)
     if (isSuperAdmin()) return true;
 
     if (item.requiredPermission && hasPermission(item.requiredPermission)) return true;
@@ -96,7 +98,18 @@ export function AppSidebar({
     return false;
   };
 
-  
+  // Filter navigation items based on user role
+  const visibleNavigationItems = useMemo(() => {
+    if (loading) return [];
+    
+    return navigationItems.filter(item => {
+      // If item has excludeForRoles and current user's role is in that list, hide it
+      if (item.excludeForRoles && userRole && item.excludeForRoles.includes(userRole)) {
+        return false;
+      }
+      return true;
+    });
+  }, [loading, userRole]);
 
   return (
     <>
@@ -136,7 +149,7 @@ export function AppSidebar({
       >
         <nav className="flex flex-col justify-center gap-4 lg:justify-between lg:h-full">
           <div className="flex flex-col gap-4">
-            {navigationItems.map(({ id, label, icon: Icon, ...permissionReq }) => {
+            {visibleNavigationItems.map(({ id, label, icon: Icon, ...permissionReq }) => {
               const isActive = id === activeItem;
               const hasAccess = checkAccess({ id, label, icon: Icon, ...permissionReq });
               const isLocked = !hasAccess;

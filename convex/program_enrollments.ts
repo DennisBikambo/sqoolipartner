@@ -137,3 +137,15 @@ export const getEarningsTimeline = query({
     return filledTimeline;
   },
 });
+
+export const getEnrollmentByTransactionId = query({
+  args: { transaction_id: v.id("transactions") },
+  handler: async (ctx, args) => {
+    const enrollment = await ctx.db
+      .query("program_enrollments")
+      .withIndex("by_transaction_id", (q) => q.eq("transaction_id", args.transaction_id))
+      .first();
+    
+    return enrollment;
+  },
+});

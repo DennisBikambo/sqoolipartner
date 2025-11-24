@@ -36,14 +36,16 @@ import ManageSubjectsDialog from "../components/common/ManageSubjectsDialog";
 import EditProgramDialog from "../components/common/EditProgramDialog";
 import type { Doc } from "../../convex/_generated/dataModel";
 import { toast } from "sonner";
-
 type Program = Doc<'programs'>;
 
 function ProgramRow({ program, onEdit }: { program: Program; onEdit: (program: Program) => void; }) {
   const campaigns = useQuery(api.campaign.getCampaignsByProgram, { programId: program._id });
   const purchasesCount = useQuery(api.program.getPurchasesCount, { program_id: program._id });
   const deleteProgram = useMutation(api.program.deleteProgram);
+  const { userRole } = usePermissions();
 
+
+  const isSuperAdmin = userRole === 'super_admin';
   const handleDelete = () => {
     toast.promise(deleteProgram({ id: program._id }), {
       loading: "Deleting program...",
@@ -94,12 +96,12 @@ function ProgramRow({ program, onEdit }: { program: Program; onEdit: (program: P
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => onEdit(program)}>
+            <DropdownMenuItem disabled={!isSuperAdmin} onClick={() => onEdit(program)}>
               <Edit className="h-4 w-4 mr-2" />
-              View/Edit
+              {isSuperAdmin ? 'Edit' : 'Not Allowed'}
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={handleDelete} className="text-red-500">
-              Delete
+            <DropdownMenuItem disabled={!isSuperAdmin} onClick={handleDelete} className="text-red-500">
+              {isSuperAdmin ? "Delete" : "Not Allowed"}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

@@ -80,3 +80,35 @@ export const getTransactionByCheckoutRequestId = query({
       .first();
   },
 });
+
+
+export const getRecentTransactionByPhone = query({
+  args: { phone_number: v.string() },
+  handler: async (ctx, args) => {
+    const transactions = await ctx.db
+      .query("transactions")
+      .filter((q) => q.eq(q.field("phone_number"), args.phone_number))
+      .order("desc")
+      .take(1);
+    
+    return transactions[0] || null;
+  },
+});
+
+export const getAllTransactions = query({
+  handler: async (ctx) => {
+    return await ctx.db.query("transactions").collect();
+  },
+});
+
+export const getTransactionsByPhoneNumber = query({
+  args: { phone_number: v.string() },
+  handler: async (ctx, args) => {
+    const transactions = await ctx.db
+      .query("transactions")
+      .filter((q) => q.eq(q.field("phone_number"), args.phone_number))
+      .collect();
+    
+    return transactions;
+  },
+});

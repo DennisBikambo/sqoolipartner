@@ -152,3 +152,10 @@ export const updateWallet = mutation({
     return { success: true, message: "Wallet updated successfully" };
   },
 });
+
+
+export const getAllWallets = query({
+  handler: async (ctx) => {
+    return await ctx.db.query("wallets").collect();
+  },
+});

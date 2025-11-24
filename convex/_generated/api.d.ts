@@ -11,6 +11,7 @@
 import type * as assets from "../assets.js";
 import type * as audit from "../audit.js";
 import type * as campaign from "../campaign.js";
+import type * as channel from "../channel.js";
 import type * as createPartner from "../createPartner.js";
 import type * as createSuperAdmin from "../createSuperAdmin.js";
 import type * as curricula from "../curricula.js";
@@ -49,6 +50,7 @@ declare const fullApi: ApiFromModules<{
   assets: typeof assets;
   audit: typeof audit;
   campaign: typeof campaign;
+  channel: typeof channel;
   createPartner: typeof createPartner;
   createSuperAdmin: typeof createSuperAdmin;
   curricula: typeof curricula;

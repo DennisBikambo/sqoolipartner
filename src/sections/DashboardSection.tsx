@@ -18,6 +18,7 @@ import CreateCampaignWizard from "../components/common/CreateCampaign";
 import CreateProgramDialog from "../components/common/CreateProgramDialog";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { Lock, AlertCircle, TrendingUp, TrendingDown, Award, DollarSign } from "lucide-react";
+import SuperAdminDashboard from "../components/common/SuperAdminDashboard";
 
 export default function DashboardSection({
   activeItem,
@@ -27,15 +28,19 @@ export default function DashboardSection({
   setActiveItem: (item: string) => void;
 }) {
   const { user, partner } = useAuth();
-  const { hasPermission } = usePermissions();
+  const { hasPermission,userRole } = usePermissions();
   const [showCreateWizard, setShowCreateWizard] = useState(false);
   const [showCreateProgramDialog, setShowCreateProgramDialog] = useState(false);
 
+  const isSuperAdmin = isConvexUser(user) && userRole === "super_admin";
+
+  
+
   // Permission checks
   const isDashboardAdmin = hasPermission("dashboard.admin");
-  const canViewFullDashboard = hasPermission("dashboard.read"); // Fixed: was dashboard.view
+  const canViewFullDashboard = hasPermission("dashboard.read"); 
   const canViewDashboard = isDashboardAdmin || canViewFullDashboard;
-  const canCreateCampaigns = hasPermission("campaigns.write"); // Fixed: was campaign.write
+  const canCreateCampaigns = hasPermission("campaigns.write"); 
 
   // Fetch campaigns
   const campaigns = useQuery(
@@ -80,6 +85,14 @@ export default function DashboardSection({
     const badges = ["🥇", "🥈", "🥉"];
     return badges[index] || `#${index + 1}`;
   };
+
+  if (isSuperAdmin) {
+    return (
+      <SuperAdminDashboard
+        setActiveItem={setActiveItem}
+      />
+    );
+  }
 
   const LockedMetric = ({ label }: { label: string }) => (
     <div className="relative">
