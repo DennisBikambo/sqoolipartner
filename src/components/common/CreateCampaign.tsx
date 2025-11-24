@@ -138,6 +138,12 @@ export default function CreateCampaignWizard({
         return;
       }
 
+      if (!calculations) {
+        setError("Unable to calculate campaign details");
+        setIsSaving(false);
+        return;
+      }
+
       const insertedId = await createCampaign({
         partner_id: partnerId,
         ...(user_id && { user_id }),
@@ -147,6 +153,8 @@ export default function CreateCampaignWizard({
         name: state.name,
         description: state.description,
         target_signups: state.target_signups,
+        duration_start: calculations.duration_start,
+        duration_end: calculations.duration_end,
       });
 
       track({ 

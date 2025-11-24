@@ -103,14 +103,6 @@ export default defineSchema({
    * ------------------------
    * Tracks all marketing or partnership campaigns tied to programs.
    */
-  channels: defineTable({
-    name: v.string(),
-    code: v.string(),
-    description: v.optional(v.string()),
-    partnerId: v.id("partners"),
-    subchanells: v.optional(v.array(v.string())),
-  }),
-
   campaigns: defineTable({
     name: v.string(),
     description: v.optional(v.string()),
