@@ -103,11 +103,21 @@ export default defineSchema({
    * ------------------------
    * Tracks all marketing or partnership campaigns tied to programs.
    */
+  channels: defineTable({
+    name: v.string(),
+    code: v.string(),
+    description: v.optional(v.string()),
+    partnerId: v.id("partners"),
+    subchanells: v.optional(v.array(v.string())),
+  }),
+
   campaigns: defineTable({
     name: v.string(),
+    description: v.optional(v.string()),
     program_id: v.id('programs'),
     partner_id: v.id("partners"),
     user_id: v.optional(v.id("users")),
+    channel_id: v.optional(v.id("channels")),
     promo_code: v.optional(v.string()), // Optional: backward compatibility for existing campaigns
     target_signups: v.number(),
     daily_target: v.number(),
@@ -416,4 +426,3 @@ withdrawal_limits: defineTable({
 
 
   
-

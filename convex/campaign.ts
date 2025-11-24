@@ -16,6 +16,7 @@ export const createCampaign = mutation({
     program_id: v.id("programs"),
     user_id: v.optional(v.id("users")),
     name: v.string(),
+    description: v.optional(v.string()),
     duration_start: v.string(),
     duration_end: v.string(),
     target_signups: v.number(),
@@ -56,6 +57,7 @@ export const createCampaign = mutation({
 
     const campaignId = await ctx.db.insert("campaigns", {
       name: args.name,
+      description: args.description,
       program_id: args.program_id,
       partner_id: args.partner_id,
       user_id: args.user_id,
