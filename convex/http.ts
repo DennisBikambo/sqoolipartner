@@ -925,4 +925,521 @@ http.route({
 });
 
 
+/**
+ * GET /transactions
+ * Lists all transactions
+ */
+http.route({
+  path: "/transactions",
+  method: "GET",
+  handler: httpAction(async (ctx) => {
+    try {
+      const transactions = await ctx.runQuery(api.transactions.listTransactions);
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          count: transactions.length,
+          transactions,
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      );
+    } catch (error) {
+      console.error("Error listing transactions:", error);
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: error instanceof Error ? error.message : "Internal server error",
+        }),
+        { status: 500, headers: { "Content-Type": "application/json" } }
+      );
+    }
+  }),
+});
+
+/**
+ * GET /transactions/:id
+ * Get a transaction by ID
+ */
+http.route({
+  path: "/transactions/:id",
+  method: "GET",
+  handler: httpAction(async (ctx, request) => {
+    try {
+      const url = new URL(request.url);
+      const pathSegments = url.pathname.split('/');
+      const id = pathSegments[pathSegments.length - 1];
+
+      if (!id) {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: "Missing transaction ID",
+          }),
+          { status: 400, headers: { "Content-Type": "application/json" } }
+        );
+      }
+
+      const transaction = await ctx.runQuery(api.transactions.getTransactionById, {
+        id: id as any,
+      });
+
+      if (!transaction) {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: "Transaction not found",
+          }),
+          { status: 404, headers: { "Content-Type": "application/json" } }
+        );
+      }
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          transaction,
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      );
+    } catch (error) {
+      console.error("Error getting transaction by ID:", error);
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: error instanceof Error ? error.message : "Internal server error",
+        }),
+        { status: 500, headers: { "Content-Type": "application/json" } }
+      );
+    }
+  }),
+});
+
+/**
+ * GET /transactions/partner/:partner_id
+ * Get all transactions for a specific partner
+ */
+http.route({
+  path: "/transactions/partner/:partner_id",
+  method: "GET",
+  handler: httpAction(async (ctx, request) => {
+    try {
+      const url = new URL(request.url);
+      const pathSegments = url.pathname.split('/');
+      const partner_id = pathSegments[pathSegments.length - 1];
+
+      if (!partner_id) {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: "Missing partner ID",
+          }),
+          { status: 400, headers: { "Content-Type": "application/json" } }
+        );
+      }
+
+      const transactions = await ctx.runQuery(api.transactions.getTransactionsByPartner, {
+        partner_id: partner_id as any,
+      });
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          count: transactions?.length || 0,
+          transactions: transactions || [],
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      );
+    } catch (error) {
+      console.error("Error getting transactions by partner:", error);
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: error instanceof Error ? error.message : "Internal server error",
+        }),
+        { status: 500, headers: { "Content-Type": "application/json" } }
+      );
+    }
+  }),
+});
+
+/**
+ * GET /transactions/mpesa/:mpesa_code
+ * Get transaction by M-Pesa code
+ */
+http.route({
+  path: "/transactions/mpesa/:mpesa_code",
+  method: "GET",
+  handler: httpAction(async (ctx, request) => {
+    try {
+      const url = new URL(request.url);
+      const pathSegments = url.pathname.split('/');
+      const mpesa_code = pathSegments[pathSegments.length - 1];
+
+      if (!mpesa_code) {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: "Missing M-Pesa code",
+          }),
+          { status: 400, headers: { "Content-Type": "application/json" } }
+        );
+      }
+
+      const transaction = await ctx.runQuery(api.transactions.getTransactionByMpesaCode, {
+        mpesa_code: mpesa_code.toUpperCase(),
+      });
+
+      if (!transaction) {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: "Transaction not found",
+          }),
+          { status: 404, headers: { "Content-Type": "application/json" } }
+        );
+      }
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          transaction,
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      );
+    } catch (error) {
+      console.error("Error getting transaction by M-Pesa code:", error);
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: error instanceof Error ? error.message : "Internal server error",
+        }),
+        { status: 500, headers: { "Content-Type": "application/json" } }
+      );
+    }
+  }),
+});
+
+/**
+ * GET /transactions/checkout/:checkout_request_id
+ * Get transaction by checkout request ID
+ */
+http.route({
+  path: "/transactions/checkout/:checkout_request_id",
+  method: "GET",
+  handler: httpAction(async (ctx, request) => {
+    try {
+      const url = new URL(request.url);
+      const pathSegments = url.pathname.split('/');
+      const checkout_request_id = pathSegments[pathSegments.length - 1];
+
+      if (!checkout_request_id) {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: "Missing checkout request ID",
+          }),
+          { status: 400, headers: { "Content-Type": "application/json" } }
+        );
+      }
+
+      const transaction = await ctx.runQuery(api.transactions.getTransactionByCheckoutRequestId, {
+        checkout_request_id,
+      });
+
+      if (!transaction) {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: "Transaction not found",
+          }),
+          { status: 404, headers: { "Content-Type": "application/json" } }
+        );
+      }
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          transaction,
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      );
+    } catch (error) {
+      console.error("Error getting transaction by checkout request ID:", error);
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: error instanceof Error ? error.message : "Internal server error",
+        }),
+        { status: 500, headers: { "Content-Type": "application/json" } }
+      );
+    }
+  }),
+});
+
+/**
+ * GET /transactions/phone/recent/:phone_number
+ * Get the most recent transaction for a phone number
+ */
+http.route({
+  path: "/transactions/phone/recent/:phone_number",
+  method: "GET",
+  handler: httpAction(async (ctx, request) => {
+    try {
+      const url = new URL(request.url);
+      const pathSegments = url.pathname.split('/');
+      const phone_number = pathSegments[pathSegments.length - 1];
+
+      if (!phone_number) {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: "Missing phone number",
+          }),
+          { status: 400, headers: { "Content-Type": "application/json" } }
+        );
+      }
+
+      const transaction = await ctx.runQuery(api.transactions.getRecentTransactionByPhone, {
+        phone_number,
+      });
+
+      if (!transaction) {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: "No transactions found for this phone number",
+          }),
+          { status: 404, headers: { "Content-Type": "application/json" } }
+        );
+      }
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          transaction,
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      );
+    } catch (error) {
+      console.error("Error getting recent transaction by phone:", error);
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: error instanceof Error ? error.message : "Internal server error",
+        }),
+        { status: 500, headers: { "Content-Type": "application/json" } }
+      );
+    }
+  }),
+});
+
+/**
+ * GET /transactions/phone/:phone_number
+ * Get all transactions for a phone number
+ */
+http.route({
+  path: "/transactions/phone/:phone_number",
+  method: "GET",
+  handler: httpAction(async (ctx, request) => {
+    try {
+      const url = new URL(request.url);
+      const pathSegments = url.pathname.split('/');
+      const phone_number = pathSegments[pathSegments.length - 1];
+
+      if (!phone_number) {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: "Missing phone number",
+          }),
+          { status: 400, headers: { "Content-Type": "application/json" } }
+        );
+      }
+
+      const transactions = await ctx.runQuery(api.transactions.getTransactionsByPhoneNumber, {
+        phone_number,
+      });
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          count: transactions.length,
+          transactions,
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      );
+    } catch (error) {
+      console.error("Error getting transactions by phone number:", error);
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: error instanceof Error ? error.message : "Internal server error",
+        }),
+        { status: 500, headers: { "Content-Type": "application/json" } }
+      );
+    }
+  }),
+});
+
+/**
+ * POST /transactions/create
+ * Create a new transaction
+ */
+http.route({
+  path: "/transactions/create",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    try {
+      const body = await request.json();
+      const { student_name, phone_number, mpesa_code, amount, campaign_code, partner_id, status } = body;
+
+      if (!student_name || !phone_number || !mpesa_code || !amount || !campaign_code || !partner_id || !status) {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: "Missing required fields: student_name, phone_number, mpesa_code, amount, campaign_code, partner_id, status",
+          }),
+          { status: 400, headers: { "Content-Type": "application/json" } }
+        );
+      }
+
+      const transactionId = await ctx.runMutation(api.transactions.createTransaction, {
+        student_name,
+        phone_number,
+        mpesa_code,
+        amount: parseFloat(amount),
+        campaign_code,
+        partner_id: partner_id as any,
+        status,
+      });
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          message: "Transaction created successfully",
+          transaction_id: transactionId,
+        }),
+        { status: 201, headers: { "Content-Type": "application/json" } }
+      );
+    } catch (error) {
+      console.error("Error creating transaction:", error);
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: error instanceof Error ? error.message : "Internal server error",
+        }),
+        { status: 500, headers: { "Content-Type": "application/json" } }
+      );
+    }
+  }),
+});
+
+/**
+ * PATCH /transactions/:id
+ * Update a transaction
+ */
+http.route({
+  path: "/transactions/:id",
+  method: "PATCH",
+  handler: httpAction(async (ctx, request) => {
+    try {
+      const url = new URL(request.url);
+      const pathSegments = url.pathname.split('/');
+      const id = pathSegments[pathSegments.length - 1];
+
+      if (!id) {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: "Missing transaction ID",
+          }),
+          { status: 400, headers: { "Content-Type": "application/json" } }
+        );
+      }
+
+      const body = await request.json();
+      const { fields } = body;
+
+      if (!fields) {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: "Missing fields to update",
+          }),
+          { status: 400, headers: { "Content-Type": "application/json" } }
+        );
+      }
+
+      await ctx.runMutation(api.transactions.updateTransaction, {
+        id: id as any,
+        fields,
+      });
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          message: "Transaction updated successfully",
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      );
+    } catch (error) {
+      console.error("Error updating transaction:", error);
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: error instanceof Error ? error.message : "Internal server error",
+        }),
+        { status: 500, headers: { "Content-Type": "application/json" } }
+      );
+    }
+  }),
+});
+
+/**
+ * DELETE /transactions/:id
+ * Delete a transaction
+ */
+http.route({
+  path: "/transactions/:id",
+  method: "DELETE",
+  handler: httpAction(async (ctx, request) => {
+    try {
+      const url = new URL(request.url);
+      const pathSegments = url.pathname.split('/');
+      const id = pathSegments[pathSegments.length - 1];
+
+      if (!id) {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: "Missing transaction ID",
+          }),
+          { status: 400, headers: { "Content-Type": "application/json" } }
+        );
+      }
+
+      await ctx.runMutation(api.transactions.deleteTransaction, {
+        id: id as any,
+      });
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          message: "Transaction deleted successfully",
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      );
+    } catch (error) {
+      console.error("Error deleting transaction:", error);
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: error instanceof Error ? error.message : "Internal server error",
+        }),
+        { status: 500, headers: { "Content-Type": "application/json" } }
+      );
+    }
+  }),
+});
+
 export default http;
