@@ -70,7 +70,7 @@ export const createCampaign = mutation({
     };
 
     // Use partner's default WhatsApp number or system default
-    const whatsapp_number = partner.phone || "+254104010203";
+    const whatsapp_number = partner.phone || "+254104003003";
 
     const campaignId = await ctx.db.insert("campaigns", {
       name: args.name,
