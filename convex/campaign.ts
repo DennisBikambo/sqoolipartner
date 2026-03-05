@@ -16,6 +16,8 @@ export const createCampaign = mutation({
     user_id: v.optional(v.id("users")),
     name: v.string(),
     description: v.optional(v.string()),
+    duration_start: v.string(),
+    duration_end: v.string(),
     target_signups: v.number(),
     channel_id: v.id("channels"),
     subchannel: v.optional(v.string()),
@@ -68,7 +70,7 @@ export const createCampaign = mutation({
     };
 
     // Use partner's default WhatsApp number or system default
-    const whatsapp_number = partner.phone || "+254104010203";
+    const whatsapp_number = partner.phone || "+254104003003";
 
     const campaignId = await ctx.db.insert("campaigns", {
       name: args.name,

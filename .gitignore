@@ -26,3 +26,14 @@ dist-ssr
 
 .env
 .env.local
+.env.production
+
+CLAUDE.md
+CONVEX_SETUP.md
+DEPLOYMENT.md
+*.xml
+*.txt
+
+*.md
+
+docs/*

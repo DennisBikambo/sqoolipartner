@@ -263,7 +263,7 @@ export default function CampaignSection() {
                             Engagements
                           </TableHead>
                           <TableHead className="text-xs text-muted-foreground font-normal">
-                            Purchases
+                            Min. Lessons
                           </TableHead>
                           <TableHead className="text-xs text-muted-foreground font-normal">
                             Expiry Date
@@ -315,7 +315,7 @@ export default function CampaignSection() {
                             <TableCell>
                               <div className="space-y-0.5">
                                 <div className="text-xs text-muted-foreground">
-                                  Purchases
+                                  Min. Lessons
                                 </div>
                                 <div className="text-sm text-foreground">
                                   {campaign.bundled_offers.min_lessons}
