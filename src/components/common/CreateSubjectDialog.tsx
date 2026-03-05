@@ -3,7 +3,6 @@
  * For Super Admins to create new subjects
  */
 
-'use client';
 
 import { useState } from 'react';
 import { useMutation } from 'convex/react';

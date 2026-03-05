@@ -3,7 +3,6 @@
  * For Super Admins to view and manage all partner organizations
  */
 
-'use client';
 
 import { useState } from 'react';
 import { useQuery, useMutation } from 'convex/react';
@@ -40,6 +39,7 @@ import AddUserDialog from './AddUserDialog';
 import ViewUserDialog, { type ViewUser } from './ViewUserDialog';
 import { ConfirmDialog } from './ConfirmationDialog';
 import type { Id } from '../../../convex/_generated/dataModel';
+import { formatDate, getInitials, getAvatarColor } from '../../utils/formatters';
 
 export default function PartnerManagement() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -68,23 +68,6 @@ export default function PartnerManagement() {
       partner.username.toLowerCase().includes(query)
     );
   });
-
-  const formatDate = (timestamp: number) => {
-    return new Date(timestamp).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
-  };
-
-  const getInitials = (name: string) =>
-    name.split(' ').map(n => n[0]).join('').toUpperCase();
-
-  const getAvatarColor = (name: string) => {
-    const colors = ['bg-blue-500', 'bg-green-500', 'bg-purple-500', 'bg-pink-500', 'bg-orange-500'];
-    const index = name.charCodeAt(0) % colors.length;
-    return colors[index];
-  };
 
   const handleViewUser = (user: any) => {
     setViewUser(user as ViewUser);

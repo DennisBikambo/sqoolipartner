@@ -9,7 +9,7 @@ export default defineSchema({
    */
   partners: defineTable({
     name: v.string(),
-    laravelUserId: v.number(),
+    laravelUserId: v.optional(v.number()),
     is_first_login: v.boolean(),
     permission_ids: v.array(v.id("permissions")),
     email: v.string(),
@@ -266,14 +266,16 @@ export default defineSchema({
     mpesa_code: v.string(),
     amount: v.float64(),
     campaign_code: v.string(),
-    partner_id: v.id("partners"), 
-    status: v.string(), 
+    partner_id: v.id("partners"),
+    status: v.union(v.literal("pending"), v.literal("Success"), v.literal("Failed")),
+    checkout_request_id: v.optional(v.string()),
     created_at: v.string(),
     verified_at: v.optional(v.string()),
   })
     .index("by_mpesa_code", ["mpesa_code"])
     .index("by_campaign_code", ["campaign_code"])
-    .index("by_partner_id", ["partner_id"]),
+    .index("by_partner_id", ["partner_id"])
+    .index("by_checkout_request_id", ["checkout_request_id"]),
 
   wallets: defineTable({
     account_number: v.string(), 
@@ -415,6 +417,15 @@ withdrawal_limits: defineTable({
     subchanells:v.array(v.string()),
     description: v.string(),
   }).index("by_partner_id", ["partnerId"]),
+
+  partner_inquiries: defineTable({
+    org_name: v.string(),
+    email: v.string(),
+    partnership_type: v.string(),
+    message: v.string(),
+    status: v.union(v.literal("pending"), v.literal("reviewed")),
+    created_at: v.string(),
+  }),
 
 });
 

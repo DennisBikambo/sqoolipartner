@@ -1,6 +1,5 @@
-'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Eye, Plus, Search, Filter, UserX, UserCheck, Lock, AlertCircle } from 'lucide-react';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../convex/_generated/api';
@@ -21,9 +20,11 @@ import { ConfirmDialog } from '../components/common/ConfirmationDialog';
 import ViewUserDialog, { type ViewUser } from '../components/common/ViewUserDialog';
 import PartnerManagement from '../components/common/PartnerManagement';
 import { isConvexUser } from '../types/auth.types';
+import { toast } from 'sonner';
+import { getInitials, getAvatarColor } from '../utils/formatters';
 
 export default function UserSection() {
-  const { user } = useAuth();
+  const { user: currentUser, partner } = useAuth();
   const [showAddModal, setShowAddModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [auditSearchQuery, setAuditSearchQuery] = useState('');
@@ -33,23 +34,12 @@ export default function UserSection() {
   const [viewUser, setViewUser] = useState<ViewUser | null>(null);
   const [viewOpen, setViewOpen] = useState(false);
 
-  const { partner } = useAuth();
-  const { canRead, canWrite, permissions } = usePermissions();
+  const { canRead, canWrite } = usePermissions();
   const partnerId = partner?._id;
 
   // Permission checks
   const canViewUsers = canRead('users');
   const canManageUsers = canWrite('users');
-
-  // Debug logs
-  useEffect(() => {
-    console.log('User Section Permissions:', {
-      permissions,
-      canViewUsers,
-      canManageUsers,
-      partnerId,
-    });
-  }, [permissions, canViewUsers, canManageUsers, partnerId]);
 
   // ✅ Only fetch if partnerId exists AND user has permission
   const users = useQuery(
@@ -69,18 +59,9 @@ export default function UserSection() {
     setViewOpen(true);
   };
 
-  const getInitials = (name: string) =>
-    name.split(' ').map(n => n[0]).join('').toUpperCase();
-
-  const getAvatarColor = (name: string) => {
-    const colors = ['bg-blue-500', 'bg-green-500', 'bg-purple-500', 'bg-pink-500', 'bg-orange-500'];
-    const index = name.charCodeAt(0) % colors.length;
-    return colors[index];
-  };
-
   const handleToggleActivation = (userId: Id<'users'>, activate: boolean) => {
     if (!canManageUsers) {
-      alert('You don\'t have permission to activate/deactivate users');
+      toast.error("You don't have permission to activate/deactivate users");
       return;
     }
     setSelectedUser(userId);
@@ -139,7 +120,7 @@ export default function UserSection() {
   }
 
   // Super admin sees Partner Management instead of regular user management
-  const isSuperAdmin = isConvexUser(user) && user.role === 'super_admin';
+  const isSuperAdmin = isConvexUser(currentUser) && currentUser.role === 'super_admin';
   if (isSuperAdmin) {
     return <PartnerManagement />;
   }

@@ -15,8 +15,7 @@ import ThemeButton from '../common/ThemeButton';
 import { NotificationDropdown } from '../common/NotificationDropDown';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { handleLogout } from '../../utils/handleLogout';
-import { getDisplayName, getUserEmail, getUserInitials, isConvexUser, isLaravelUser } from '../../types/auth.types';
+import { getDisplayName, getUserEmail, getUserInitials, isConvexUser } from '../../types/auth.types';
 import { useMutation } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 
@@ -32,35 +31,23 @@ export function Header({ title = 'Dashboard' }: HeaderProps) {
 
   const onLogout = async () => {
     try {
-      if (loginMethod === "convex") {
-        const token = document.cookie
-          .split("; ")
-          .find((row) => row.startsWith("convex_session="))
-          ?.split("=")[1];
+      const token = document.cookie
+        .split("; ")
+        .find((row) => row.startsWith("convex_session="))
+        ?.split("=")[1];
 
-        if (token) {
-          try {
-            await deleteSession({ token });
-            console.log("✅ Convex session deleted from DB");
-          } catch (err) {
-            console.error("❌ Failed to delete session from DB:", err);
-          }
+      if (token) {
+        try {
+          await deleteSession({ token });
+        } catch (err) {
+          console.error("Failed to delete session from DB:", err);
         }
-
-        document.cookie = "convex_session=; path=/; max-age=0";
-
-        toast.success("Logged out successfully 👋");
-        navigate("/signIn");
-        return;
       }
 
-      const result = await handleLogout();
-      if (result?.success) {
-        toast.success("Logged out successfully 👋");
-        navigate("/signIn");
-      } else {
-        toast.error("Logout failed. Please try again.");
-      }
+      document.cookie = "convex_session=; path=/; max-age=0";
+
+      toast.success("Logged out successfully");
+      navigate("/signIn");
     } catch (error) {
       console.error("Logout error:", error);
       toast.error("An unexpected error occurred during logout.");
@@ -97,9 +84,7 @@ export function Header({ title = 'Dashboard' }: HeaderProps) {
   const email = getUserEmail(user);
   const initials = getUserInitials(user);
 
-  const avatarUrl = isLaravelUser(user) && 'avatar' in user && typeof user.avatar === 'string' 
-    ? user.avatar 
-    : '';
+  const avatarUrl = '';
 
   const userRole = isConvexUser(user) ? user.role : null;
   const userExtension = isConvexUser(user) ? user.extension : null;

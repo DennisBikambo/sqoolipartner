@@ -1,4 +1,3 @@
-'use client';
 import type { ReactNode, ReactElement } from "react";
 import { useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';

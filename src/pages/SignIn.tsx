@@ -1,11 +1,25 @@
-'use client';
 
 import React from 'react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Eye, EyeOff, Loader2, CheckCircle2 } from 'lucide-react';
-import { handleLogin, validateLoginData } from '../utils/handleLogin';
 import type { LoginFormData, LoginValidationErrors } from '../types/auth.types';
+
+const validateLoginData = (data: LoginFormData): LoginValidationErrors => {
+  const errors: LoginValidationErrors = {};
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!data.email.trim()) {
+    errors.email = 'Email is required';
+  } else if (!emailRegex.test(data.email)) {
+    errors.email = 'Please enter a valid email address';
+  }
+  if (!data.password) {
+    errors.password = 'Password is required';
+  } else if (data.password.length < 8) {
+    errors.password = 'Password must be at least 8 characters';
+  }
+  return errors;
+};
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { HeroHeader } from '../components/layout/HeroHeader';
@@ -78,72 +92,71 @@ export default function SignIn() {
       setIsLoading(true);
 
       try {
+        if (!extension) {
+          toast.error("Invalid sign-in link. Please use the URL provided by your organization.");
+          setIsLoading(false);
+          return;
+        }
+
         let result;
-        if (extension) {
-          // Convex user login using hooks
-          console.log("In here!")
-          try {
-            const loginResponse = await loginMutation({ 
-              email: loginData.email, 
-              password: loginData.password,
-              extension: extension
-            });
+        // Convex user login using hooks
+        try {
+          const loginResponse = await loginMutation({
+            email: loginData.email,
+            password: loginData.password,
+            extension: extension
+          });
 
-            if (!loginResponse.user) {
-              throw new Error('Invalid email or password');
-            }
-
-            if (!loginResponse.user.is_account_activated) {
-              throw new Error('Your account needs activation. Please contact your administrator');
-            }
-
-            const sessionResponse = await createSessionMutation({
-              user_id: loginResponse.user._id,
-            });
-
-            result = {
-              success: true,
-              message: 'Login successful',
-              session: sessionResponse,
-              user: loginResponse.user,
-            };
-          } catch (error: unknown) {
-            console.error('Convex login failed:', error);
-            let message = 'An unexpected error occurred. Please try again';
-            
-            if (
-              error &&
-              typeof error === 'object' &&
-              'message' in error &&
-              typeof (error as { message?: unknown }).message === 'string'
-            ) {
-              const errorMsg = (error as { message: string }).message;
-              
-              // Transform backend error messages to user-friendly ones
-              if (errorMsg.includes('Invalid email or password')) {
-                message = 'The email or password you entered is incorrect';
-              } else if (errorMsg.includes('Invalid extension')) {
-                message = 'Invalid login link. Please use the correct sign-in URL';
-              } else if (errorMsg.includes('Account not activated') || errorMsg.includes('not activated')) {
-                message = 'Your account needs activation. Please contact your administrator';
-              } else {
-                message = errorMsg;
-              }
-              
-              // Clear password field for password-related errors
-              if (message.includes('password') || message.includes('incorrect')) {
-                setLoginData(prev => ({ ...prev, password: '' }));
-              }
-            }
-            
-            result = {
-              success: false,
-              message,
-            };
+          if (!loginResponse.user) {
+            throw new Error('Invalid email or password');
           }
-        } else {
-          // Default Laravel login
-          result = await handleLogin(loginData);
+
+          if (!loginResponse.user.is_account_activated) {
+            throw new Error('Your account needs activation. Please contact your administrator');
+          }
+
+          const sessionResponse = await createSessionMutation({
+            user_id: loginResponse.user._id,
+          });
+
+          result = {
+            success: true,
+            message: 'Login successful',
+            session: sessionResponse,
+            user: loginResponse.user,
+          };
+        } catch (error: unknown) {
+          let message = 'An unexpected error occurred. Please try again';
+
+          if (
+            error &&
+            typeof error === 'object' &&
+            'message' in error &&
+            typeof (error as { message?: unknown }).message === 'string'
+          ) {
+            const errorMsg = (error as { message: string }).message;
+
+            // Transform backend error messages to user-friendly ones
+            if (errorMsg.includes('Invalid email or password')) {
+              message = 'The email or password you entered is incorrect';
+            } else if (errorMsg.includes('Invalid extension')) {
+              message = 'Invalid login link. Please use the correct sign-in URL';
+            } else if (errorMsg.includes('Account not activated') || errorMsg.includes('not activated')) {
+              message = 'Your account needs activation. Please contact your administrator';
+            } else {
+              message = errorMsg;
+            }
+
+            // Clear password field for password-related errors
+            if (message.includes('password') || message.includes('incorrect')) {
+              setLoginData(prev => ({ ...prev, password: '' }));
+            }
+          }
+
+          result = {
+            success: false,
+            message,
+          };
         }
 
         if (!result?.success) {
@@ -335,17 +348,7 @@ export default function SignIn() {
                       )}
                     </Button>
 
-                    <div className="text-center">
-                      <p className="text-signin-description dark:text-muted-foreground">
-                        Don't have an account?{' '}
-                        <a 
-                          onClick={() => navigate('/signUp')} 
-                          className="text-signin-link dark:text-primary hover:underline cursor-pointer"
-                        >
-                          Learn how to Get Started
-                        </a>
-                      </p>
-                    </div>
+                    {/* TODO: Sign Up is not yet available. Remove this block when sign-up is re-enabled. */}
                   </div>
                 </div>
               </div>

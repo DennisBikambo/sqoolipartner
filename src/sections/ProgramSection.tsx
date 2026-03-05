@@ -1,5 +1,4 @@
 // app/programs/section.tsx
-"use client";
 
 import { useState } from "react";
 import { useQuery, useMutation } from "convex/react";

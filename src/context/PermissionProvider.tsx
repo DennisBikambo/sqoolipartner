@@ -6,7 +6,7 @@ import { api } from "../../convex/_generated/api";
 import { useAuth } from "../hooks/useAuth";
 import type { Id } from "../../convex/_generated/dataModel";
 import { useState, useEffect, useMemo } from "react";
-import { isConvexUser, type Partner } from "../types/auth.types";
+import { isConvexUser } from "../types/auth.types";
 
 export function PermissionProvider({ children }: { children: ReactNode }) {
   const { user, partner, loading: authLoading, loginMethod } = useAuth();
@@ -18,9 +18,6 @@ export function PermissionProvider({ children }: { children: ReactNode }) {
     if (loginMethod === "convex" && isConvexUser(user)) {
       setUserPermissionIds(user.permission_ids ?? []);
       setUserRole(user.role as UserRole);
-    } else if (loginMethod === "laravel" && partner) {
-      setUserPermissionIds((partner as Partner).permission_ids ?? []);
-      setUserRole((partner as Partner).role as UserRole);
     } else {
       setUserPermissionIds([]);
       setUserRole(null);

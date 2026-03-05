@@ -14,6 +14,7 @@ import { X, Building2 } from "lucide-react";
 import { useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
+import { toast } from "sonner";
 
 interface WalletSetupDialogProps {
   open: boolean;
@@ -85,7 +86,7 @@ export function WalletSetupDialog({
       onClose();
     } catch (error) {
       console.error("Failed to create wallet:", error);
-      alert("Failed to set up wallet. Please try again.");
+      toast.error("Failed to set up wallet. Please try again.");
     } finally {
       setIsLoading(false);
     }

@@ -1,4 +1,3 @@
-"use client";
 
 import { useState, useMemo } from "react";
 import { useQuery, useMutation } from "convex/react";
@@ -48,6 +47,7 @@ import {
 } from "lucide-react";
 import type { Doc, Id } from "../../../convex/_generated/dataModel";
 import { toast } from "sonner";
+import { formatCurrency, formatDate, getStatusBadgeVariant } from "../../utils/formatters";
 
 export default function SuperAdminWalletSection() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -90,7 +90,7 @@ export default function SuperAdminWalletSection() {
     const pendingWithdrawals = allWithdrawals.filter((w: Doc<"withdrawals">) => w.status === "pending");
     const pendingWithdrawalAmount = pendingWithdrawals.reduce((sum: number, w: Doc<"withdrawals">) => sum + w.amount, 0);
 
-    const verifiedTransactions = allTransactions.filter((t) => t.status === "verified");
+    const verifiedTransactions = allTransactions.filter((t) => t.status === "Success");
     const totalTransactionAmount = verifiedTransactions.reduce((sum, t) => sum + t.amount, 0);
 
     return {
@@ -201,47 +201,7 @@ export default function SuperAdminWalletSection() {
     }
   };
 
-  const formatCurrency = (amount: number) => {
-    return `KES ${amount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  };
-
-  const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString("en-GB", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
-
-  const formatCreationTime = (timestamp: number) => {
-    return new Date(timestamp).toLocaleDateString("en-GB", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
-
-  const getStatusBadgeVariant = (status: string) => {
-    switch (status.toLowerCase()) {
-      case "verified":
-      case "completed":
-        return "default";
-      case "pending":
-        return "secondary";
-      case "processing":
-        return "outline";
-      case "failed":
-      case "rejected":
-      case "cancelled":
-        return "destructive";
-      default:
-        return "outline";
-    }
-  };
+  const formatCreationTime = (timestamp: number) => formatDate(timestamp);
 
   const getWithdrawalStatusIcon = (status: string) => {
     switch (status.toLowerCase()) {

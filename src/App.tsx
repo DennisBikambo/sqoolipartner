@@ -6,33 +6,11 @@ import SignIn from './pages/SignIn'
 // import SignUp from './pages/SignUp'
 import NotFound from './components/common/PageNotFound'
 import { ProtectedRoute } from './components/Protected'
-import { handleGetCSRF } from './utils/handleLogin'
-import { useEffect, useRef } from 'react'
 import OnboardingPage from './pages/Onboarding'
 
 
 
 function App() {
-  const csrfInitialized = useRef(false) 
-
-  useEffect(() => {
-    // Fetch CSRF token ONLY ONCE ever
-    const initCSRF = async () => {
-      if (csrfInitialized.current) return 
-      
-      csrfInitialized.current = true
-      
-      try {
-        await handleGetCSRF()
-
-      } catch (error) {
-        console.error('Failed to initialize CSRF token:', error)
-      }
-    }
-    
-    initCSRF()
-  }, [])
-
   const routes = [
     {path:"/", element:<Hero />},
     {path:'signIn', element:<SignIn />},

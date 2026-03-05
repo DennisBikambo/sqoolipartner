@@ -24,6 +24,7 @@ import { CampaignAssets } from "./CampaignAssets";
 import { useState, useMemo } from "react";
 import { CartesianGrid, Line, LineChart as RechartsLineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { toast } from "sonner";
+import { formatCurrency, formatDate } from "../../utils/formatters";
 
 interface CampaignDetailDialogProps {
   campaign: Doc<"campaigns"> | null;
@@ -96,22 +97,6 @@ export function CampaignDetailDialog({
   }, [revenueLogs]);
 
   if (!campaign) return null;
-
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('en-US', { 
-      day: '2-digit', 
-      month: 'short', 
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true
-    });
-  };
-
-  const formatCurrency = (amount: number) => {
-    return `KES ${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  };
 
   const calculateDaysToExpiry = (endDate: string) => {
     const end = new Date(endDate);

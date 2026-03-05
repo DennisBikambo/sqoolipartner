@@ -1,4 +1,3 @@
-"use client";
 import { useState, useMemo, useEffect } from "react";
 import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
@@ -36,6 +35,7 @@ import { CampaignDetailDialog } from "../components/common/CampaignDetails";
 import { ConfirmDialog } from "../components/common/ConfirmationDialog";
 import type { Doc } from "../../convex/_generated/dataModel";
 import { toast } from "sonner";
+import { formatDate } from "../utils/formatters";
 import CreateCampaignWizard from "../components/common/CreateCampaign";
 import { isConvexUser } from '../types/auth.types';
 
@@ -71,16 +71,6 @@ export default function CampaignSection() {
       setHasLoaded(true);
     }
   }, [campaigns]);
-
-  // Format date
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString("en-GB", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    }).toUpperCase();
-  };
 
   // Filter campaigns based on tab and search query
   const filteredCampaigns = useMemo(() => {

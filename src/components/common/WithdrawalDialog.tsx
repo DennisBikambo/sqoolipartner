@@ -1,4 +1,3 @@
-"use client";
 
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
@@ -18,6 +17,7 @@ import {
   TrendingDown,
   Wallet,
 } from "lucide-react";
+import { formatCurrency } from "../../utils/formatters";
 
 interface WithdrawalDialogProps {
   open: boolean;
@@ -137,10 +137,6 @@ export function WithdrawalDialog({
       setError(errorMessage);
       setShowPin(false);
     }
-  };
-
-  const formatCurrency = (value: number) => {
-    return `KES ${value.toLocaleString()}`;
   };
 
   const getDestinationDisplay = () => {

@@ -70,12 +70,6 @@ export default function NotFound() {
             >
               Sign In
             </button>
-            <button
-              onClick={() => handleNavigate('/signUp')}
-              className="text-primary hover:underline"
-            >
-              Sign Up
-            </button>
           </div>
         </div>
       </div>

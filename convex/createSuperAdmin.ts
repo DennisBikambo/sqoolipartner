@@ -59,7 +59,6 @@ export const createSuperAdminUser = mutation({
         name: "System",
         email: "system@sqooli.com",
         phone: "",
-        laravelUserId: 0,
         is_first_login: false,
         username: "system",
         permission_ids: [],
@@ -109,7 +108,6 @@ export const createSuperAdminUser = mutation({
       },
       credentials: {
         email: args.email,
-        password: args.password,
         extension: extension,
       },
     };
@@ -174,7 +172,6 @@ export const resetSuperAdminPassword = mutation({
       message: `Password reset successfully for ${args.email}`,
       credentials: {
         email: args.email,
-        password: args.new_password,
         extension: user.extension,
       },
     };

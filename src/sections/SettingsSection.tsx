@@ -1,5 +1,4 @@
 // app/settings/section.tsx
-"use client";
 
 import { useState } from "react";
 import { useAuth } from "../hooks/useAuth";
@@ -12,18 +11,12 @@ import { Avatar, AvatarFallback } from "../components/ui/avatar";
 import { Badge } from "../components/ui/badge";
 import ThemeButton from "../components/common/ThemeButton";
 import { Camera, Sparkles } from "lucide-react";
+import { getInitials } from "../utils/formatters";
 
 export default function SettingsSection() {
   const { partner } = useAuth();
   const { theme, setTheme } = useTheme();
   const [activeTab, setActiveTab] = useState<"profile" | "roles">("profile");
-
-  const getInitials = (name: string = "") =>
-    name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase();
 
   if (!partner) {
     return (

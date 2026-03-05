@@ -1,5 +1,4 @@
 
-"use client";
 import { useCallback } from "react";
 import type { Id } from "../../convex/_generated/dataModel";
 

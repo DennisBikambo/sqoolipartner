@@ -1,4 +1,3 @@
-'use client';
 
 import { 
   Home, 
@@ -14,6 +13,7 @@ import {
 import { cn } from '../../lib/utils';
 import { useState, useMemo } from 'react';
 import { usePermissions } from '../../hooks/usePermission';
+import { toast } from 'sonner';
 
 interface NavItem {
   id: string;
@@ -78,7 +78,7 @@ export function AppSidebar({
 
   const handleSelect = (id: string, isLocked: boolean) => {
     if (isLocked) {
-      alert('This feature is locked. Contact your administrator for access.');
+      toast.error("This feature is locked. Contact your administrator for access.");
       return;
     }
     onSelect?.(id);

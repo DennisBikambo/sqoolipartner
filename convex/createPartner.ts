@@ -99,7 +99,6 @@ export const createPartnerOrganization = mutation({
       email: args.partner_email,
       phone: args.partner_phone,
       username: args.partner_username,
-      laravelUserId: 0, // Not linked to Laravel initially
       is_first_login: true,
       permission_ids: partnerPermissions,
     });

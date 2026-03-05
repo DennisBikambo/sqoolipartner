@@ -1,4 +1,3 @@
-"use client";
 
 import { useState } from "react";
 import { useAuth } from "../hooks/useAuth";
@@ -19,6 +18,7 @@ import CreateProgramDialog from "../components/common/CreateProgramDialog";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { Lock, AlertCircle, TrendingUp, TrendingDown, Award, DollarSign } from "lucide-react";
 import SuperAdminDashboard from "../components/common/SuperAdminDashboard";
+import { formatCurrency } from "../utils/formatters";
 
 export default function DashboardSection({
   activeItem,
@@ -71,14 +71,6 @@ export default function DashboardSection({
     ongoingCampaigns: campaigns?.filter((c) => c.status === "active").length || 0,
     totalSignups: campaignEarnings?.reduce((sum, c) => sum + c.enrollments, 0) || 0,
     totalEarnings: campaignEarnings?.reduce((sum, c) => sum + c.partner_earnings, 0) || 0,
-  };
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-KE", {
-      style: "currency",
-      currency: "KES",
-      minimumFractionDigits: 2,
-    }).format(amount);
   };
 
   const getRankBadge = (index: number) => {

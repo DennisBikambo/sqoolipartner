@@ -2,7 +2,6 @@
 // UPDATED AddUserDialog Component
 // ============================================
 
-'use client';
 
 import { useState } from 'react';
 import { Eye } from 'lucide-react';

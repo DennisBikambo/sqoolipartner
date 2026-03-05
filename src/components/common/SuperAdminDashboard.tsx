@@ -1,4 +1,3 @@
-"use client";
 
 import { useState } from "react";
 import { useQuery } from "convex/react";
@@ -19,6 +18,7 @@ import {
   Award,
   BarChart3
 } from "lucide-react";
+import { formatCurrency } from "../../utils/formatters";
 
 interface SuperAdminDashboardProps {
   setActiveItem: (item: string) => void;
@@ -66,14 +66,6 @@ export default function SuperAdminDashboard({
     totalTransactions: transactions?.length || 0,
     totalPartnerEarnings: partnerEarningsSummary?.total_earnings || 0,
     totalSystemRevenue: partnerEarningsSummary?.total_revenue || 0,
-  };
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-KE", {
-      style: "currency",
-      currency: "KES",
-      minimumFractionDigits: 2,
-    }).format(amount);
   };
 
   const getRankBadge = (index: number) => {

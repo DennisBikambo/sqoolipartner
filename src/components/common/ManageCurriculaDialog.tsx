@@ -3,7 +3,6 @@
  * For Super Admins to view, edit, and delete curricula
  */
 
-'use client';
 
 import { useState } from 'react';
 import { useQuery, useMutation } from 'convex/react';
@@ -32,6 +31,7 @@ import {
 import { toast } from 'sonner';
 import { BookOpen, Edit, Trash2, Search } from 'lucide-react';
 import { ConfirmDialog } from './ConfirmationDialog';
+import { formatDate } from '../../utils/formatters';
 
 interface ManageCurriculaDialogProps {
   open: boolean;
@@ -117,14 +117,6 @@ export default function ManageCurriculaDialog({ open, onOpenChange }: ManageCurr
     } finally {
       setLoading(false);
     }
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
   };
 
   return (

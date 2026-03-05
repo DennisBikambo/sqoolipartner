@@ -1,4 +1,3 @@
-'use client';
 import { AppSidebar } from './Sidebar';
 import { Header } from './Header';
 

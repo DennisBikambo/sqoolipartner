@@ -12,10 +12,13 @@ import Footer from '../components/landing/Footer';
 import PartnerCarousel from '../components/landing/PartnerCarousel';
 import { HeroHeader } from '../components/layout/HeroHeader';
 import { useTheme } from '../hooks/useTheme';
+import { useMutation } from 'convex/react';
+import { api } from '../../convex/_generated/api';
 
 export default function Hero() {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
+  const submitInquiry = useMutation(api.inquiries.submitPartnershipInquiry);
 
   const scrollToForm = () => {
     const formSection = document.getElementById('partner-form');
@@ -62,32 +65,21 @@ export default function Hero() {
     setIsSubmitting(true);
     setResult("");
 
-    const submitData = new FormData();
-    submitData.append("access_key", "2313b8a5-6438-473f-acb4-8f4cd0df5926");
-    submitData.append("name", formData.orgName);
-    submitData.append("email", formData.email);
-    submitData.append("partnership_type", formData.partnershipType);
-    submitData.append("message", formData.message);
-
     try {
-      const response = await fetch("https://api.web3forms.com/submit", {
-        method: "POST",
-        body: submitData
+      await submitInquiry({
+        org_name: formData.orgName,
+        email: formData.email,
+        partnership_type: formData.partnershipType,
+        message: formData.message,
       });
 
-      const data = await response.json();
-
-      if (data.success) {
-        setResult("success");
-        setFormData({
-          orgName: '',
-          email: '',
-          partnershipType: 'Media',
-          message: ''
-        });
-      } else {
-        setResult("error");
-      }
+      setResult("success");
+      setFormData({
+        orgName: '',
+        email: '',
+        partnershipType: 'Media',
+        message: ''
+      });
     } catch (error) {
       console.error("Form submission error:", error);
       setResult("error");

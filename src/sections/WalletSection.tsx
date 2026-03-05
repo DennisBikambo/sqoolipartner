@@ -44,6 +44,7 @@ import {
 } from "lucide-react";
 import type { Doc } from "../../convex/_generated/dataModel";
 import { toast } from "sonner";
+import { formatCurrency, formatDate, getStatusBadgeVariant } from "../utils/formatters";
 
 
 export default function WalletSection({
@@ -110,51 +111,7 @@ export default function WalletSection({
     setSearchQuery(e.target.value);
   };
 
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('en-US', { 
-      day: '2-digit', 
-      month: 'short', 
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true
-    });
-  };
-
-  const formatCreationTime = (timestamp: number) => {
-    const date = new Date(timestamp);
-    return date.toLocaleDateString('en-US', { 
-      day: '2-digit', 
-      month: 'short', 
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true
-    });
-  };
-
-  const formatCurrency = (amount: number | undefined) => {
-    return `KES ${amount?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  };
-
-  const getStatusBadgeVariant = (status: string) => {
-    switch (status.toLowerCase()) {
-      case "verified":
-      case "completed":
-        return "default";
-      case "pending":
-        return "secondary";
-      case "processing":
-        return "outline";
-      case "failed":
-      case "rejected":
-      case "cancelled":
-        return "destructive";
-      default:
-        return "outline";
-    }
-  };
+  const formatCreationTime = (timestamp: number) => formatDate(timestamp);
 
   const getWithdrawalStatusIcon = (status: string) => {
     switch (status.toLowerCase()) {

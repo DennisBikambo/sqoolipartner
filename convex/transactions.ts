@@ -11,7 +11,8 @@ export const createTransaction = mutation({
         amount:v.float64(),
         campaign_code:v.string(),
         partner_id:v.id("partners"),
-        status:v.string()
+        status:v.union(v.literal("pending"), v.literal("Success"), v.literal("Failed")),
+        checkout_request_id:v.optional(v.string()),
     },
     handler:async (ctx,args) =>{
         const now = new Date().toISOString()
@@ -44,10 +45,15 @@ export const getTransactionsByPartner = query({
 export const updateTransaction = mutation({
   args: {
     id: v.id("transactions"),
-    fields: v.record(v.string(), v.any()),
+    fields: v.object({
+      status: v.optional(v.union(v.literal("pending"), v.literal("Success"), v.literal("Failed"))),
+      mpesa_code: v.optional(v.string()),
+      amount: v.optional(v.float64()),
+      verified_at: v.optional(v.string()),
+    }),
   },
   handler: async (ctx, { id, fields }) => {
-    return await ctx.db.patch(id, { ...fields, verified_at: new Date().toISOString() });
+    return await ctx.db.patch(id, { ...fields, verified_at: fields.verified_at ?? new Date().toISOString() });
   },
 });
 
@@ -76,7 +82,7 @@ export const getTransactionByCheckoutRequestId = query({
   handler: async (ctx, args) => {
     return await ctx.db
       .query("transactions")
-      .filter(q => q.eq(q.field("mpesa_code"), args.checkout_request_id))
+      .withIndex("by_checkout_request_id", q => q.eq("checkout_request_id", args.checkout_request_id))
       .first();
   },
 });

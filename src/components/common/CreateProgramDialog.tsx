@@ -3,7 +3,6 @@
  * For Super Admins to create new educational programs
  */
 
-'use client';
 
 import { useState, useEffect, useRef } from 'react';
 import { useMutation, useQuery } from 'convex/react';

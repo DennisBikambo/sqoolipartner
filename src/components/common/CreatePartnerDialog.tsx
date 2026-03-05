@@ -1,4 +1,3 @@
-'use client';
 
 import { useState } from 'react';
 import { useMutation } from 'convex/react';
@@ -14,36 +13,68 @@ import { Label } from '../ui/label';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
 import { toast } from 'sonner';
-import { Building2, User, Mail, Phone, UserCircle, Eye, EyeOff, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
+import { Building2, User, Mail, Phone, UserCircle, Loader2 } from 'lucide-react';
 import { UserCredentialsDialog } from './UserCredentialsDialog';
-import { handleRegister, validateRegistrationData, getPasswordStrength } from '../../utils/handleRegister';
-import type { RegisterFormData, ValidationErrors } from '../../types/auth.types';
 
 interface CreatePartnerDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-interface PartnerFormData extends RegisterFormData {
+interface PartnerFormData {
   organizationName: string;
+  partnerEmail: string;
+  partnerPhone: string;
+  partnerUsername: string;
+  adminName: string;
+  adminEmail: string;
+  adminPhone: string;
 }
+
+interface FormErrors {
+  organizationName?: string;
+  partnerEmail?: string;
+  partnerPhone?: string;
+  partnerUsername?: string;
+  adminName?: string;
+  adminEmail?: string;
+  adminPhone?: string;
+}
+
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const phoneRegex = /^[+]?[\d\s\-()]+$/;
+
+const validateForm = (data: PartnerFormData): FormErrors => {
+  const errors: FormErrors = {};
+  if (!data.organizationName.trim() || data.organizationName.trim().length < 2)
+    errors.organizationName = 'Organization name must be at least 2 characters';
+  if (!data.partnerEmail.trim()) errors.partnerEmail = 'Partner email is required';
+  else if (!emailRegex.test(data.partnerEmail)) errors.partnerEmail = 'Please enter a valid email address';
+  if (!data.partnerPhone.trim()) errors.partnerPhone = 'Partner phone is required';
+  else if (!phoneRegex.test(data.partnerPhone) || data.partnerPhone.replace(/\D/g, '').length < 10)
+    errors.partnerPhone = 'Please enter a valid phone number';
+  if (!data.partnerUsername.trim() || data.partnerUsername.trim().length < 3)
+    errors.partnerUsername = 'Username must be at least 3 characters';
+  if (!data.adminName.trim() || data.adminName.trim().length < 2)
+    errors.adminName = 'Admin name must be at least 2 characters';
+  if (!data.adminEmail.trim()) errors.adminEmail = 'Admin email is required';
+  else if (!emailRegex.test(data.adminEmail)) errors.adminEmail = 'Please enter a valid email address';
+  return errors;
+};
 
 export default function CreatePartnerDialog({ open, onOpenChange }: CreatePartnerDialogProps) {
   const [formData, setFormData] = useState<PartnerFormData>({
     organizationName: '',
-    firstName: '',
-    lastName: '',
-    email: '',
-    phoneNumber: '',
-    username: '',
-    password: '',
-    confirmPassword: ''
+    partnerEmail: '',
+    partnerPhone: '',
+    partnerUsername: '',
+    adminName: '',
+    adminEmail: '',
+    adminPhone: '',
   });
 
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [touchedFields, setTouchedFields] = useState<Set<keyof PartnerFormData>>(new Set());
-  const [errors, setErrors] = useState<ValidationErrors & { organizationName?: string }>({});
+  const [errors, setErrors] = useState<FormErrors>({});
   const [loading, setLoading] = useState(false);
 
   const [showCredDialog, setShowCredDialog] = useState(false);
@@ -55,97 +86,32 @@ export default function CreatePartnerDialog({ open, onOpenChange }: CreatePartne
     admin_name: string;
   } | null>(null);
 
-  const createPartner = useMutation(api.partner.register);
-
-  const validateSingleField = (field: keyof PartnerFormData, value: string) => {
-    if (field === 'organizationName') {
-      if (!value.trim()) return 'Organization name is required';
-      if (value.trim().length < 2) return 'Organization name must be at least 2 characters';
-      return undefined;
-    }
-
-    const tempData: RegisterFormData = {
-      firstName: formData.firstName,
-      lastName: formData.lastName,
-      email: formData.email,
-      phoneNumber: formData.phoneNumber,
-      username: formData.username,
-      password: formData.password,
-      confirmPassword: formData.confirmPassword,
-      [field]: value
-    };
-    const allErrors = validateRegistrationData(tempData);
-    return allErrors[field as keyof RegisterFormData];
-  };
+  const createPartnerOrg = useMutation(api.createPartner.createPartnerOrganization);
 
   const handleBlur = (field: keyof PartnerFormData) => {
     setTouchedFields(prev => new Set(prev).add(field));
-    const error = validateSingleField(field, formData[field]);
-    setErrors(prev => ({ ...prev, [field]: error }));
+    const allErrors = validateForm({ ...formData });
+    setErrors(prev => ({ ...prev, [field]: allErrors[field] }));
   };
 
   const handleChange = (field: keyof PartnerFormData, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
-
     if (touchedFields.has(field)) {
-      const error = validateSingleField(field, value);
-      setErrors(prev => ({ ...prev, [field]: error }));
-    }
-
-    if (field === 'password' && touchedFields.has('confirmPassword')) {
-      const tempData: RegisterFormData = {
-        ...formData,
-        password: value
-      };
-      const allErrors = validateRegistrationData(tempData);
-      setErrors(prev => ({ ...prev, confirmPassword: allErrors.confirmPassword }));
+      const allErrors = validateForm({ ...formData, [field]: value });
+      setErrors(prev => ({ ...prev, [field]: allErrors[field] }));
     }
   };
 
   const isFormValid = () => {
-    if (!formData.organizationName.trim() || formData.organizationName.trim().length < 2) {
-      return false;
-    }
-
-    const registerData: RegisterFormData = {
-      firstName: formData.firstName,
-      lastName: formData.lastName,
-      email: formData.email,
-      phoneNumber: formData.phoneNumber,
-      username: formData.username,
-      password: formData.password,
-      confirmPassword: formData.confirmPassword
-    };
-
-    const allErrors = validateRegistrationData(registerData);
-    return Object.keys(allErrors).length === 0;
+    return Object.keys(validateForm(formData)).length === 0;
   };
 
   const handleSubmit = async () => {
-    // Mark all fields as touched
     const allFields = new Set(Object.keys(formData) as (keyof PartnerFormData)[]);
     setTouchedFields(allFields);
 
-    // Validate organization name
-    if (!formData.organizationName.trim() || formData.organizationName.trim().length < 2) {
-      setErrors(prev => ({ ...prev, organizationName: 'Organization name is required' }));
-      toast.error('Please fill in all required fields correctly.');
-      return;
-    }
-
-    // Validate registration fields
-    const registerData: RegisterFormData = {
-      firstName: formData.firstName,
-      lastName: formData.lastName,
-      email: formData.email,
-      phoneNumber: formData.phoneNumber,
-      username: formData.username,
-      password: formData.password,
-      confirmPassword: formData.confirmPassword
-    };
-
-    const newErrors = validateRegistrationData(registerData);
-    setErrors({ ...newErrors });
+    const newErrors = validateForm(formData);
+    setErrors(newErrors);
 
     if (Object.keys(newErrors).length > 0) {
       toast.error('Please fill in all required fields correctly.');
@@ -155,68 +121,50 @@ export default function CreatePartnerDialog({ open, onOpenChange }: CreatePartne
     setLoading(true);
 
     try {
-      // Call the handleRegister function (same as SignUp page)
-      const result = await handleRegister(registerData, createPartner);
-
-      if (!result.success) {
-        // Handle server-side validation errors
-        if (result.errors) {
-          const serverErrors: ValidationErrors = {};
-          
-          // Map Laravel errors (snake_case) to form errors (camelCase)
-          if (result.errors.first_name) serverErrors.firstName = result.errors.first_name[0];
-          if (result.errors.last_name) serverErrors.lastName = result.errors.last_name[0];
-          if (result.errors.email) serverErrors.email = result.errors.email[0];
-          if (result.errors.phone) serverErrors.phoneNumber = result.errors.phone[0];
-          if (result.errors.username) serverErrors.username = result.errors.username[0];
-          if (result.errors.password) serverErrors.password = result.errors.password[0];
-          if (result.errors.password_confirmation) serverErrors.confirmPassword = result.errors.password_confirmation[0];
-
-          setErrors(serverErrors);
-          toast.error('Please fix the highlighted errors.');
-        } else {
-          toast.error(result.message || 'Partner registration failed. Please try again.');
-        }
-        return;
-      }
+      const result = await createPartnerOrg({
+        partner_name: formData.organizationName,
+        partner_email: formData.partnerEmail,
+        partner_phone: formData.partnerPhone,
+        partner_username: formData.partnerUsername,
+        admin_name: formData.adminName,
+        admin_email: formData.adminEmail,
+        admin_phone: formData.adminPhone || undefined,
+      });
 
       // Success! Show credentials dialog
       setNewPartnerCreds({
-        partner_name: formData.organizationName,
-        admin_email: formData.email,
-        admin_password: formData.password,
-        admin_extension: formData.username, // Use username as extension
-        admin_name: `${formData.firstName} ${formData.lastName}`,
+        partner_name: result.credentials.partner_name,
+        admin_email: result.credentials.admin_email,
+        admin_password: result.credentials.admin_password,
+        admin_extension: result.credentials.admin_extension,
+        admin_name: formData.adminName,
       });
       setShowCredDialog(true);
 
-      toast.success(result.message || 'Partner organization registered successfully! 🎉');
+      toast.success(result.message || 'Partner organization created successfully!');
 
       // Reset form
       setFormData({
         organizationName: '',
-        firstName: '',
-        lastName: '',
-        email: '',
-        phoneNumber: '',
-        username: '',
-        password: '',
-        confirmPassword: ''
+        partnerEmail: '',
+        partnerPhone: '',
+        partnerUsername: '',
+        adminName: '',
+        adminEmail: '',
+        adminPhone: '',
       });
       setTouchedFields(new Set());
       setErrors({});
       onOpenChange(false);
 
     } catch (error) {
-      console.error('Partner registration error:', error);
-      toast.error('An unexpected error occurred. Please try again.');
+      console.error('Partner creation error:', error);
+      const message = error instanceof Error ? error.message : 'An unexpected error occurred. Please try again.';
+      toast.error(message);
     } finally {
       setLoading(false);
     }
   };
-
-  const passwordStrength = formData.password ? getPasswordStrength(formData.password) : null;
-  const passwordsMatch = formData.password && formData.confirmPassword && formData.password === formData.confirmPassword;
 
   return (
     <>
@@ -250,6 +198,59 @@ export default function CreatePartnerDialog({ open, onOpenChange }: CreatePartne
                   <p className="text-xs text-destructive mt-1">{errors.organizationName}</p>
                 )}
               </div>
+
+              <div>
+                <Label>Partner Email *</Label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    type="email"
+                    value={formData.partnerEmail}
+                    onChange={(e) => handleChange('partnerEmail', e.target.value)}
+                    onBlur={() => handleBlur('partnerEmail')}
+                    placeholder="partner@acme.com"
+                    className={`pl-10 ${errors.partnerEmail && touchedFields.has('partnerEmail') ? 'border-destructive' : ''}`}
+                  />
+                </div>
+                {errors.partnerEmail && touchedFields.has('partnerEmail') && (
+                  <p className="text-xs text-destructive mt-1">{errors.partnerEmail}</p>
+                )}
+              </div>
+
+              <div>
+                <Label>Partner Phone *</Label>
+                <div className="relative">
+                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    type="tel"
+                    value={formData.partnerPhone}
+                    onChange={(e) => handleChange('partnerPhone', e.target.value)}
+                    onBlur={() => handleBlur('partnerPhone')}
+                    placeholder="+254 700 000000"
+                    className={`pl-10 ${errors.partnerPhone && touchedFields.has('partnerPhone') ? 'border-destructive' : ''}`}
+                  />
+                </div>
+                {errors.partnerPhone && touchedFields.has('partnerPhone') && (
+                  <p className="text-xs text-destructive mt-1">{errors.partnerPhone}</p>
+                )}
+              </div>
+
+              <div>
+                <Label>Partner Username *</Label>
+                <div className="relative">
+                  <UserCircle className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    value={formData.partnerUsername}
+                    onChange={(e) => handleChange('partnerUsername', e.target.value)}
+                    onBlur={() => handleBlur('partnerUsername')}
+                    placeholder="acmecorp"
+                    className={`pl-10 ${errors.partnerUsername && touchedFields.has('partnerUsername') ? 'border-destructive' : ''}`}
+                  />
+                </div>
+                {errors.partnerUsername && touchedFields.has('partnerUsername') && (
+                  <p className="text-xs text-destructive mt-1">{errors.partnerUsername}</p>
+                )}
+              </div>
             </div>
 
             {/* Admin User Details Section */}
@@ -259,179 +260,56 @@ export default function CreatePartnerDialog({ open, onOpenChange }: CreatePartne
                 Admin User Details
               </div>
 
-              {/* First/Last Name */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>First Name *</Label>
-                  <Input
-                    value={formData.firstName}
-                    onChange={(e) => handleChange('firstName', e.target.value)}
-                    onBlur={() => handleBlur('firstName')}
-                    placeholder="John"
-                    className={errors.firstName && touchedFields.has('firstName') ? 'border-destructive' : ''}
-                  />
-                  {errors.firstName && touchedFields.has('firstName') && (
-                    <p className="text-xs text-destructive mt-1">{errors.firstName}</p>
-                  )}
-                </div>
-                <div>
-                  <Label>Last Name *</Label>
-                  <Input
-                    value={formData.lastName}
-                    onChange={(e) => handleChange('lastName', e.target.value)}
-                    onBlur={() => handleBlur('lastName')}
-                    placeholder="Doe"
-                    className={errors.lastName && touchedFields.has('lastName') ? 'border-destructive' : ''}
-                  />
-                  {errors.lastName && touchedFields.has('lastName') && (
-                    <p className="text-xs text-destructive mt-1">{errors.lastName}</p>
-                  )}
-                </div>
+              <div>
+                <Label>Admin Full Name *</Label>
+                <Input
+                  value={formData.adminName}
+                  onChange={(e) => handleChange('adminName', e.target.value)}
+                  onBlur={() => handleBlur('adminName')}
+                  placeholder="John Doe"
+                  className={errors.adminName && touchedFields.has('adminName') ? 'border-destructive' : ''}
+                />
+                {errors.adminName && touchedFields.has('adminName') && (
+                  <p className="text-xs text-destructive mt-1">{errors.adminName}</p>
+                )}
               </div>
 
-              {/* Email */}
               <div>
-                <Label>Email Address *</Label>
+                <Label>Admin Email *</Label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
                     type="email"
-                    value={formData.email}
-                    onChange={(e) => handleChange('email', e.target.value)}
-                    onBlur={() => handleBlur('email')}
+                    value={formData.adminEmail}
+                    onChange={(e) => handleChange('adminEmail', e.target.value)}
+                    onBlur={() => handleBlur('adminEmail')}
                     placeholder="admin@acme.com"
-                    className={`pl-10 ${errors.email && touchedFields.has('email') ? 'border-destructive' : ''}`}
+                    className={`pl-10 ${errors.adminEmail && touchedFields.has('adminEmail') ? 'border-destructive' : ''}`}
                   />
                 </div>
-                {errors.email && touchedFields.has('email') && (
-                  <p className="text-xs text-destructive mt-1">{errors.email}</p>
+                {errors.adminEmail && touchedFields.has('adminEmail') && (
+                  <p className="text-xs text-destructive mt-1">{errors.adminEmail}</p>
                 )}
               </div>
 
-              {/* Phone */}
               <div>
-                <Label>Phone Number *</Label>
+                <Label>Admin Phone</Label>
                 <div className="relative">
                   <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
                     type="tel"
-                    value={formData.phoneNumber}
-                    onChange={(e) => handleChange('phoneNumber', e.target.value)}
-                    onBlur={() => handleBlur('phoneNumber')}
-                    placeholder="+254 700 000000"
-                    className={`pl-10 ${errors.phoneNumber && touchedFields.has('phoneNumber') ? 'border-destructive' : ''}`}
+                    value={formData.adminPhone}
+                    onChange={(e) => handleChange('adminPhone', e.target.value)}
+                    onBlur={() => handleBlur('adminPhone')}
+                    placeholder="+254 700 000000 (optional)"
+                    className="pl-10"
                   />
                 </div>
-                {errors.phoneNumber && touchedFields.has('phoneNumber') && (
-                  <p className="text-xs text-destructive mt-1">{errors.phoneNumber}</p>
-                )}
-              </div>
-
-              {/* Username */}
-              <div>
-                <Label>Username *</Label>
-                <div className="relative">
-                  <UserCircle className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    value={formData.username}
-                    onChange={(e) => handleChange('username', e.target.value)}
-                    onBlur={() => handleBlur('username')}
-                    placeholder="johndoe"
-                    className={`pl-10 ${errors.username && touchedFields.has('username') ? 'border-destructive' : ''}`}
-                  />
-                </div>
-                {errors.username && touchedFields.has('username') && (
-                  <p className="text-xs text-destructive mt-1">{errors.username}</p>
-                )}
-                <p className="text-xs text-muted-foreground mt-1">
-                  Unique username for login
-                </p>
-              </div>
-
-              {/* Password */}
-              <div>
-                <Label>Password *</Label>
-                <div className="relative">
-                  <Input
-                    type={showPassword ? 'text' : 'password'}
-                    value={formData.password}
-                    onChange={(e) => handleChange('password', e.target.value)}
-                    onBlur={() => handleBlur('password')}
-                    placeholder="••••••••"
-                    className={`pr-10 ${errors.password && touchedFields.has('password') ? 'border-destructive' : ''}`}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                  >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-                {errors.password && touchedFields.has('password') && (
-                  <p className="text-xs text-destructive mt-1">{errors.password}</p>
-                )}
-                {passwordStrength && formData.password && !errors.password && (
-                  <div className="mt-2">
-                    <div className="flex gap-1 mb-1">
-                      {[...Array(5)].map((_, i) => (
-                        <div
-                          key={i}
-                          className={`h-1 flex-1 rounded-full ${i < passwordStrength.score ? passwordStrength.color : 'bg-muted'}`}
-                        />
-                      ))}
-                    </div>
-                    <p className={`text-xs ${passwordStrength.color.replace('bg-', 'text-')}`}>
-                      Password strength: {passwordStrength.label}
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              {/* Confirm Password */}
-              <div>
-                <Label>Confirm Password *</Label>
-                <div className="relative">
-                  <Input
-                    type={showConfirmPassword ? 'text' : 'password'}
-                    value={formData.confirmPassword}
-                    onChange={(e) => handleChange('confirmPassword', e.target.value)}
-                    onBlur={() => handleBlur('confirmPassword')}
-                    placeholder="••••••••"
-                    className={`pr-10 ${
-                      errors.confirmPassword && touchedFields.has('confirmPassword')
-                        ? 'border-destructive'
-                        : passwordsMatch
-                        ? 'border-secondary'
-                        : ''
-                    }`}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                  >
-                    {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-                {errors.confirmPassword && touchedFields.has('confirmPassword') && (
-                  <p className="text-xs text-destructive mt-1 flex items-center gap-1">
-                    <XCircle className="w-3 h-3" />
-                    {errors.confirmPassword}
-                  </p>
-                )}
-                {passwordsMatch && touchedFields.has('confirmPassword') && !errors.confirmPassword && (
-                  <p className="text-xs text-secondary mt-1 flex items-center gap-1">
-                    <CheckCircle2 className="w-3 h-3" />
-                    Passwords match
-                  </p>
-                )}
               </div>
 
               <div className="bg-muted/30 p-3 rounded-lg">
                 <p className="text-xs text-muted-foreground">
-                  <strong>Note:</strong> These credentials will be used for the admin user to log in to their partner account.
-                  Make sure to save them securely.
+                  <strong>Note:</strong> A password and extension will be auto-generated for the admin user. These credentials will be shown after creation — make sure to save them securely.
                 </p>
               </div>
             </div>
