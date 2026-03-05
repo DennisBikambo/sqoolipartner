@@ -16,12 +16,12 @@ export function DashboardLayout({
 }: DashboardLayoutProps) {
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
+    <div className="min-h-screen bg-background">
       {/* Fixed Header - Full Width at Top */}
       <Header title={title} />
-      
-      {/* Content Area with Sidebar - Add top padding for fixed header */}
-      <div className="flex flex-1 overflow-hidden bg-muted/30 ">
+
+      {/* Content Area with Sidebar - pt matches header height (h-14 / sm:h-16) */}
+      <div className="flex pt-14 sm:pt-16 min-h-screen overflow-hidden bg-muted/30">
         {/* Floating Sticky Sidebar */}
         <AppSidebar 
           activeItem={activeItem} 
@@ -29,7 +29,7 @@ export function DashboardLayout({
         />
         
         {/* Main Content - Add left margin for sidebar spacing */}
-        <main className="flex-1 overflow-y-auto  lg:ml-[130px]">
+        <main className="flex-1 overflow-y-auto lg:ml-[110px]">
           {children}
         </main>
       </div>

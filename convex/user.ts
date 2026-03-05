@@ -206,7 +206,7 @@ export const deleteUser = mutation({
  * 🔐 Login user
  */
 export const login = mutation({
-  args: { email: v.string(), password: v.string(), extension: v.string() },
+  args: { email: v.string(), password: v.string() },
   handler: async (ctx, args) => {
     const user = await ctx.db
       .query("users")
@@ -217,9 +217,6 @@ export const login = mutation({
 
     const isMatch = bcrypt.compareSync(args.password, user.password_hash);
     if (!isMatch) throw new Error("Invalid email or password");
-    if (user.extension !== args.extension) {
-      throw new Error("Invalid extension");
-    }
 
     await ctx.db.patch(user._id, {
       last_login: new Date().toISOString(),

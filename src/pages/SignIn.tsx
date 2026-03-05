@@ -26,7 +26,6 @@ import { HeroHeader } from '../components/layout/HeroHeader';
 import { useAuth } from '../hooks/useAuth';
 import { useMutation as useConvexMutation } from 'convex/react';
 import { api } from '../../convex/_generated/api';
-import { useLocation } from 'react-router-dom';
 
 export default function SignIn() {
   const { user } = useAuth();
@@ -35,7 +34,6 @@ export default function SignIn() {
   const [touchedFields, setTouchedFields] = React.useState<Set<keyof LoginFormData>>(new Set());
   const [errors, setErrors] = React.useState<LoginValidationErrors>({});
   const navigate = useNavigate();
-  const location = useLocation();
 
   // Convex mutations
   const loginMutation = useConvexMutation(api.user.login);
@@ -76,8 +74,6 @@ export default function SignIn() {
   };
 
   const handleSubmit = async () => {
-      const params = new URLSearchParams(location.search);
-      const extension = params.get("extension");
       const allFields = new Set(Object.keys(loginData) as (keyof LoginFormData)[]);
       setTouchedFields(allFields);
 
@@ -92,19 +88,13 @@ export default function SignIn() {
       setIsLoading(true);
 
       try {
-        if (!extension) {
-          toast.error("Invalid sign-in link. Please use the URL provided by your organization.");
-          setIsLoading(false);
-          return;
-        }
-
         let result;
+        let sessionToken: string | undefined;
         // Convex user login using hooks
         try {
           const loginResponse = await loginMutation({
             email: loginData.email,
             password: loginData.password,
-            extension: extension
           });
 
           if (!loginResponse.user) {
@@ -119,11 +109,11 @@ export default function SignIn() {
             user_id: loginResponse.user._id,
           });
 
+          sessionToken = sessionResponse.token;
+
           result = {
             success: true,
             message: 'Login successful',
-            session: sessionResponse,
-            user: loginResponse.user,
           };
         } catch (error: unknown) {
           let message = 'An unexpected error occurred. Please try again';
@@ -139,8 +129,6 @@ export default function SignIn() {
             // Transform backend error messages to user-friendly ones
             if (errorMsg.includes('Invalid email or password')) {
               message = 'The email or password you entered is incorrect';
-            } else if (errorMsg.includes('Invalid extension')) {
-              message = 'Invalid login link. Please use the correct sign-in URL';
             } else if (errorMsg.includes('Account not activated') || errorMsg.includes('not activated')) {
               message = 'Your account needs activation. Please contact your administrator';
             } else {
@@ -167,7 +155,6 @@ export default function SignIn() {
         toast.success('Login successful! 🎉');
 
         // Store the Convex session token in cookies if using Convex login
-        const sessionToken = (result as { session?: { token?: string } })?.session?.token;
         if (typeof sessionToken === 'string') {
           document.cookie = `convex_session=${sessionToken}; path=/; max-age=${2 * 60 * 60}; SameSite=Lax`;
         }

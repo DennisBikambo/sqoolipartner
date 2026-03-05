@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { useAuth } from "../hooks/useAuth";
+import { isConvexUser } from "../types/auth.types";
 import { useQuery } from "convex/react";
 import { usePermissions } from "../hooks/usePermission";
 import { Loading } from "../components/common/Loading";
@@ -54,13 +55,14 @@ export default function WalletSection({
   activeItem: string;
   setActiveItem: (item: string) => void;
 }) {
-  const { partner } = useAuth();
+  const { user, partner, loading: authLoading } = useAuth();
   const {userRole} = usePermissions()
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState<"payments" | "withdrawals">("payments");
   const [isWalletOpen, setIsWalletOpen] = useState(false);
 
-  const isSuperAdmin =  userRole === "super_admin";
+  // Derive from user.role directly — avoids waiting for PermissionContext to hydrate
+  const isSuperAdmin = (isConvexUser(user) && user.role === 'super_admin') || userRole === 'super_admin';
   const campaigns = useQuery(
     api.campaign.getCampaignsByPartner,
     partner?._id ? { partner_id: partner._id } : "skip"
@@ -147,19 +149,18 @@ export default function WalletSection({
     toast.success("Copied to clipboard!");
   };
 
-  // Show loading state
-  if (!partner) {
+  // Super admin exits early — no need to wait for partner or queries
+  if (isSuperAdmin) {
+    return <SuperAdminWalletSection />;
+  }
+
+  // For regular partners: wait for auth + partner to resolve
+  if (authLoading || !partner) {
     return <Loading message="Loading your wallet..." size="lg" />;
   }
 
   if (campaigns === undefined || transactions === undefined || withdrawals === undefined) {
     return <Loading message="Loading transactions..." size="lg" />;
-  }
-
-  if (isSuperAdmin) {
-    return (
-      <SuperAdminWalletSection />
-    );
   }
 
   return (

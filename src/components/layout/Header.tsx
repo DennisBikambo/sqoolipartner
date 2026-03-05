@@ -24,7 +24,7 @@ interface HeaderProps {
 }
 
 export function Header({ title = 'Dashboard' }: HeaderProps) {
-  const { user, loading, partner, loginMethod } = useAuth();
+  const { user, loading, partner } = useAuth();
   const { setTheme, theme } = useTheme();
   const navigate = useNavigate();
   const deleteSession = useMutation(api.session.deleteSession);
@@ -90,7 +90,7 @@ export function Header({ title = 'Dashboard' }: HeaderProps) {
   const userExtension = isConvexUser(user) ? user.extension : null;
 
   return (
-    <header className="w-full bg-background border-b border-border shrink-0">
+    <header className="fixed top-0 left-0 right-0 z-50 w-full bg-background border-b border-border">
       <div className="flex h-14 sm:h-16 items-center justify-between px-4 sm:px-6 gap-2">
         <div className="flex items-center gap-2">
           {/* Logo / Title can go here */}

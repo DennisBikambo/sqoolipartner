@@ -116,7 +116,7 @@ export function AppSidebar({
       {/* Mobile Toggle Button */}
       <button
         onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-        className="lg:hidden fixed top-20 left-4 z-50 p-2 rounded-lg bg-background/90 border border-border shadow-md backdrop-blur-md"
+        className="lg:hidden fixed top-16 left-4 z-50 p-2 rounded-lg bg-background/90 border border-border shadow-md backdrop-blur-md"
       >
         {isMobileMenuOpen ? (
           <X className="h-5 w-5 text-foreground" />
@@ -136,13 +136,15 @@ export function AppSidebar({
       {/* Sidebar */}
       <aside
         className={cn(
-          "fixed z-50 transition-all duration-300 ease-in-out",
-          "bg-background border border-border rounded-2xl shadow-lg backdrop-blur-md",
-          "overflow-hidden flex flex-col",
-          // desktop position
-          "lg:top-20 lg:left-4 lg:w-[110px] lg:h-[calc(100vh-6rem)]",
-          // mobile centered overlay
-          isMobileMenuOpen 
+          "fixed z-40 transition-all duration-300 ease-in-out",
+          "bg-background overflow-hidden flex flex-col",
+          // mobile: floating card style
+          "rounded-2xl shadow-lg border border-border backdrop-blur-md",
+          // desktop: flush left rail starting exactly at header bottom
+          "lg:top-16 lg:left-0 lg:w-[110px] lg:h-[calc(100vh-4rem)]",
+          "lg:rounded-none lg:shadow-none lg:border-0 lg:border-r lg:border-border",
+          // mobile position toggle
+          isMobileMenuOpen
             ? "top-1/2 left-1/2 w-[85%] max-w-[360px] h-auto -translate-x-1/2 -translate-y-1/2 p-4"
             : "translate-x-[-150%] lg:translate-x-0"
         )}

@@ -9,7 +9,6 @@ export default defineSchema({
    */
   partners: defineTable({
     name: v.string(),
-    laravelUserId: v.optional(v.number()),
     is_first_login: v.boolean(),
     permission_ids: v.array(v.id("permissions")),
     email: v.string(),

@@ -12,19 +12,34 @@ import { Badge } from "../components/ui/badge";
 import ThemeButton from "../components/common/ThemeButton";
 import { Camera, Sparkles } from "lucide-react";
 import { getInitials } from "../utils/formatters";
+import { isConvexUser } from "../types/auth.types";
 
 export default function SettingsSection() {
-  const { partner } = useAuth();
+  const { user, partner, loading: authLoading } = useAuth();
   const { theme, setTheme } = useTheme();
   const [activeTab, setActiveTab] = useState<"profile" | "roles">("profile");
 
-  if (!partner) {
+  if (authLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <p className="text-muted-foreground">Loading settings...</p>
       </div>
     );
   }
+
+  if (!user) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <p className="text-muted-foreground">Not authenticated. Please sign in.</p>
+      </div>
+    );
+  }
+
+  // Use partner data when available, fall back to user data
+  const displayName = partner?.name ?? (isConvexUser(user) ? user.name : '');
+  const displayEmail = partner?.email ?? (isConvexUser(user) ? user.email : '');
+  const displayPhone = partner?.phone ?? (isConvexUser(user) ? user.phone ?? '' : '');
+  const displayUsername = partner?.username ?? (isConvexUser(user) ? user.extension : '');
 
   return (
     <div className="space-y-6 p-6">
@@ -80,7 +95,7 @@ export default function SettingsSection() {
                     <div className="relative">
                       <Avatar className="h-24 w-24">
                         <AvatarFallback className="text-2xl">
-                          {getInitials(partner.name)}
+                          {getInitials(displayName)}
                         </AvatarFallback>
                       </Avatar>
                       <button className="absolute bottom-0 right-0 h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-lg hover:bg-primary/90 transition-colors">
@@ -142,7 +157,7 @@ export default function SettingsSection() {
                     <Input
                       id="phone"
                       type="tel"
-                      value={partner.phone}
+                      value={displayPhone}
                       disabled
                       className="bg-muted"
                     />
@@ -166,7 +181,7 @@ export default function SettingsSection() {
                     <Input
                       id="email"
                       type="email"
-                      value={partner.email}
+                      value={displayEmail}
                       disabled
                       className="bg-muted"
                     />
@@ -182,7 +197,7 @@ export default function SettingsSection() {
                     <Input
                       id="username"
                       type="text"
-                      value={partner.username}
+                      value={displayUsername}
                       disabled
                       className="bg-muted"
                     />
@@ -198,7 +213,7 @@ export default function SettingsSection() {
                     <Input
                       id="name"
                       type="text"
-                      value={partner.name}
+                      value={displayName}
                       disabled
                       className="bg-muted"
                     />

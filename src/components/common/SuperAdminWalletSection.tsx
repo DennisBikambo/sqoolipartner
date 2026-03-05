@@ -110,11 +110,12 @@ export default function SuperAdminWalletSection() {
     const partner = partners?.find((p) => p._id === partnerId);
     return partner?.name || "Unknown Partner";
   };
+  
 
   // Filter wallets
   const filteredWallets = useMemo(() => {
     if (!wallets || !partners) return [];
-
+  
     return wallets.filter((wallet) => {
       const partner = partners.find((p) => p._id === wallet.partner_id);
       const matchesSearch =
@@ -224,10 +225,16 @@ export default function SuperAdminWalletSection() {
     toast.success("Copied to clipboard!");
   };
 
-  if (!wallets || !allTransactions || !allWithdrawals || !partners) {
+  if (
+    wallets === undefined ||
+    allTransactions === undefined ||
+    allWithdrawals === undefined ||
+    partners === undefined
+  ) {
     return <Loading message="Loading wallet management..." size="lg" />;
   }
 
+  console.log(wallets)
   return (
     <div className="min-h-screen bg-background p-6 space-y-6">
       {/* Header */}

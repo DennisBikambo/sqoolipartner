@@ -114,15 +114,15 @@ export default function UserSection() {
     );
   }
 
-  // Loading state
-  if (!partnerId || users === undefined) {
-    return <Loading message="Loading users..." size="md" />;
-  }
-
-  // Super admin sees Partner Management instead of regular user management
+  // Super admin sees Partner Management — check before loading guard
   const isSuperAdmin = isConvexUser(currentUser) && currentUser.role === 'super_admin';
   if (isSuperAdmin) {
     return <PartnerManagement />;
+  }
+
+  // Loading state (non-super-admin only)
+  if (!partnerId || users === undefined) {
+    return <Loading message="Loading users..." size="md" />;
   }
 
   return (
