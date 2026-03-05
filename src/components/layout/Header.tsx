@@ -90,8 +90,8 @@ export function Header({ title = 'Dashboard' }: HeaderProps) {
   const userExtension = isConvexUser(user) ? user.extension : null;
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 w-full bg-background border-b border-border">
-      <div className="flex h-14 sm:h-16 items-center justify-between px-4 sm:px-6 gap-2">
+    <header className="fixed top-0 left-0 right-0 z-50 w-full bg-background border-b border-border">      
+    <div className="flex h-14 sm:h-16 items-center justify-between px-4 sm:px-6 gap-2">
         <div className="flex items-center gap-2">
           {/* Logo / Title can go here */}
         </div>
