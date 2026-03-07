@@ -3,7 +3,7 @@ info:
   title: Convex App - OpenAPI 3.0
   version: 0.0.0
 servers:
-  - url: https://patient-hornet-303.convex.cloud
+  - url: https://industrious-bear-173.convex.cloud
 security:
   - bearerAuth: []
 tags:
