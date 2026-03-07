@@ -1,196 +1,337 @@
-import { useState, useEffect } from "react";
-import { CheckCircle, ArrowRight } from "lucide-react";
+import { useReducer, useEffect, useCallback, useRef } from "react";
+import { motion } from "framer-motion";
+import { Check, ChevronRight } from "lucide-react";
 import { Button } from "../components/ui/button";
-import { Badge } from "../components/ui/badge";
-import { Card } from "../components/ui/card";
-import CreateCampaignWizard from "../components/common/CreateCampaign";
-import { WalletSetupDialog } from "../components/common/WalletSetUp";
 import { useAuth } from "../hooks/useAuth";
 import { isConvexUser } from "../types/auth.types";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
+import { DashboardLayout } from "../components/layout/DashboardLayout";
+import { WalletSetupDialog } from "../components/common/WalletSetUp";
+import CreateCampaignWizard from "../components/common/CreateCampaign";
+import AddUserDialog from "../components/common/AddUserDialog";
+import { TwoFactorModal } from "../components/common/TwoFactorModal";
+import { SocialMediaModal } from "../components/common/SocialMediaModal";
+
+// ─── Step config ─────────────────────────────────────────────────────────────
+
+type StepId = "wallet" | "campaign" | "users" | "2fa" | "social";
+type StepStatus = "incomplete" | "active" | "completed";
+
+interface StepDef {
+  id: StepId;
+  title: string;
+  activeTitle?: string;
+  description: string;
+}
+
+const STEPS: StepDef[] = [
+  {
+    id: "wallet",
+    title: "Activate Wallet",
+    description: "Setup your wallet payment methods for future withdrawals of your earnings",
+  },
+  {
+    id: "campaign",
+    title: "Create Campaign",
+    description: "Create a campaign and share with your audience to start earning",
+  },
+  {
+    id: "users",
+    title: "Add Users",
+    activeTitle: "Add Users (optional)",
+    description: "Invite other users with different roles to your account",
+  },
+  {
+    id: "2fa",
+    title: "Two Factor Authentication Setup",
+    description: "Setup your contact details for two factor authentication",
+  },
+  {
+    id: "social",
+    title: "Social Media Links (optional)",
+    description: "Setup your social media links to grow your audience",
+  },
+];
+
+// ─── State machine ────────────────────────────────────────────────────────────
+
+interface OnboardingState {
+  // which steps are completed (by index)
+  completed: boolean[];
+  // which modal is open
+  openModal: StepId | null;
+}
+
+type OnboardingAction =
+  | { type: "COMPLETE_STEP"; index: number }
+  | { type: "OPEN_MODAL"; id: StepId }
+  | { type: "CLOSE_MODAL" };
+
+function computeStatuses(completed: boolean[]): StepStatus[] {
+  let foundActive = false;
+  return completed.map((done) => {
+    if (done) return "completed";
+    if (!foundActive) {
+      foundActive = true;
+      return "active";
+    }
+    return "incomplete";
+  });
+}
+
+function reducer(state: OnboardingState, action: OnboardingAction): OnboardingState {
+  switch (action.type) {
+    case "COMPLETE_STEP": {
+      const completed = [...state.completed];
+      completed[action.index] = true;
+      return { ...state, completed, openModal: null };
+    }
+    case "OPEN_MODAL":
+      return { ...state, openModal: action.id };
+    case "CLOSE_MODAL":
+      return { ...state, openModal: null };
+    default:
+      return state;
+  }
+}
+
+// ─── Component ────────────────────────────────────────────────────────────────
 
 export default function OnboardingPage() {
-  const [walletOpen, setWalletOpen] = useState(false);
-  const [campaignOpen, setCampaignOpen] = useState(false);
   const { partner, user } = useAuth();
   const navigate = useNavigate();
+  const completeOnboarding = useMutation(api.partner.completeOnboarding);
 
   const wallet = useQuery(
     api.wallet.getWalletByPartner,
     partner?._id ? { partnerId: partner._id } : "skip"
   );
-  const campaign = useQuery(
+  const campaigns = useQuery(
     api.campaign.getCampaignsByPartner,
     partner?._id ? { partner_id: partner._id } : "skip"
   );
 
-  const completeOnboarding = useMutation(api.partner.completeOnboarding);
+  const [state, dispatch] = useReducer(reducer, {
+    completed: [false, false, false, false, false],
+    openModal: null,
+  });
+
+  // Refs prevent wallet/campaign effects from re-running on every step change
+  const completionFired = useRef(false);
+  const walletSynced = useRef(false);
+  const campaignSynced = useRef(false);
+
+  // Sync wallet completion (step 0) — only re-runs when wallet query result changes
+  useEffect(() => {
+    if (wallet && !walletSynced.current) {
+      walletSynced.current = true;
+      dispatch({ type: "COMPLETE_STEP", index: 0 });
+    }
+  }, [wallet]);
+
+  // Sync campaign completion (step 1) — only re-runs when campaigns query result changes
+  useEffect(() => {
+    if (campaigns && campaigns.length > 0 && !campaignSynced.current) {
+      campaignSynced.current = true;
+      dispatch({ type: "COMPLETE_STEP", index: 1 });
+    }
+  }, [campaigns]);
+
+  // When all done → call mutation + navigate (guarded to fire exactly once)
+  const handleAllDone = useCallback(async () => {
+    if (completionFired.current) return;
+    if (!partner?._id || !user || !isConvexUser(user)) return;
+    completionFired.current = true;
+    try {
+      await completeOnboarding({ partnerId: partner._id, userId: user._id });
+      navigate("/dashboard");
+      window.location.reload();
+    } catch {
+      completionFired.current = false; // allow retry
+      toast.error("Failed to complete onboarding. Please try again.");
+    }
+  }, [partner, user, completeOnboarding, navigate]);
 
   useEffect(() => {
-    if (partner && wallet && campaign) {
-      completeOnboarding({ partnerId: partner._id });
-      navigate("/dashboard");
-      window.location.reload(); 
+    if (state.completed.every(Boolean)) {
+      handleAllDone();
     }
-  }, [wallet, campaign, partner, completeOnboarding, navigate]);
+  }, [state.completed, handleAllDone]);
 
-  const handleSkip = async () => {
-    if (!partner?._id) return;
-    await completeOnboarding({ partnerId: partner._id });
-    navigate("/dashboard");
-    window.location.reload(); 
-  };
+  const statuses = computeStatuses(state.completed);
+
+  const handleGo = (id: StepId) => dispatch({ type: "OPEN_MODAL", id });
+  const handleSkip = (index: number) => dispatch({ type: "COMPLETE_STEP", index });
+  const handleCloseModal = () => dispatch({ type: "CLOSE_MODAL" });
+
+  const handleStep4Complete = () => dispatch({ type: "COMPLETE_STEP", index: 3 });
+  const handleStep5Complete = () => dispatch({ type: "COMPLETE_STEP", index: 4 });
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-background text-foreground px-4 sm:px-0">
-      <div className="w-full max-w-xl space-y-6">
-        <div className="text-center">
-          <h1 className="text-2xl font-semibold">Welcome to Sqooli</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Complete the following steps to activate your profile
-          </p>
-        </div>
-
-        {/* === Step 1: Wallet Setup === */}
-        <Card
-          className={`rounded-xl border p-5 transition ${
-            wallet ? "bg-green-50 border-green-200" : "hover:bg-muted border-border"
-          }`}
-        >
-          <div className="flex items-center justify-between w-full">
-            {/* Number + Text */}
-            <div className="flex items-center space-x-4">
-              <span className="text-lg font-semibold text-gray-400">1</span>
-              <div>
-                <p className="font-medium text-foreground">Setup Wallet</p>
-                <p className="text-sm text-muted-foreground">
-                  Setup your wallet payment methods for future withdrawals of your
-                  earnings.
-                </p>
-              </div>
-            </div>
-
-            {/* Go / Check */}
-            {wallet ? (
-              <CheckCircle className="text-green-500 h-6 w-6 animate-fadeIn" />
-            ) : (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => setWalletOpen(true)}
-                className="ml-4 whitespace-nowrap"
-              >
-                Go
-                <ArrowRight className="ml-1 h-4 w-4" />
-              </Button>
-            )}
+    <DashboardLayout activeItem="dashboard" title="Dashboard">
+      <div className="min-h-full px-4 py-8 sm:px-8 lg:px-16">
+        <div className="max-w-2xl mx-auto space-y-8">
+          {/* Heading */}
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">Welcome to Sqooli</h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              Complete the following steps to activate your profile
+            </p>
           </div>
-        </Card>
 
-        {/* === Step 2: Create Campaign === */}
-        <Card
-          className={`rounded-xl border p-5 transition ${
-            campaign ? "bg-blue-50 border-blue-200" : "hover:bg-muted border-border"
-          }`}
-        >
-          <div className="flex items-center justify-between w-full">
-            <div className="flex items-center space-x-4">
-              <span className="text-lg font-semibold text-gray-400">2</span>
-              <div>
-                <p className="font-medium text-foreground">Create Campaign</p>
-                <p className="text-sm text-muted-foreground">
-                  Create a campaign and share with your audience to start earning.
-                </p>
-              </div>
-            </div>
+          {/* Step list */}
+          <div className="rounded-xl border border-border bg-card overflow-hidden divide-y divide-border">
+            {STEPS.map((step, index) => {
+                const status = statuses[index];
+                const isActive = status === "active";
+                const isDone = status === "completed";
 
-            {campaign ? (
-              <CheckCircle className="text-blue-500 h-6 w-6 animate-fadeIn" />
-            ) : (
-              <Button
-                size="sm"
-                variant="outline"
-                className="ml-4 whitespace-nowrap"
-                onClick={() => setCampaignOpen(true)}
-              >
-                Go
-                <ArrowRight className="ml-1 h-4 w-4" />
-              </Button>
-            )}
+                const displayTitle =
+                  isActive && step.activeTitle ? step.activeTitle : step.title;
+
+                return (
+                  <motion.div
+                    key={step.id}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.25, delay: index * 0.05 }}
+                    className={[
+                      "flex items-center gap-4 px-5 py-5 transition-colors",
+                      isActive
+                        ? "bg-blue-50/50 dark:bg-blue-950/20"
+                        : isDone
+                        ? "bg-background"
+                        : "bg-background opacity-60",
+                      !isDone && "hover:bg-muted/30",
+                    ]
+                      .filter(Boolean)
+                      .join(" ")}
+                  >
+                    {/* Step indicator */}
+                    <div className="shrink-0">
+                      {isDone ? (
+                        <motion.div
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          transition={{ type: "spring", stiffness: 250, damping: 18 }}
+                          className="w-9 h-9 rounded-full bg-green-500 flex items-center justify-center"
+                        >
+                          <Check className="h-5 w-5 text-white stroke-[2.5]" />
+                        </motion.div>
+                      ) : isActive ? (
+                        <div className="w-9 h-9 rounded-full bg-blue-100 dark:bg-blue-900/40 border-2 border-blue-300 dark:border-blue-700 flex items-center justify-center">
+                          <span className="text-sm font-semibold text-blue-600 dark:text-blue-400">
+                            {index + 1}
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="w-9 h-9 rounded-full bg-muted border border-border flex items-center justify-center">
+                          <span className="text-sm font-semibold text-muted-foreground">
+                            {index + 1}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Title + description */}
+                    <div className="flex-1 min-w-0">
+                      <p
+                        className={[
+                          "text-sm font-semibold leading-snug",
+                          isDone || isActive ? "text-foreground" : "text-muted-foreground",
+                        ].join(" ")}
+                      >
+                        {displayTitle}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+                        {step.description}
+                      </p>
+                    </div>
+
+                    {/* Right action */}
+                    <div className="shrink-0 flex items-center gap-2">
+                      {isActive ? (
+                        <>
+                          <button
+                            onClick={() => handleSkip(index)}
+                            className="text-xs text-muted-foreground hover:text-foreground underline-offset-2 hover:underline transition-colors"
+                          >
+                            Skip
+                          </button>
+                          <Button
+                            size="sm"
+                            onClick={() => handleGo(step.id)}
+                            className="h-8 px-4 text-xs font-semibold rounded-lg"
+                          >
+                            Go
+                          </Button>
+                        </>
+                      ) : (
+                        <ChevronRight
+                          className={[
+                            "h-4 w-4",
+                            isDone ? "text-muted-foreground" : "text-muted-foreground/40",
+                          ].join(" ")}
+                        />
+                      )}
+                    </div>
+                  </motion.div>
+                );
+              })}
           </div>
-        </Card>
-
-        {/* === Step 3: Add Users === */}
-        <Card className="rounded-xl border border-border p-5 opacity-70">
-          <div className="flex items-center justify-between w-full">
-            <div className="flex items-center space-x-4">
-              <span className="text-lg font-semibold text-gray-400">3</span>
-              <div>
-                <p className="font-medium text-foreground">Add Users</p>
-                <p className="text-sm text-muted-foreground">
-                  Invite other users with different roles to your account.
-                </p>
-              </div>
-            </div>
-            <Badge variant="secondary" className="whitespace-nowrap">
-              Coming Soon
-            </Badge>
-          </div>
-        </Card>
-
-        {/* === Step 4: Two-Factor Auth === */}
-        <Card className="rounded-xl border border-border p-5 opacity-70">
-          <div className="flex items-center justify-between w-full">
-            <div className="flex items-center space-x-4">
-              <span className="text-lg font-semibold text-gray-400">4</span>
-              <div>
-                <p className="font-medium text-foreground">
-                  Two Factor Authentication Setup
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  Setup your contact details for two-factor authentication.
-                </p>
-              </div>
-            </div>
-            <Badge variant="secondary" className="whitespace-nowrap">
-              Coming Soon
-            </Badge>
-          </div>
-        </Card>
-
-        {/* Skip */}
-        <div className="flex justify-center pt-4">
-          <Button
-            variant="outline"
-            onClick={handleSkip}
-            className="text-muted-foreground border-border hover:bg-primary hover:text-primary-foreground"
-          >
-            Skip for now
-          </Button>
         </div>
       </div>
 
-      {/* Dialogs */}
-      { partner?._id && user && isConvexUser(user) && (
+      {/* ── Modals ─────────────────────────────────────────────────── */}
+
+      {/* Step 1: Wallet — completes automatically when wallet query returns data */}
+      {partner?._id && user && isConvexUser(user) && (
         <WalletSetupDialog
-        open={walletOpen}
-        onClose={() => setWalletOpen(false)}
-        partnerId={partner?._id as Id<"partners">}
-        userId={user._id}
-      />
+          open={state.openModal === "wallet"}
+          onClose={handleCloseModal}
+          partnerId={partner._id as Id<"partners">}
+          userId={user._id}
+        />
       )}
-      
+
+      {/* Step 2: Campaign — completes automatically when campaign query returns data */}
       {partner?._id && user && isConvexUser(user) && (
         <CreateCampaignWizard
-          open={campaignOpen}
-          onClose={() => setCampaignOpen(false)}
+          open={state.openModal === "campaign"}
+          onClose={handleCloseModal}
           partnerId={partner._id}
           user_id={user._id}
         />
       )}
-    </div>
+
+      {/* Step 3: Add Users — optional; closing just dismisses, Skip button advances */}
+      {partner?._id && (
+        <AddUserDialog
+          open={state.openModal === "users"}
+          onOpenChange={(o) => { if (!o) handleCloseModal(); }}
+          partnerIdOverride={partner._id as Id<"partners">}
+        />
+      )}
+
+      {/* Step 4: 2FA */}
+      <TwoFactorModal
+        open={state.openModal === "2fa"}
+        onClose={handleCloseModal}
+        onComplete={handleStep4Complete}
+        defaultEmail={user?.email ?? ""}
+        defaultPhone={user?.phone ?? ""}
+      />
+
+      {/* Step 5: Social Media */}
+      <SocialMediaModal
+        open={state.openModal === "social"}
+        onClose={handleCloseModal}
+        onComplete={handleStep5Complete}
+      />
+    </DashboardLayout>
   );
 }

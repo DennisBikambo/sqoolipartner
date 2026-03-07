@@ -220,7 +220,6 @@ export const login = mutation({
 
     await ctx.db.patch(user._id, {
       last_login: new Date().toISOString(),
-      is_first_login: false,
     });
 
     

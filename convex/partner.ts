@@ -45,9 +45,10 @@ export const getByEmail = query({
 
 
 export const completeOnboarding = mutation({
-  args: { partnerId: v.id("partners") },
+  args: { partnerId: v.id("partners"), userId: v.id("users") },
   handler: async (ctx, args) => {
     await ctx.db.patch(args.partnerId, { is_first_login: false });
+    await ctx.db.patch(args.userId, { is_first_login: false });
   },
 });
 
