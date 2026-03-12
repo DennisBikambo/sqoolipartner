@@ -53,7 +53,7 @@ function formatCompact(num: number): string {
 }
 
 export default function DashboardSection({
-  activeItem,
+  // activeItem,
   setActiveItem,
 }: {
   activeItem?: string;
