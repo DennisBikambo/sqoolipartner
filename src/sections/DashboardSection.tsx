@@ -6,45 +6,23 @@ import { api } from "../../convex/_generated/api";
 import { useQuery } from "convex/react";
 import { isConvexUser } from "../types/auth.types";
 import type { DashboardCampaign } from "../types/global.types";
-import type { Doc, Id } from "../../convex/_generated/dataModel";
+import type { Id } from "../../convex/_generated/dataModel";
 import { Card, CardContent } from "../components/ui/card";
-import { Button } from "../components/ui/button";
 import {
-  AreaChart,
-  Area,
+  LineChart,
+  Line,
   XAxis,
   YAxis,
-  CartesianGrid,
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
-import {
-  Lock,
-  AlertCircle,
-  TrendingDown,
-  DollarSign,
-  Users,
-  Target,
-  Zap,
-  Calendar,
-  Download,
-  TrendingUp,
-  Edit,
-} from "lucide-react";
+import { Lock, AlertCircle } from "lucide-react";
 import SuperAdminDashboard from "../components/common/SuperAdminDashboard";
-import { WalletSetupDialog } from "../components/common/WalletSetUp";
-import { WithdrawalDialog } from "../components/common/WithdrawalDialog";
-import { WalletEditDialog } from "../components/common/WalletEditDialog";
+import Wallet from "../components/common/Wallet";
 import CreateCampaignWizard from "../components/common/CreateCampaign";
 import CreateProgramDialog from "../components/common/CreateProgramDialog";
 import { PermissionWrapper } from "../components/common/PermissionWrapper";
 import { formatCurrency, getAvatarColor } from "../utils/formatters";
-
-function maskString(str: string, showStart = 2, showEnd = 4): string {
-  if (!str) return "";
-  if (str.length <= showStart + showEnd) return str;
-  return `${str.slice(0, showStart)}${"*".repeat(str.length - showStart - showEnd)}${str.slice(-showEnd)}`;
-}
 
 function formatCompact(num: number): string {
   if (num >= 1_000_000) return `${(num / 1_000_000).toFixed(1)}M`;
@@ -52,8 +30,72 @@ function formatCompact(num: number): string {
   return num.toString();
 }
 
+// ── Custom Icons ──────────────────────────────────────────────────────────────
+
+const MoneybagIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 36 36" fill="none">
+    <ellipse cx="18" cy="24" rx="12" ry="10" fill="#f97316"/>
+    <path d="M12 24 C12 18 24 18 24 24" fill="#f97316"/>
+    <rect x="13" y="8" width="10" height="7" rx="3" fill="#fb923c"/>
+    <path d="M14 8 Q18 2 22 8" fill="none" stroke="#f97316" strokeWidth="2" strokeLinecap="round"/>
+    <text x="18" y="28" textAnchor="middle" fontSize="9" fontWeight="bold" fill="white">$</text>
+  </svg>
+);
+
+const SendIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="22" y1="2" x2="11" y2="13"/>
+    <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+  </svg>
+);
+
+const RefreshIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f97316" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="23 4 23 10 17 10"/>
+    <polyline points="1 20 1 14 7 14"/>
+    <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
+  </svg>
+);
+
+const DropIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 2.69l5.66 5.66a8 8 0 11-11.31 0z"/>
+  </svg>
+);
+
+const ClockIcon = () => (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="10"/>
+    <polyline points="12 6 12 12 16 14"/>
+  </svg>
+);
+
+const ArrowUpIcon = () => (
+  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="12" y1="19" x2="12" y2="5"/>
+    <polyline points="5 12 12 5 19 12"/>
+  </svg>
+);
+
+const CalIcon = () => (
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="4" width="18" height="18" rx="2"/>
+    <line x1="16" y1="2" x2="16" y2="6"/>
+    <line x1="8" y1="2" x2="8" y2="6"/>
+    <line x1="3" y1="10" x2="21" y2="10"/>
+  </svg>
+);
+
+const ChevronDownIcon = () => (
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="6 9 12 15 18 9"/>
+  </svg>
+);
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 export default function DashboardSection({
-  // activeItem,
+  activeItem,
   setActiveItem,
 }: {
   activeItem?: string;
@@ -63,9 +105,6 @@ export default function DashboardSection({
   const { hasPermission, userRole } = usePermissions();
 
   const [chartTab, setChartTab] = useState<"earnings" | "withdrawals" | "engagements">("earnings");
-  const [withdrawalOpen, setWithdrawalOpen] = useState(false);
-  const [walletSetupOpen, setWalletSetupOpen] = useState(false);
-  const [editWalletOpen, setEditWalletOpen] = useState(false);
   const [showCreateWizard, setShowCreateWizard] = useState(false);
   const [showCreateProgramDialog, setShowCreateProgramDialog] = useState(false);
 
@@ -76,11 +115,6 @@ export default function DashboardSection({
   const canCreateCampaigns = hasPermission("campaigns.write");
 
   const partnerId = partner?._id as Id<"partners"> | undefined;
-
-  const wallet = useQuery(
-    api.wallet.getWalletByPartnerId,
-    partnerId ? { partner_id: partnerId } : "skip"
-  ) as Doc<"wallets"> | null | undefined;
 
   const campaigns = useQuery(
     api.campaign.getCampaignsByPartner,
@@ -120,9 +154,7 @@ export default function DashboardSection({
               <div className="h-12 w-12 rounded-full bg-destructive/10 flex items-center justify-center">
                 <Lock className="h-6 w-6 text-destructive" />
               </div>
-              <div>
-                <h3 className="text-lg font-semibold text-foreground">Dashboard Access Restricted</h3>
-              </div>
+              <h3 className="text-lg font-semibold text-foreground">Dashboard Access Restricted</h3>
             </div>
             <div className="flex items-start gap-2 text-sm text-muted-foreground">
               <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
@@ -143,17 +175,14 @@ export default function DashboardSection({
   const ongoingCampaigns = campaigns?.filter((c) => c.status === "active").length ?? 0;
   const totalEngagements = campaignEarnings?.reduce((s, c) => s + c.enrollments, 0) ?? 0;
   const totalWithdrawn = withdrawalStats?.total_completed ?? 0;
-  const isWalletActive = wallet?.is_setup_complete === true;
 
   // Chart data by tab
   const getChartData = (): { formatted_date: string; amount: number }[] => {
-    if (chartTab === "earnings") return (earningsTimeline as { formatted_date: string; amount: number }[] | undefined) ?? [];
+    if (chartTab === "earnings")
+      return (earningsTimeline as { formatted_date: string; amount: number }[] | undefined) ?? [];
     if (chartTab === "withdrawals") {
       return (withdrawalStats?.recent_withdrawals ?? []).map((w) => ({
-        formatted_date: new Date(w._creationTime).toLocaleDateString("en-GB", {
-          day: "2-digit",
-          month: "short",
-        }),
+        formatted_date: new Date(w._creationTime).toLocaleDateString("en-GB", { day: "2-digit", month: "short" }),
         amount: w.amount,
       }));
     }
@@ -162,323 +191,174 @@ export default function DashboardSection({
 
   const chartData = getChartData();
 
-  const getLogAvatarColor = (id: string) => getAvatarColor(id);
-
   const chartTabConfig = [
-    { key: "earnings" as const, label: "Earnings", value: formatCurrency(totalEarnings) },
+    { key: "earnings" as const,    label: "Earnings",    value: formatCurrency(totalEarnings) },
     { key: "withdrawals" as const, label: "Withdrawals", value: formatCurrency(totalWithdrawn) },
     { key: "engagements" as const, label: "Engagements", value: formatCompact(totalEngagements) },
   ];
+  const activeTabIdx = chartTabConfig.findIndex((t) => t.key === chartTab);
+
+  const recentLogs = auditLogs ? [...auditLogs].reverse().slice(0, 10) : [];
 
   return (
-    <div className="p-6 space-y-6">
-      {/* ===== TOP ACTION ROW ===== */}
-      <div className="flex items-center justify-end gap-3">
-        {isConvexUser(user) && user.role === "super_admin" && (
-          <Button variant="outline" onClick={() => setShowCreateProgramDialog(true)}>
-            + New Program
-          </Button>
-        )}
-        {canCreateCampaigns && (
-          <Button
-            className="bg-primary text-primary-foreground hover:bg-primary/90"
-            onClick={() => setShowCreateWizard(true)}
-          >
-            + New Campaign
-          </Button>
-        )}
-      </div>
+    <div style={{ padding: "24px", background: "#f9fafb", minHeight: "100%" }}>
 
-      {/* ===== WALLET BANNER ===== */}
-      <PermissionWrapper requireRead="wallet" fallback={null}>
-        {/* Outer tinted container */}
-        <div className="rounded-xl p-4" style={{ backgroundColor: "#EFF3F8" }}>
-          <div className="flex items-center gap-6">
-
-            {/* ── Zone 1: Gradient balance card ── */}
-            <div
-              className="relative rounded-xl overflow-hidden flex-shrink-0 flex flex-col justify-between"
-              style={{
-                background: "linear-gradient(to right, #1E1B4B, #6366F1)",
-                width: 240,
-                minHeight: 110,
-                padding: "18px 20px",
-              }}
-            >
-              {/* Watermark wallet icon — front-facing billfold with clasp */}
-              <svg
-                className="absolute bottom-2 right-2"
-                style={{ opacity: 0.35, width: 68, height: 68 }}
-                viewBox="0 0 64 64"
-                fill="none"
-                stroke="white"
-                strokeWidth={2}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
-              >
-                {/* Wallet body */}
-                <rect x="8" y="16" width="48" height="40" rx="8" ry="8" />
-                {/* Top flap / clasp tab */}
-                <path d="M24 16 V12 Q24 4 32 4 Q40 4 40 12 V16" />
-                {/* Horizontal seam */}
-                <line x1="8" y1="30" x2="56" y2="30" />
-                {/* Clasp circle — filled white at same opacity */}
-                <circle cx="32" cy="16" r="3" fill="white" stroke="none" />
-              </svg>
-
-              <p className="text-white/75 text-xs font-medium tracking-wide relative z-10">
-                Wallet Balance
-              </p>
-              <p className="text-white text-2xl font-bold mt-3 relative z-10">
-                {isWalletActive
-                  ? `KES ${(wallet?.balance ?? 0).toLocaleString("en-KE", {
-                      minimumFractionDigits: 2,
-                    })}`
-                  : "KES 0.00"}
-              </p>
-            </div>
-
-            {/* ── Zone 2 + Zone 3: Right content ── */}
-            <div className="flex-1 flex items-center justify-between gap-6 min-w-0">
-              {!isWalletActive ? (
-                /* Empty state */
-                <>
-                  <p className="text-sm text-gray-600 dark:text-muted-foreground">
-                    Activate Wallet to withdraw your earnings
-                  </p>
-                  <Button
-                    className="bg-red-500 hover:bg-red-600 text-white rounded-lg px-6 flex-shrink-0"
-                    onClick={() => setWalletSetupOpen(true)}
-                  >
-                    Activate Wallet
-                  </Button>
-                </>
-              ) : (
-                /* Activated state */
-                <>
-                  {/* Zone 2: M-Pesa badge + masked details */}
-                  <div className="flex items-center gap-4 min-w-0">
-                    {/* Green M-Pesa chip */}
-                    <div className="flex items-center gap-1.5 bg-green-100 dark:bg-green-900/30 rounded-lg px-3 py-1.5 flex-shrink-0">
-                      <div className="h-5 w-5 bg-green-600 rounded flex items-center justify-center">
-                        <span className="text-white text-[11px] font-bold leading-none">M</span>
-                      </div>
-                      <span className="text-xs text-green-700 dark:text-green-400 font-semibold">
-                        Paybill
-                      </span>
-                    </div>
-
-                    {/* Masked details */}
-                    <div className="space-y-1 min-w-0">
-                      {wallet?.paybill_number && (
-                        <p className="text-sm text-gray-700 dark:text-foreground">
-                          Paybill:{" "}
-                          <span className="font-mono">
-                            {maskString(wallet.paybill_number, 2, 1)}
-                          </span>
-                        </p>
-                      )}
-                      <p className="text-sm text-gray-700 dark:text-foreground">
-                        Account No:{" "}
-                        <span className="font-mono">
-                          {maskString(wallet?.account_number ?? "", 2, 4)}
-                        </span>
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Zone 3: Edit + Withdraw */}
-                  <div className="flex items-center gap-3 flex-shrink-0">
-                    <button
-                      onClick={() => setEditWalletOpen(true)}
-                      title="Edit payment method"
-                      className="h-9 w-9 rounded-lg border border-gray-300 dark:border-border flex items-center justify-center text-gray-500 hover:text-gray-700 hover:bg-white dark:hover:bg-muted transition-colors"
-                    >
-                      <Edit className="h-4 w-4" />
-                    </button>
-                    <Button
-                      className="bg-blue-500 hover:bg-blue-600 text-white rounded-lg px-5 h-10"
-                      onClick={() => setWithdrawalOpen(true)}
-                    >
-                      <Download className="h-4 w-4 mr-2" />
-                      Withdraw
-                    </Button>
-                  </div>
-                </>
-              )}
+      {/* ── Header ── */}
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "18px" }}>
+        <h1 style={{ fontSize: "18px", fontWeight: 700, color: "#111827", margin: 0 }}>Dashboard</h1>
+        <div style={{ display: "flex", alignItems: "flex-start", gap: "6px" }}>
+          <div style={{ marginTop: "2px" }}><CalIcon /></div>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "2px" }}>
+            <span style={{ fontSize: "11px", color: "#6b7280" }}>12 Jan 2026 – 13 Feb 2026</span>
+            <div style={{ display: "flex", alignItems: "center", gap: "3px", cursor: "pointer" }}>
+              <span style={{ fontSize: "11px", fontWeight: 600, color: "#374151" }}>Last 28 Days</span>
+              <ChevronDownIcon />
             </div>
           </div>
         </div>
+      </div>
+
+      {/* ── Wallet Card (from commons/Wallet.tsx) ── */}
+      <PermissionWrapper requireRead="wallet" fallback={null}>
+        <div style={{ marginBottom: "16px" }}>
+          <Wallet activeItem={activeItem ?? "dashboard"} setActiveItem={setActiveItem} />
+        </div>
       </PermissionWrapper>
 
-      {/* ===== TWO-COLUMN LAYOUT: Stats+Chart | Sidebar ===== */}
-      <div className="flex gap-6 items-start">
+      {/* ── Main 2-col grid ── */}
+      <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "14px" }}>
 
-        {/* ── LEFT column (~65%): Stats card + Chart card ── */}
-        <div className="flex-[2] min-w-0 space-y-5">
+        {/* LEFT column */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
 
-          {/* STATS — single unified card */}
-          <div
-            className="rounded-xl overflow-hidden"
-            style={{ border: "1px solid #E5E7EB" }}
-          >
-            {/* Top row: Total Earnings (full width) */}
+          {/* EARNINGS + STATS PANEL */}
+          <div style={{
+            background: "#fff", borderRadius: "12px", border: "1px solid #f3f4f6",
+            padding: "16px 18px", boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
+          }}>
+            {/* Total Earnings */}
             <PermissionWrapper
               permissionKey="dashboard.admin"
               fallback={
-                <div className="px-6 py-5" style={{ borderBottom: "1px solid #E5E7EB" }}>
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="h-9 w-9 rounded-full bg-amber-100 dark:bg-amber-900/20 flex items-center justify-center flex-shrink-0">
-                      <DollarSign className="h-4 w-4 text-amber-600" />
+                <div style={{ marginBottom: "14px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "4px" }}>
+                    <div style={{ width: "30px", height: "30px", borderRadius: "8px", background: "#ffedd5", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <MoneybagIcon />
                     </div>
-                    <p className="text-sm text-muted-foreground">Total Earnings</p>
+                    <span style={{ fontSize: "11px", color: "#9ca3af" }}>Total Earnings</span>
                   </div>
-                  <p className="text-2xl font-bold text-muted-foreground blur-sm select-none">
-                    KES ••••
-                  </p>
+                  <div style={{ paddingLeft: "24px" }}>
+                    <span style={{ fontSize: "16px", fontWeight: 700, color: "#9ca3af", filter: "blur(4px)", userSelect: "none" }}>KES ••••</span>
+                  </div>
                 </div>
               }
             >
-              <div className="px-6 py-5 bg-card" style={{ borderBottom: "1px solid #E5E7EB" }}>
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="h-9 w-9 rounded-full bg-amber-100 dark:bg-amber-900/20 flex items-center justify-center flex-shrink-0">
-                    <DollarSign className="h-4 w-4 text-amber-600" />
+              <div style={{ marginBottom: "14px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "4px" }}>
+                  <div style={{ width: "30px", height: "30px", borderRadius: "8px", background: "#ffedd5", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <MoneybagIcon />
                   </div>
-                  <p className="text-sm text-muted-foreground">Total Earnings</p>
+                  <span style={{ fontSize: "11px", color: "#9ca3af" }}>Total Earnings</span>
                 </div>
-                <p className="text-2xl font-bold text-foreground">{formatCurrency(totalEarnings)}</p>
-                {/* Subtext only when there is real earnings data */}
-                {totalEarnings > 0 && (
-                  <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
-                    <TrendingUp className="h-3 w-3" />
-                    <span>↑ since last month</span>
-                  </p>
-                )}
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", paddingLeft: "24px" }}>
+                  <span style={{ fontSize: "16px", fontWeight: 700, color: "#111827" }}>
+                    {formatCurrency(totalEarnings)}
+                  </span>
+                  {totalEarnings > 0 && (
+                    <span style={{
+                      display: "flex", alignItems: "center", gap: "3px",
+                      fontSize: "10px", color: "#16a34a", fontWeight: 600,
+                      background: "#dcfce7", padding: "2px 7px", borderRadius: "999px",
+                    }}>
+                      <ArrowUpIcon />
+                      10% since last month
+                    </span>
+                  )}
+                </div>
               </div>
             </PermissionWrapper>
 
-            {/* Bottom row: 3 stats with vertical dividers */}
-            <div className="grid grid-cols-3 bg-card" style={{ borderTop: 0 }}>
-              {/* Total Campaigns */}
-              <div className="px-6 py-5" style={{ borderRight: "1px solid #E5E7EB" }}>
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="h-9 w-9 rounded-full bg-blue-100 dark:bg-blue-900/20 flex items-center justify-center flex-shrink-0">
-                    <Target className="h-4 w-4 text-blue-600" />
-                  </div>
-                  <p className="text-xs text-muted-foreground">Total Campaigns</p>
-                </div>
-                <p className="text-2xl font-bold text-foreground">{totalCampaigns}</p>
-              </div>
+            <div style={{ borderTop: "1px solid #f3f4f6", marginBottom: "14px" }}/>
 
-              {/* Ongoing Campaigns */}
-              <div className="px-6 py-5" style={{ borderRight: "1px solid #E5E7EB" }}>
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="h-9 w-9 rounded-full bg-amber-100 dark:bg-amber-900/20 flex items-center justify-center flex-shrink-0">
-                    <Zap className="h-4 w-4 text-amber-500" />
-                  </div>
-                  <p className="text-xs text-muted-foreground">Ongoing Campaigns</p>
+            {/* 3-col stats */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
+                <div style={{ width: "30px", height: "30px", borderRadius: "8px", background: "#dbeafe", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <SendIcon />
                 </div>
-                <p className="text-2xl font-bold text-foreground">{ongoingCampaigns}</p>
+                <span style={{ fontSize: "11px", color: "#9ca3af", marginTop: "3px" }}>Total Campaigns</span>
+                <span style={{ fontSize: "16px", fontWeight: 700, color: "#111827" }}>{totalCampaigns}</span>
               </div>
-
-              {/* Engagements */}
-              <div className="px-6 py-5">
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="h-9 w-9 rounded-full bg-green-100 dark:bg-green-900/20 flex items-center justify-center flex-shrink-0">
-                    <Users className="h-4 w-4 text-green-600" />
-                  </div>
-                  <p className="text-xs text-muted-foreground">Engagements</p>
+              <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
+                <div style={{ width: "30px", height: "30px", borderRadius: "8px", background: "#ffedd5", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <RefreshIcon />
                 </div>
-                <p className="text-2xl font-bold text-foreground">{formatCompact(totalEngagements)}</p>
+                <span style={{ fontSize: "11px", color: "#9ca3af", marginTop: "3px" }}>Ongoing Campaigns</span>
+                <span style={{ fontSize: "16px", fontWeight: 700, color: "#111827" }}>{ongoingCampaigns}</span>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
+                <div style={{ width: "30px", height: "30px", borderRadius: "8px", background: "#dcfce7", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <DropIcon />
+                </div>
+                <span style={{ fontSize: "11px", color: "#9ca3af", marginTop: "3px" }}>Engagements</span>
+                <span style={{ fontSize: "16px", fontWeight: 700, color: "#111827" }}>{formatCompact(totalEngagements)}</span>
               </div>
             </div>
           </div>
 
-          {/* CHART — tabbed */}
+          {/* CHART PANEL */}
           <PermissionWrapper permissionKey="dashboard.read" fallback={null}>
-            <div className="rounded-xl overflow-hidden bg-card" style={{ border: "1px solid #E5E7EB" }}>
-              {/* Tab headers */}
-              <div className="flex px-6 pt-4 overflow-x-auto" style={{ borderBottom: "1px solid #E5E7EB" }}>
-                {chartTabConfig.map(({ key, label, value }) => (
+            <div style={{ background: "#f9fafb", borderRadius: "12px", overflow: "hidden" }}>
+              {/* Tab strip with sliding indicator */}
+              <div style={{ position: "relative", display: "grid", gridTemplateColumns: "1fr 1fr 1fr", paddingTop: "4px" }}>
+                <div style={{
+                  position: "absolute", top: "4px", bottom: "-1px",
+                  left: `${activeTabIdx * 33.333}%`, width: "33.333%",
+                  background: "#fff", borderRadius: "8px 8px 0 0",
+                  transition: "left 0.22s cubic-bezier(0.4,0,0.2,1)",
+                  zIndex: 1, pointerEvents: "none",
+                }}/>
+                {chartTabConfig.map((t) => (
                   <button
-                    key={key}
-                    className={`pb-3 mr-8 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
-                      chartTab === key
-                        ? "border-blue-500 text-blue-600"
-                        : "border-transparent text-muted-foreground hover:text-foreground"
-                    }`}
-                    onClick={() => setChartTab(key)}
+                    key={t.key}
+                    onClick={() => setChartTab(t.key)}
+                    style={{
+                      position: "relative", zIndex: 2,
+                      background: "transparent", border: "none", cursor: "pointer",
+                      padding: "10px 14px 12px", textAlign: "left",
+                    }}
                   >
-                    {label}
-                    <span className="ml-2 text-xs font-normal text-muted-foreground">{value}</span>
+                    <div style={{ fontSize: "10px", color: "#9ca3af", marginBottom: "3px" }}>{t.label}</div>
+                    <div style={{ fontSize: "13px", fontWeight: 700, color: chartTab === t.key ? "#111827" : "#6b7280" }}>
+                      {t.value}
+                    </div>
                   </button>
                 ))}
               </div>
-
-              <div className="p-6">
+              {/* Chart area */}
+              <div style={{ background: "#fff", borderRadius: "0 0 12px 12px", padding: "14px 18px 16px" }}>
                 {chartData.length > 0 ? (
-                  <div className="h-72">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={chartData}>
-                        <defs>
-                          <linearGradient id="chartFill" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#60A5FA" stopOpacity={0.3} />
-                            <stop offset="95%" stopColor="#60A5FA" stopOpacity={0} />
-                          </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" vertical={false} />
-                        <XAxis
-                          dataKey="formatted_date"
-                          tick={{ fontSize: 11, fill: "#9CA3AF" }}
-                          tickLine={false}
-                          axisLine={false}
-                        />
-                        <YAxis
-                          tick={{ fontSize: 11, fill: "#9CA3AF" }}
-                          tickLine={false}
-                          axisLine={false}
-                          tickFormatter={(v) =>
-                            chartTab === "engagements"
-                              ? formatCompact(v)
-                              : `${(v / 1000).toFixed(0)}K`
-                          }
-                        />
-                        <Tooltip
-                          contentStyle={{
-                            backgroundColor: "#fff",
-                            border: "1px solid #E5E7EB",
-                            borderRadius: "8px",
-                            fontSize: "12px",
-                          }}
-                          formatter={(value: number) => [
-                            chartTab === "engagements"
-                              ? formatCompact(value)
-                              : formatCurrency(value),
-                            chartTab === "earnings"
-                              ? "Earnings"
-                              : chartTab === "withdrawals"
-                              ? "Withdrawals"
-                              : "Engagements",
-                          ]}
-                        />
-                        <Area
-                          type="monotone"
-                          dataKey="amount"
-                          stroke="#60A5FA"
-                          strokeWidth={2}
-                          fill="url(#chartFill)"
-                          dot={false}
-                          activeDot={{ r: 4, fill: "#60A5FA" }}
-                        />
-                      </AreaChart>
-                    </ResponsiveContainer>
-                  </div>
+                  <ResponsiveContainer width="100%" height={155}>
+                    <LineChart data={chartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+                      <XAxis dataKey="formatted_date" tick={{ fontSize: 10, fill: "#9ca3af" }} axisLine={false} tickLine={false}/>
+                      <YAxis
+                        tick={{ fontSize: 10, fill: "#9ca3af" }}
+                        axisLine={false} tickLine={false}
+                        tickFormatter={(v) => chartTab === "engagements" ? formatCompact(v) : `${(v / 1000).toFixed(0)}k`}
+                      />
+                      <Tooltip
+                        contentStyle={{ fontSize: 11, borderRadius: 8, border: "1px solid #e5e7eb" }}
+                        formatter={(value: number) => [
+                          chartTab === "engagements" ? formatCompact(value) : formatCurrency(value),
+                          chartTab === "earnings" ? "Earnings" : chartTab === "withdrawals" ? "Withdrawals" : "Engagements",
+                        ]}
+                      />
+                      <Line type="monotone" dataKey="amount" stroke="#22d3ee" strokeWidth={2} dot={false} activeDot={{ r: 4, fill: "#22d3ee" }}/>
+                    </LineChart>
+                  </ResponsiveContainer>
                 ) : (
-                  <div className="h-72 flex flex-col items-center justify-center text-muted-foreground">
-                    <TrendingDown className="h-10 w-10 mb-3 opacity-30" />
-                    <p className="text-sm font-medium">Not enough data to show trend</p>
-                    <p className="text-xs mt-1 opacity-60">Data will appear as you earn</p>
+                  <div style={{ height: "140px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <span style={{ fontSize: "11px", color: "#9ca3af" }}>Not enough data to show trend</span>
                   </div>
                 )}
               </div>
@@ -486,163 +366,85 @@ export default function DashboardSection({
           </PermissionWrapper>
         </div>
 
-        {/* ── RIGHT column (~35%): Upcoming + Activity ── */}
-        <div className="flex-[1] min-w-0 space-y-4">
+        {/* RIGHT column */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
 
-          {/* Upcoming Campaigns */}
-          <div className="rounded-xl overflow-hidden bg-card" style={{ border: "1px solid #E5E7EB" }}>
-            <div className="px-5 py-4 flex items-center gap-2" style={{ borderBottom: "1px solid #E5E7EB" }}>
-              <div className="h-8 w-8 rounded-full bg-blue-100 dark:bg-blue-900/20 flex items-center justify-center flex-shrink-0">
-                <Calendar className="h-4 w-4 text-blue-600" />
-              </div>
-              <p className="text-sm font-semibold text-foreground">Upcoming Campaigns</p>
+          {/* UPCOMING CAMPAIGNS */}
+          <div style={{ borderRadius: "12px", border: "1px solid #ddd6fe", overflow: "hidden", background: "#ede9fe" }}>
+            <div style={{ padding: "12px 14px", display: "flex", alignItems: "center", gap: "6px" }}>
+              <ClockIcon />
+              <span style={{ fontSize: "12px", fontWeight: 600, color: "#374151" }}>Upcoming Campaigns</span>
             </div>
-            <div className="px-5 py-2">
-              {campaigns && campaigns.length > 0 ? (
-                campaigns.slice(0, 5).map((c, i) => (
+            {campaigns && campaigns.length > 0 ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: "8px", padding: "0 10px 12px" }}>
+                {campaigns.slice(0, 5).map((c) => (
                   <div
                     key={c._id}
-                    className="flex items-center justify-between py-3"
-                    style={{ borderBottom: i < Math.min(campaigns.length, 5) - 1 ? "1px solid #F3F4F6" : "none" }}
+                    style={{
+                      background: "#fff", border: "1px solid #e5e7eb", borderRadius: "8px",
+                      padding: "8px 12px", display: "flex", alignItems: "center", gap: "10px",
+                    }}
                   >
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs text-muted-foreground">{c.duration_start}</p>
-                      <p className="text-sm font-medium truncate pr-3">{c.name}</p>
-                    </div>
-                    <span
-                      className={`flex-shrink-0 px-3 py-1 rounded-full text-xs font-medium text-white ${
-                        i % 2 === 0 ? "bg-orange-400" : "bg-pink-500"
-                      }`}
-                    >
-                      {c.status}
-                    </span>
+                    <span style={{ fontSize: "10px", color: "#9ca3af", whiteSpace: "nowrap" }}>{c.duration_start}</span>
+                    <span style={{ fontSize: "11px", fontWeight: 600, color: "#374151", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.name}</span>
                   </div>
-                ))
-              ) : (
-                <p className="text-sm text-muted-foreground text-center py-6">
-                  You have no upcoming campaigns
-                </p>
-              )}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <div style={{ padding: "22px 14px", display: "flex", justifyContent: "center" }}>
+                <span style={{ fontSize: "11px", color: "#9ca3af" }}>You have no upcoming campaigns.</span>
+              </div>
+            )}
           </div>
 
-          {/* Recent Activity */}
-          <div className="rounded-xl overflow-hidden bg-card" style={{ border: "1px solid #E5E7EB" }}>
-            <div className="px-5 py-4 flex items-center justify-between" style={{ borderBottom: "1px solid #E5E7EB" }}>
-              <p className="text-sm font-semibold text-foreground">Recent Activity</p>
+          {/* RECENT ACTIVITY */}
+          <div style={{ background: "#fff", borderRadius: "12px", border: "1px solid #f3f4f6", padding: "14px 16px", flex: 1 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "14px" }}>
+              <span style={{ fontSize: "12px", fontWeight: 600, color: "#374151" }}>Recent Activity</span>
               {auditLogs && auditLogs.length > 5 && (
-                <button className="text-xs text-blue-500 hover:text-blue-600">View All</button>
+                <button style={{ background: "none", border: "none", fontSize: "11px", color: "#06b6d4", cursor: "pointer" }}>
+                  View All
+                </button>
               )}
             </div>
-            <div className="px-5 py-2 max-h-72 overflow-y-auto">
-              {auditLogs && auditLogs.length > 0 ? (
-                [...auditLogs]
-                  .reverse()
-                  .slice(0, 10)
-                  .map((log, i, arr) => (
+            {recentLogs.length > 0 ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                {recentLogs.map((log) => (
+                  <div key={log._id} style={{ display: "flex", alignItems: "flex-start", gap: "8px" }}>
                     <div
-                      key={log._id}
-                      className="flex items-start gap-3 py-3"
-                      style={{ borderBottom: i < arr.length - 1 ? "1px solid #F3F4F6" : "none" }}
+                      style={{ width: "28px", height: "28px", borderRadius: "50%", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}
+                      className={getAvatarColor(log.user_id)}
                     >
-                      <div
-                        className={`h-9 w-9 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0 ${getLogAvatarColor(log.user_id)}`}
-                      >
+                      <span style={{ fontSize: "9px", fontWeight: 700, color: "#fff" }}>
                         {log.entity_type.charAt(0).toUpperCase()}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-foreground truncate capitalize">
-                          {log.entity_type}
-                        </p>
-                        <p className="text-xs text-muted-foreground truncate">{log.action}</p>
-                        {log.details && (
-                          <p className="text-xs text-muted-foreground truncate">{log.details}</p>
-                        )}
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {new Date(log.created_at).toLocaleDateString("en-GB", {
-                            day: "2-digit",
-                            month: "short",
-                            year: "numeric",
-                          })}
-                        </p>
-                      </div>
+                      </span>
                     </div>
-                  ))
-              ) : (
-                <p className="text-sm text-muted-foreground text-center py-6">
-                  No recent activity
-                </p>
-              )}
-            </div>
+                    <div>
+                      <p style={{ margin: 0, fontSize: "11px", lineHeight: 1.4 }}>
+                        <span style={{ color: "#3b82f6", fontWeight: 600, textTransform: "capitalize" }}>{log.entity_type}</span>
+                        {" "}
+                        <span style={{ color: "#6b7280" }}>{log.action}</span>
+                      </p>
+                      {log.details && (
+                        <p style={{ margin: "1px 0 0", fontSize: "10px", color: "#9ca3af" }}>{log.details}</p>
+                      )}
+                      <p style={{ margin: "2px 0 0", fontSize: "9px", color: "#9ca3af" }}>
+                        {new Date(log.created_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "80px" }}>
+                <span style={{ fontSize: "11px", color: "#9ca3af" }}>No recent activity</span>
+              </div>
+            )}
           </div>
         </div>
       </div>
 
-      {/* ===== USER PROFILE CARD (wallet active only) ===== */}
-      {isWalletActive && isConvexUser(user) && (
-        <Card className="border border-border">
-          <CardContent className="p-5">
-            <div className="flex items-center gap-4 flex-wrap">
-              <div
-                className="h-12 w-12 rounded-full flex items-center justify-center text-white text-lg font-bold flex-shrink-0 bg-emerald-500"
-              >
-                {user.name.charAt(0).toUpperCase()}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <p className="font-semibold text-foreground">{user.name}</p>
-                  <span className="px-2 py-0.5 rounded-full bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-400 text-xs font-medium">
-                    Media Partner
-                  </span>
-                </div>
-                {user.phone && (
-                  <p className="text-sm text-muted-foreground">{user.phone}</p>
-                )}
-                <p className="text-sm text-muted-foreground">{user.email}</p>
-              </div>
-              {canCreateCampaigns && (
-                <Button
-                  className="bg-green-500 hover:bg-green-600 text-white rounded-lg flex-shrink-0"
-                  onClick={() => setShowCreateWizard(true)}
-                >
-                  Create Campaign Link
-                </Button>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* ===== DIALOGS ===== */}
-      {partner?._id && (
-        <WalletSetupDialog
-          open={walletSetupOpen}
-          onClose={() => setWalletSetupOpen(false)}
-          partnerId={partner._id as Id<"partners">}
-          userId={isConvexUser(user) ? user._id : (partner._id as unknown as Id<"users">)}
-        />
-      )}
-
-      {partner?._id && wallet && isConvexUser(user) && (
-        <WithdrawalDialog
-          open={withdrawalOpen}
-          onClose={() => setWithdrawalOpen(false)}
-          wallet={wallet}
-          partnerId={partner._id}
-          userId={user._id}
-        />
-      )}
-
-      {partner?._id && wallet && isConvexUser(user) && (
-        <WalletEditDialog
-          open={editWalletOpen}
-          onClose={() => setEditWalletOpen(false)}
-          wallet={wallet}
-          partnerId={partner._id}
-          userId={user._id}
-        />
-      )}
-
+      {/* ── Dialogs ── */}
       {showCreateWizard && partner?._id && canCreateCampaigns && isConvexUser(user) && (
         <CreateCampaignWizard
           partnerId={partner._id}
