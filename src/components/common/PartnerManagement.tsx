@@ -425,6 +425,7 @@ export default function PartnerManagement() {
           confirmLabel={isActivating ? "Activate" : "Deactivate"}
           onConfirm={handleConfirmToggle}
           loading={confirmLoading}
+          variant={isActivating ? "default" : "destructive"}
         />
       </div>
     );
@@ -699,6 +700,7 @@ export default function PartnerManagement() {
         confirmLabel={isActivating ? "Activate" : "Deactivate"}
         onConfirm={handleConfirmToggle}
         loading={confirmLoading}
+        variant={isActivating ? "default" : "destructive"}
       />
     </div>
   );

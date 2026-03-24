@@ -507,23 +507,34 @@ export default function SuperAdminWalletSection() {
       {/* ── WALLET DETAILS DIALOG ─────────────────────────────────────────────── */}
       <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
         <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Wallet Details</DialogTitle>
-            <DialogDescription>{selectedWallet && getPartnerName(selectedWallet.partner_id)}</DialogDescription>
-          </DialogHeader>
+          {/* Header block */}
+          <div className="flex items-center gap-3 p-4 bg-muted/40 rounded-xl mb-1">
+            <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+              <WalletIcon className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <DialogHeader>
+                <DialogTitle className="text-[15px] leading-tight">Wallet Details</DialogTitle>
+                <DialogDescription className="text-xs mt-0.5">
+                  {selectedWallet && getPartnerName(selectedWallet.partner_id)}
+                </DialogDescription>
+              </DialogHeader>
+            </div>
+          </div>
           {selectedWallet && (
-            <div className="grid grid-cols-2 gap-4 text-sm">
+            <div className="grid grid-cols-2 gap-3 text-sm">
               {[
-                { label: "Account Number",   value: selectedWallet.account_number,                          mono: true },
-                { label: "Balance",          value: formatCurrency(selectedWallet.balance),                 accent: "text-secondary" },
-                { label: "Pending",          value: formatCurrency(selectedWallet.pending_balance),         accent: "text-chart-3" },
-                { label: "Lifetime Earnings",value: formatCurrency(selectedWallet.lifetime_earnings) },
-                { label: "Method",           value: selectedWallet.withdrawal_method,                       capitalize: true },
-                { label: "Setup",            value: selectedWallet.is_setup_complete ? "Complete" : "Incomplete" },
+                { label: "Account Number",    value: selectedWallet.account_number,                          mono: true },
+                { label: "Balance",           value: formatCurrency(selectedWallet.balance),                 accent: "text-secondary font-bold" },
+                { label: "Pending Balance",   value: formatCurrency(selectedWallet.pending_balance),         accent: "text-chart-3" },
+                { label: "Lifetime Earnings", value: formatCurrency(selectedWallet.lifetime_earnings) },
+                { label: "Method",            value: selectedWallet.withdrawal_method,                       capitalize: true },
+                { label: "Setup",             value: selectedWallet.is_setup_complete ? "Complete" : "Incomplete",
+                  accent: selectedWallet.is_setup_complete ? "text-secondary" : "text-muted-foreground" },
               ].map(({ label, value, mono, accent, capitalize }) => (
-                <div key={label}>
-                  <p className="text-muted-foreground text-xs mb-0.5">{label}</p>
-                  <p className={`font-semibold ${mono ? 'font-mono text-xs' : ''} ${accent ?? ''} ${capitalize ? 'capitalize' : ''}`}>
+                <div key={label} className="bg-muted/30 rounded-xl p-3">
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1">{label}</p>
+                  <p className={`font-semibold text-foreground ${mono ? 'font-mono text-xs' : ''} ${accent ?? ''} ${capitalize ? 'capitalize' : ''}`}>
                     {value}
                   </p>
                 </div>
@@ -536,29 +547,36 @@ export default function SuperAdminWalletSection() {
       {/* ── APPROVAL DIALOG ───────────────────────────────────────────────────── */}
       <Dialog open={isApprovalOpen} onOpenChange={setIsApprovalOpen}>
         <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Approve Withdrawal</DialogTitle>
-            <DialogDescription>Enter the M-Pesa receipt number to confirm this payment.</DialogDescription>
-          </DialogHeader>
+          {/* Header block */}
+          <div className="flex items-center gap-3 p-4 bg-secondary/10 rounded-xl mb-1">
+            <div className="h-10 w-10 rounded-xl bg-secondary/15 flex items-center justify-center flex-shrink-0">
+              <CheckCircle2 className="h-5 w-5 text-secondary" />
+            </div>
+            <div>
+              <DialogHeader>
+                <DialogTitle className="text-[15px] leading-tight">Approve Withdrawal</DialogTitle>
+                <DialogDescription className="text-xs mt-0.5">
+                  Enter the M-Pesa receipt number to confirm this payment.
+                </DialogDescription>
+              </DialogHeader>
+            </div>
+          </div>
           {selectedWithdrawal && (
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4 p-4 bg-muted/40 rounded-xl text-sm">
-                <div>
-                  <p className="text-muted-foreground text-xs mb-0.5">Partner</p>
-                  <p className="font-medium">{getPartnerName(selectedWithdrawal.partner_id)}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground text-xs mb-0.5">Amount</p>
-                  <p className="font-bold text-secondary">{formatCurrency(selectedWithdrawal.amount)}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground text-xs mb-0.5">Method</p>
-                  <p className="capitalize">{selectedWithdrawal.withdrawal_method}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground text-xs mb-0.5">Account</p>
-                  <p className="font-mono text-xs">{selectedWithdrawal.destination_details.account_number}</p>
-                </div>
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                {[
+                  { label: "Partner", value: getPartnerName(selectedWithdrawal.partner_id) },
+                  { label: "Amount",  value: formatCurrency(selectedWithdrawal.amount), accent: "text-secondary font-bold" },
+                  { label: "Method",  value: selectedWithdrawal.withdrawal_method, capitalize: true },
+                  { label: "Account", value: selectedWithdrawal.destination_details.account_number, mono: true },
+                ].map(({ label, value, accent, capitalize, mono }) => (
+                  <div key={label} className="bg-muted/30 rounded-xl p-3">
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1">{label}</p>
+                    <p className={`font-medium text-foreground ${accent ?? ''} ${capitalize ? 'capitalize' : ''} ${mono ? 'font-mono text-xs' : ''}`}>
+                      {value}
+                    </p>
+                  </div>
+                ))}
               </div>
               <div className="space-y-1.5">
                 <label className="text-sm font-semibold">
@@ -586,15 +604,31 @@ export default function SuperAdminWalletSection() {
       {/* ── REJECT DIALOG ─────────────────────────────────────────────────────── */}
       <Dialog open={isRejectOpen} onOpenChange={setIsRejectOpen}>
         <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Reject Withdrawal</DialogTitle>
-            <DialogDescription>Provide a reason — the partner will see this message.</DialogDescription>
-          </DialogHeader>
+          {/* Header block */}
+          <div className="flex items-center gap-3 p-4 bg-destructive/10 rounded-xl mb-1">
+            <div className="h-10 w-10 rounded-xl bg-destructive/15 flex items-center justify-center flex-shrink-0">
+              <XCircle className="h-5 w-5 text-destructive" />
+            </div>
+            <div>
+              <DialogHeader>
+                <DialogTitle className="text-[15px] leading-tight">Reject Withdrawal</DialogTitle>
+                <DialogDescription className="text-xs mt-0.5">
+                  Provide a reason — the partner will see this message.
+                </DialogDescription>
+              </DialogHeader>
+            </div>
+          </div>
           {selectedWithdrawal && (
             <div className="space-y-4">
-              <div className="flex items-center justify-between p-4 bg-destructive/5 border border-destructive/15 rounded-xl text-sm">
-                <span className="text-muted-foreground">{getPartnerName(selectedWithdrawal.partner_id)}</span>
-                <span className="font-bold text-destructive">{formatCurrency(selectedWithdrawal.amount)}</span>
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div className="bg-muted/30 rounded-xl p-3">
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1">Partner</p>
+                  <p className="font-medium text-foreground">{getPartnerName(selectedWithdrawal.partner_id)}</p>
+                </div>
+                <div className="bg-destructive/5 border border-destructive/15 rounded-xl p-3">
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1">Amount</p>
+                  <p className="font-bold text-destructive">{formatCurrency(selectedWithdrawal.amount)}</p>
+                </div>
               </div>
               <div className="space-y-1.5">
                 <label className="text-sm font-semibold">Rejection Reason</label>

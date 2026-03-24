@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import { useMutation, useQuery } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
-import { X, Upload, ChevronDown } from 'lucide-react';
+import { X, Camera, Users, ChevronDown } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -155,159 +155,177 @@ export default function AddUserDialog({ open, onOpenChange, partnerIdOverride }:
     <>
       {/* Overlay */}
       <div
-        className="fixed top-14 sm:top-16 lg:left-[110px] left-0 right-0 bottom-0 z-50 flex items-center justify-center bg-black/30"
+        className="fixed top-14 sm:top-16 lg:left-[110px] left-0 right-0 bottom-0 z-50 flex items-center justify-center backdrop-blur-sm bg-black/40"
         onClick={handleClose}
       >
         <div
-          className="bg-card rounded-[14px] w-[calc(100%-24px)] p-7 shadow-2xl max-h-[calc(100%-24px)] overflow-y-auto"
+          className="bg-card rounded-2xl w-full max-w-[520px] shadow-2xl overflow-hidden"
           onClick={e => e.stopPropagation()}
         >
-          {/* Header */}
-          <div className="flex justify-between items-start mb-5">
-            <div>
-              <h2 className="text-base font-bold text-foreground m-0">Add User</h2>
-              <p className="text-xs text-muted-foreground mt-0.5">Add user and assign role</p>
+          {/* Card header */}
+          <div className="relative bg-gradient-to-br from-primary to-primary/80 px-6 pt-5 pb-5">
+            <div className="flex items-center gap-3">
+              <div className="h-9 w-9 rounded-xl bg-primary-foreground/20 flex items-center justify-center shrink-0">
+                <Users className="h-5 w-5 text-primary-foreground" />
+              </div>
+              <div>
+                <h2 className="text-base font-bold text-primary-foreground leading-none">Add User</h2>
+                <p className="text-xs text-primary-foreground/70 mt-0.5">Add user and assign role</p>
+              </div>
             </div>
-            <button onClick={handleClose} className="p-0.5 rounded hover:bg-muted transition-colors">
-              <X className="h-4 w-4 text-muted-foreground" />
+            <button
+              onClick={handleClose}
+              className="absolute top-4 right-4 p-1.5 rounded-md opacity-70 hover:opacity-100 transition-opacity text-primary-foreground"
+            >
+              <X className="h-4 w-4" />
             </button>
           </div>
 
-          <div className="flex gap-5">
-            {/* ── Left: Image upload ── */}
-            <div className="w-[160px] shrink-0">
-              <label className="text-xs font-medium text-foreground block mb-2">Profile Photo</label>
-              <div
-                className="border-2 border-dashed border-border rounded-xl bg-muted h-[160px] flex flex-col items-center justify-center cursor-pointer overflow-hidden transition-colors hover:border-primary/50 hover:bg-muted/80"
-                onClick={() => fileInputRef.current?.click()}
-              >
-                {imagePreview ? (
-                  <>
-                    <img src={imagePreview} className="w-full h-full object-cover" alt="preview" />
-                  </>
-                ) : (
-                  <>
-                    <div className="w-10 h-10 rounded-full bg-card flex items-center justify-center mb-2 shadow-sm">
-                      <Upload className="h-5 w-5 text-muted-foreground" />
-                    </div>
-                    <p className="text-[11px] font-medium text-primary text-center px-2">Click to upload</p>
-                    <p className="text-[10px] text-muted-foreground text-center mt-0.5 px-2">PNG, JPG or GIF</p>
-                  </>
-                )}
-              </div>
-              {imagePreview && (
-                <button
-                  onClick={handleRemoveImage}
-                  className="w-full mt-1.5 text-destructive text-[11px] font-semibold bg-transparent border-none cursor-pointer text-center"
+          {/* Card body */}
+          <div className="px-6 py-5">
+            <div className="flex gap-5">
+              {/* ── Left: Image upload (circular) ── */}
+              <div className="shrink-0 flex flex-col items-center">
+                <label className="text-xs font-medium text-foreground block mb-2 self-start">Profile Photo</label>
+                <div
+                  className="relative h-[100px] w-[100px] rounded-full border-2 border-dashed border-border bg-muted flex items-center justify-center cursor-pointer overflow-hidden transition-colors hover:border-primary/50 group"
+                  onClick={() => fileInputRef.current?.click()}
                 >
-                  Remove photo
-                </button>
-              )}
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={handleFileChange}
-              />
-            </div>
-
-            {/* ── Right: Form fields ── */}
-            <div className="flex-1 min-w-0">
-              {/* Name */}
-              <div className="mb-4">
-                <label className="text-xs font-medium text-foreground block mb-1.5">Full Name</label>
+                  {imagePreview ? (
+                    <img src={imagePreview} className="w-full h-full object-cover" alt="preview" />
+                  ) : (
+                    <Camera className="h-6 w-6 text-muted-foreground group-hover:text-primary transition-colors" />
+                  )}
+                  {/* Camera overlay on hover */}
+                  {imagePreview && (
+                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Camera className="h-5 w-5 text-white" />
+                    </div>
+                  )}
+                </div>
+                {imagePreview && (
+                  <button
+                    onClick={handleRemoveImage}
+                    className="mt-1.5 text-destructive text-[11px] font-semibold bg-transparent border-none cursor-pointer"
+                  >
+                    Remove
+                  </button>
+                )}
                 <input
-                  value={name}
-                  onChange={e => setName(e.target.value)}
-                  placeholder="John Doe"
-                  className="w-full border border-border rounded-lg px-3.5 py-2.5 text-xs bg-muted outline-none text-foreground placeholder:text-muted-foreground focus:border-primary/50 transition-colors"
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleFileChange}
                 />
               </div>
 
-              {/* Email */}
-              <div className="mb-4">
-                <label className="text-xs font-medium text-foreground block mb-1.5">Email Address</label>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={e => setEmail(e.target.value)}
-                  placeholder="john@example.com"
-                  className="w-full border border-border rounded-lg px-3.5 py-2.5 text-xs bg-muted outline-none text-foreground placeholder:text-muted-foreground focus:border-primary/50 transition-colors"
-                />
-              </div>
-
-              {/* Phone with Kenya flag */}
-              <div className="mb-4">
-                <label className="text-xs font-medium text-foreground block mb-1.5">Phone Number <span className="text-muted-foreground font-normal">(optional)</span></label>
-                <div className="flex items-center border border-border rounded-lg bg-muted overflow-hidden px-3 focus-within:border-primary/50 transition-colors">
-                  <div className="flex items-center gap-1.5 pr-3 border-r border-border mr-3 cursor-pointer py-2.5">
-                    <KenyaFlag />
-                    <ChevronDown className="h-3 w-3 text-muted-foreground" />
-                  </div>
-                  <span className="text-xs text-muted-foreground mr-1.5">+254</span>
+              {/* ── Right: Form fields ── */}
+              <div className="flex-1 min-w-0">
+                {/* Name */}
+                <div className="mb-3">
+                  <label className="text-xs font-medium text-foreground block mb-1.5">Full Name</label>
                   <input
-                    value={phone}
-                    onChange={e => setPhone(e.target.value)}
-                    placeholder="7XX XXX XXX"
-                    className="flex-1 border-none bg-transparent outline-none text-xs py-2.5 text-foreground placeholder:text-muted-foreground"
+                    value={name}
+                    onChange={e => setName(e.target.value)}
+                    placeholder="John Doe"
+                    className="w-full border border-border rounded-lg px-3.5 py-2.5 text-sm bg-muted outline-none text-foreground placeholder:text-muted-foreground focus:border-primary/50 transition-colors"
                   />
                 </div>
-              </div>
 
-              {/* Role */}
-              <div className="mb-3">
-                <label className="text-xs font-medium text-foreground block mb-1.5">Role</label>
-                <Select value={role} onValueChange={val => setRole(val as Role)}>
-                  <SelectTrigger className="text-xs h-9 bg-muted border-border">
-                    <SelectValue placeholder="Select role..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="viewer">Viewer</SelectItem>
-                    <SelectItem value="campaign_manager">Campaign Manager</SelectItem>
-                    <SelectItem value="accountant">Accountant</SelectItem>
-                    <SelectItem value="merchant_admin">Merchant Admin</SelectItem>
-                    <SelectItem value="super_agent">Super Agent</SelectItem>
-                    <SelectItem value="master_agent">Master Agent</SelectItem>
-                    <SelectItem value="partner_admin">Partner Admin</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Auto-resolved permission preview */}
-              {matchedRole && Object.keys(permsByCategory).length > 0 ? (
-                <div className="rounded-lg border border-border bg-muted/50 p-3 space-y-2">
-                  <p className="text-[10px] font-semibold text-foreground uppercase tracking-wide">Permissions</p>
-                  {Object.entries(permsByCategory).map(([cat, perms]) => (
-                    <div key={cat}>
-                      <p className="text-[10px] text-muted-foreground mb-1.5">{CATEGORY_LABELS[cat] ?? cat}</p>
-                      <div className="flex flex-wrap gap-1">
-                        {perms.map(p => (
-                          <Badge key={p._id} variant="secondary" className="text-[10px] py-0 px-1.5">
-                            {p.name}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
+                {/* Email */}
+                <div className="mb-3">
+                  <label className="text-xs font-medium text-foreground block mb-1.5">Email Address</label>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={e => setEmail(e.target.value)}
+                    placeholder="john@example.com"
+                    className="w-full border border-border rounded-lg px-3.5 py-2.5 text-sm bg-muted outline-none text-foreground placeholder:text-muted-foreground focus:border-primary/50 transition-colors"
+                  />
                 </div>
-              ) : matchedRole ? (
-                <p className="text-[11px] text-muted-foreground italic">No permissions configured for this role.</p>
-              ) : roles && roles.length > 0 ? (
-                <p className="text-[11px] text-muted-foreground italic">No role template found for "{role}" — user will be created with no permissions.</p>
-              ) : null}
+
+                {/* Phone with Kenya flag */}
+                <div className="mb-3">
+                  <label className="text-xs font-medium text-foreground block mb-1.5">Phone <span className="text-muted-foreground font-normal">(optional)</span></label>
+                  <div className="flex items-center border border-border rounded-lg bg-muted overflow-hidden px-3 focus-within:border-primary/50 transition-colors">
+                    <div className="flex items-center gap-1.5 pr-3 border-r border-border mr-3 cursor-pointer py-2.5">
+                      <KenyaFlag />
+                      <ChevronDown className="h-3 w-3 text-muted-foreground" />
+                    </div>
+                    <span className="text-xs text-muted-foreground mr-1.5">+254</span>
+                    <input
+                      value={phone}
+                      onChange={e => setPhone(e.target.value)}
+                      placeholder="7XX XXX XXX"
+                      className="flex-1 border-none bg-transparent outline-none text-sm py-2.5 text-foreground placeholder:text-muted-foreground"
+                    />
+                  </div>
+                </div>
+
+                {/* Role */}
+                <div>
+                  <label className="text-xs font-medium text-foreground block mb-1.5">Role</label>
+                  <Select value={role} onValueChange={val => setRole(val as Role)}>
+                    <SelectTrigger className="text-sm h-9 bg-muted border-border">
+                      <SelectValue placeholder="Select role..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="viewer">Viewer</SelectItem>
+                      <SelectItem value="campaign_manager">Campaign Manager</SelectItem>
+                      <SelectItem value="accountant">Accountant</SelectItem>
+                      <SelectItem value="merchant_admin">Merchant Admin</SelectItem>
+                      <SelectItem value="super_agent">Super Agent</SelectItem>
+                      <SelectItem value="master_agent">Master Agent</SelectItem>
+                      <SelectItem value="partner_admin">Partner Admin</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
             </div>
+
+            {/* Permissions preview */}
+            {matchedRole && Object.keys(permsByCategory).length > 0 ? (
+              <div className="mt-4 rounded-xl border border-border bg-muted/30 p-3 space-y-2">
+                <p className="text-[10px] font-semibold text-foreground uppercase tracking-wide">Permissions</p>
+                {Object.entries(permsByCategory).map(([cat, perms]) => (
+                  <div key={cat}>
+                    <p className="text-[10px] text-muted-foreground mb-1.5">{CATEGORY_LABELS[cat] ?? cat}</p>
+                    <div className="flex flex-wrap gap-1">
+                      {perms.map(p => (
+                        <Badge key={p._id} variant="secondary" className="text-[10px] py-0 px-1.5">
+                          {p.name}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : matchedRole ? (
+              <p className="text-[11px] text-muted-foreground italic mt-3">No permissions configured for this role.</p>
+            ) : roles && roles.length > 0 ? (
+              <p className="text-[11px] text-muted-foreground italic mt-3">No role template found for "{role}" — user will be created with no permissions.</p>
+            ) : null}
           </div>
 
-          {/* Footer */}
-          <div className="flex justify-end mt-4">
-            <button
-              onClick={handleSubmit}
-              disabled={saving || uploading}
-              className="bg-primary text-primary-foreground border-none rounded-full px-5 py-2 text-xs font-semibold cursor-pointer hover:bg-primary/90 transition-colors disabled:opacity-60"
-            >
-              {uploading ? 'Uploading photo...' : saving ? 'Creating...' : 'Save Changes'}
-            </button>
+          {/* Card footer */}
+          <div className="px-6 py-4 border-t border-border bg-muted/20 flex justify-between items-center">
+            <p className="text-xs text-muted-foreground">Credentials shown after creation</p>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleClose}
+                className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors px-3 py-2"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSubmit}
+                disabled={saving || uploading}
+                className="bg-primary text-primary-foreground border-none rounded-full px-5 py-2 text-xs font-semibold cursor-pointer hover:bg-primary/90 transition-colors disabled:opacity-60"
+              >
+                {uploading ? 'Uploading photo...' : saving ? 'Creating...' : 'Save Changes'}
+              </button>
+            </div>
           </div>
         </div>
       </div>

@@ -8,6 +8,7 @@ import {
   DialogFooter,
 } from "../ui/dialog";
 import { Button } from "../ui/button";
+import { AlertTriangle, CheckCircle2 } from "lucide-react";
 
 interface ConfirmDialogProps {
   open: boolean;
@@ -18,6 +19,7 @@ interface ConfirmDialogProps {
   cancelLabel?: string;
   onConfirm: () => void;
   loading?: boolean;
+  variant?: "destructive" | "default";
 }
 
 export function ConfirmDialog({
@@ -29,20 +31,46 @@ export function ConfirmDialog({
   cancelLabel = "Cancel",
   onConfirm,
   loading = false,
+  variant = "default",
 }: ConfirmDialogProps) {
+  const isDestructive = variant === "destructive";
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange} >
-      <DialogContent className="sm:max-w-[400px]">
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>{description}</DialogDescription>
-        </DialogHeader>
-        <DialogFooter className="flex justify-end space-x-2">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[380px]">
+        <div className="flex flex-col items-center text-center pt-2 pb-1">
+          <div
+            className={`h-14 w-14 rounded-2xl flex items-center justify-center mb-4 ${
+              isDestructive ? "bg-destructive/10" : "bg-primary/10"
+            }`}
+          >
+            {isDestructive ? (
+              <AlertTriangle className="h-6 w-6 text-destructive" />
+            ) : (
+              <CheckCircle2 className="h-6 w-6 text-primary" />
+            )}
+          </div>
+          <DialogHeader className="space-y-1.5">
+            <DialogTitle className="text-base font-bold text-center">
+              {title}
+            </DialogTitle>
+            <DialogDescription className="text-sm text-center leading-relaxed">
+              {description}
+            </DialogDescription>
+          </DialogHeader>
+        </div>
+        <DialogFooter className="flex gap-2 sm:flex-row mt-2">
+          <Button
+            variant="outline"
+            className="flex-1"
+            onClick={() => onOpenChange(false)}
+            disabled={loading}
+          >
             {cancelLabel}
           </Button>
           <Button
-            variant="destructive"
+            variant={isDestructive ? "destructive" : "default"}
+            className="flex-1"
             onClick={onConfirm}
             disabled={loading}
           >
