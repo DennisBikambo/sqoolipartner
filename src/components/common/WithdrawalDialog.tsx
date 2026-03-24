@@ -220,7 +220,7 @@ export function WithdrawalDialog({
 
             <div className="px-6 py-5 space-y-5">
               {/* 48-hour warning */}
-              <p className="text-sm text-red-500 font-medium">
+              <p className="text-sm text-destructive font-medium">
                 Please note: You can only make one withdrawal every 48 Hours.
               </p>
 
@@ -262,7 +262,7 @@ export function WithdrawalDialog({
 
                 {/* Validation error */}
                 {validationError && (
-                  <div className="flex items-center gap-2 text-red-500 text-sm mt-1">
+                  <div className="flex items-center gap-2 text-destructive text-sm mt-1">
                     <AlertCircle className="h-4 w-4 flex-shrink-0" />
                     <span>{validationError}</span>
                   </div>
@@ -282,7 +282,7 @@ export function WithdrawalDialog({
               <Button
                 disabled={!canProceed}
                 onClick={handleWithdrawClick}
-                className="bg-blue-500 hover:bg-blue-600 text-white px-8"
+                className="bg-primary hover:bg-primary/90 text-primary-foreground px-8"
               >
                 {isValidating ? "Checking…" : "Withdraw"}
               </Button>
@@ -306,9 +306,9 @@ export function WithdrawalDialog({
 
             <div className="px-6 py-8 flex flex-col items-center space-y-6">
               {/* Wallet illustration */}
-              <div className="h-16 w-16 rounded-2xl bg-blue-100 dark:bg-blue-900/20 flex items-center justify-center">
+              <div className="h-16 w-16 rounded-2xl bg-primary/10 flex items-center justify-center">
                 <svg
-                  className="h-9 w-9 text-blue-500"
+                  className="h-9 w-9 text-primary"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -338,16 +338,16 @@ export function WithdrawalDialog({
                       value={digit}
                       onChange={(e) => handlePinChange(i, e.target.value)}
                       onKeyDown={(e) => handlePinKeyDown(i, e)}
-                      className={`w-12 h-12 text-center text-xl font-bold rounded-lg border-2 bg-background outline-none transition-colors focus:border-blue-500 ${
+                      className={`w-12 h-12 text-center text-xl font-bold rounded-lg border-2 bg-background outline-none transition-colors focus:border-primary ${
                         digit
-                          ? "border-blue-500"
+                          ? "border-primary"
                           : "border-border"
                       }`}
                     />
                     {/* Blue dot mask */}
                     {digit && (
                       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                        <div className="h-3 w-3 rounded-full bg-blue-500" />
+                        <div className="h-3 w-3 rounded-full bg-primary" />
                       </div>
                     )}
                   </div>
@@ -355,7 +355,7 @@ export function WithdrawalDialog({
               </div>
 
               {pinError && (
-                <p className="text-sm text-red-500 text-center">{pinError}</p>
+                <p className="text-sm text-destructive text-center">{pinError}</p>
               )}
 
               {isSubmitting && (
@@ -365,7 +365,7 @@ export function WithdrawalDialog({
               <Button
                 onClick={handlePinSubmit}
                 disabled={pinDigits.join("").length < 4 || isSubmitting}
-                className="bg-blue-500 hover:bg-blue-600 text-white px-8"
+                className="bg-primary hover:bg-primary/90 text-primary-foreground px-8"
               >
                 {isSubmitting ? "Processing…" : "Confirm"}
               </Button>
@@ -387,9 +387,9 @@ export function WithdrawalDialog({
             <div className="relative h-24 w-24">
               <Starburst color="#22c55e" />
               <div className="absolute inset-0 flex items-center justify-center">
-                <div className="h-14 w-14 rounded-full bg-green-100 dark:bg-green-900/20 flex items-center justify-center">
+                <div className="h-14 w-14 rounded-full bg-secondary/10 flex items-center justify-center">
                   <svg
-                    className="h-7 w-7 text-green-500"
+                    className="h-7 w-7 text-secondary"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
@@ -427,8 +427,8 @@ export function WithdrawalDialog({
             <div className="relative h-24 w-24">
               <Starburst color="#ef4444" />
               <div className="absolute inset-0 flex items-center justify-center">
-                <div className="h-14 w-14 rounded-full bg-red-100 dark:bg-red-900/20 flex items-center justify-center">
-                  <X className="h-7 w-7 text-red-500" />
+                <div className="h-14 w-14 rounded-full bg-destructive/10 flex items-center justify-center">
+                  <X className="h-7 w-7 text-destructive" />
                 </div>
               </div>
             </div>

@@ -14,19 +14,6 @@ import { v } from "convex/values";
 import bcrypt from "bcryptjs";
 
 /**
- * Utility to generate a secure extension
- */
-function generateExtension(): string {
-  const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
-  let extension = "";
-  for (let i = 0; i < 8; i++) {
-    extension += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  const randomSuffix = Math.floor(1000 + Math.random() * 9000).toString();
-  return `admin-${extension}-${randomSuffix}`;
-}
-
-/**
  * Create a Super Admin User
  */
 export const createSuperAdminUser = mutation({
@@ -74,8 +61,7 @@ export const createSuperAdminUser = mutation({
     const allPermissions = await ctx.db.query("permissions").collect();
     const allPermissionIds = allPermissions.map((p) => p._id);
 
-    // Generate extension and hash password
-    const extension = generateExtension();
+    // Hash password
     const password_hash = bcrypt.hashSync(args.password, 10);
 
     // Create the super admin user
@@ -87,7 +73,6 @@ export const createSuperAdminUser = mutation({
       phone: args.phone,
       role: "super_admin",
       permission_ids: allPermissionIds,
-      extension,
       is_active: true,
       is_first_login: true,
       is_account_activated: true,
@@ -102,7 +87,6 @@ export const createSuperAdminUser = mutation({
         id: userId,
         email: args.email,
         name: args.name,
-        extension: extension,
         role: "super_admin",
         permissions_count: allPermissionIds.length,
       },

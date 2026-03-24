@@ -60,3 +60,23 @@ export const getById = query({
     return partner;
   },
 });
+
+/**
+ * ✏️ UPDATE partner profile (social media handles)
+ */
+export const updatePartnerProfile = mutation({
+  args: {
+    partner_id: v.id("partners"),
+    social_media: v.optional(v.object({
+      twitter:   v.optional(v.string()),
+      instagram: v.optional(v.string()),
+      facebook:  v.optional(v.string()),
+      linkedin:  v.optional(v.string()),
+    })),
+  },
+  handler: async (ctx, args) => {
+    if (args.social_media === undefined) return { success: true };
+    await ctx.db.patch(args.partner_id, { social_media: args.social_media });
+    return { success: true };
+  },
+});

@@ -15,6 +15,7 @@ import type * as channel from "../channel.js";
 import type * as createPartner from "../createPartner.js";
 import type * as createSuperAdmin from "../createSuperAdmin.js";
 import type * as curricula from "../curricula.js";
+import type * as email from "../email.js";
 import type * as http from "../http.js";
 import type * as inquiries from "../inquiries.js";
 import type * as makeSuperAdmin from "../makeSuperAdmin.js";
@@ -53,6 +54,7 @@ declare const fullApi: ApiFromModules<{
   createPartner: typeof createPartner;
   createSuperAdmin: typeof createSuperAdmin;
   curricula: typeof curricula;
+  email: typeof email;
   http: typeof http;
   inquiries: typeof inquiries;
   makeSuperAdmin: typeof makeSuperAdmin;

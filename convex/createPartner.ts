@@ -10,19 +10,6 @@ import { v } from "convex/values";
 import bcrypt from "bcryptjs";
 
 /**
- * Utility to generate a secure extension
- */
-function generateExtension(): string {
-  const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
-  let extension = "";
-  for (let i = 0; i < 8; i++) {
-    extension += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  const randomSuffix = Math.floor(1000 + Math.random() * 9000).toString();
-  return `${extension}-${randomSuffix}`;
-}
-
-/**
  * Utility to generate random passwords
  */
 function generateRandomPassword(length = 12): string {
@@ -105,7 +92,6 @@ export const createPartnerOrganization = mutation({
 
     // Generate credentials for the partner admin user
     const adminPassword = generateRandomPassword(12);
-    const adminExtension = generateExtension();
     const password_hash = bcrypt.hashSync(adminPassword, 10);
 
     // Create the partner admin user
@@ -117,7 +103,6 @@ export const createPartnerOrganization = mutation({
       phone: args.admin_phone,
       role: "partner_admin",
       permission_ids: adminPermissions,
-      extension: adminExtension,
       is_active: true,
       is_first_login: true,
       is_account_activated: true,
@@ -139,14 +124,12 @@ export const createPartnerOrganization = mutation({
         id: userId,
         name: args.admin_name,
         email: args.admin_email,
-        extension: adminExtension,
         role: "partner_admin",
       },
       credentials: {
         partner_name: args.partner_name,
         admin_email: args.admin_email,
         admin_password: adminPassword,
-        admin_extension: adminExtension,
       },
     };
   },
@@ -220,7 +203,6 @@ export const getPartnerDetails = query({
         email: u.email,
         role: u.role,
         is_active: u.is_active,
-        extension: u.extension,
       })),
       campaign_count: campaigns.length,
     };

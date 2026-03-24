@@ -23,7 +23,8 @@ import {
   TableRow,
 } from "../components/ui/table";
 
-import { Loading } from "../components/common/Loading";
+import { Skeleton } from "../components/ui/skeleton";
+import { useConvexQuery } from "../hooks/useConvexQuery";
 import { useAuth } from "../hooks/useAuth";
 import { usePermissions } from "../hooks/usePermission";
 import { isConvexUser } from "../types/auth.types";
@@ -38,8 +39,16 @@ import { toast } from "sonner";
 type Program = Doc<'programs'>;
 
 function ProgramRow({ program, onEdit }: { program: Program; onEdit: (program: Program) => void; }) {
-  const campaigns = useQuery(api.campaign.getCampaignsByProgram, { programId: program._id });
-  const purchasesCount = useQuery(api.program.getPurchasesCount, { program_id: program._id });
+  const rawCampaigns = useQuery(api.campaign.getCampaignsByProgram, { programId: program._id });
+  const rawPurchasesCount = useQuery(api.program.getPurchasesCount, { program_id: program._id });
+  const { data: campaigns, isLoading: campaignsLoading } = useConvexQuery(
+    `program_campaigns_${program._id}`,
+    rawCampaigns
+  );
+  const { data: purchasesCount, isLoading: purchasesLoading } = useConvexQuery(
+    `program_purchases_${program._id}`,
+    rawPurchasesCount
+  );
   const deleteProgram = useMutation(api.program.deleteProgram);
   const { userRole } = usePermissions();
 
@@ -67,7 +76,11 @@ function ProgramRow({ program, onEdit }: { program: Program; onEdit: (program: P
         <div>
           <p className="text-xs text-muted-foreground mb-1">Campaigns</p>
           <p className="text-sm font-medium text-foreground">
-            {campaigns?.length || 0}
+            {campaignsLoading ? (
+              <Skeleton className="h-4 w-8 rounded inline-block" />
+            ) : (
+              campaigns?.length ?? 0
+            )}
           </p>
         </div>
       </TableCell>
@@ -75,7 +88,11 @@ function ProgramRow({ program, onEdit }: { program: Program; onEdit: (program: P
         <div>
           <p className="text-xs text-muted-foreground mb-1">Engagements</p>
           <p className="text-sm font-medium text-foreground">
-            {purchasesCount}
+            {purchasesLoading ? (
+              <Skeleton className="h-4 w-8 rounded inline-block" />
+            ) : (
+              purchasesCount ?? 0
+            )}
           </p>
         </div>
       </TableCell>
@@ -83,7 +100,11 @@ function ProgramRow({ program, onEdit }: { program: Program; onEdit: (program: P
         <div>
           <p className="text-xs text-muted-foreground mb-1">Purchases</p>
           <p className="text-sm font-medium text-foreground">
-            {purchasesCount}
+            {purchasesLoading ? (
+              <Skeleton className="h-4 w-8 rounded inline-block" />
+            ) : (
+              purchasesCount ?? 0
+            )}
           </p>
         </div>
       </TableCell>
@@ -99,7 +120,7 @@ function ProgramRow({ program, onEdit }: { program: Program; onEdit: (program: P
               <Edit className="h-4 w-4 mr-2" />
               {isSuperAdmin ? 'Edit' : 'Not Allowed'}
             </DropdownMenuItem>
-            <DropdownMenuItem disabled={!isSuperAdmin} onClick={handleDelete} className="text-red-500">
+            <DropdownMenuItem disabled={!isSuperAdmin} onClick={handleDelete} className="text-destructive">
               {isSuperAdmin ? "Delete" : "Not Allowed"}
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -124,7 +145,11 @@ export default function ProgramsSection() {
 
   const { user } = useAuth();
   const { canWrite, hasPermission } = usePermissions();
-  const programs = useQuery(api.program.listPrograms) as Program[] | undefined;
+  const rawPrograms = useQuery(api.program.listPrograms) as Program[] | undefined;
+  const { data: programs, isLoading: programsLoading, isError: programsError } = useConvexQuery(
+    "programs_list",
+    rawPrograms
+  );
 
   const isSuperAdmin = isConvexUser(user) && user.role === 'super_admin';
   const canCreatePrograms = isSuperAdmin || canWrite('programs') || hasPermission('programs.admin');
@@ -146,10 +171,6 @@ export default function ProgramsSection() {
     startIndex,
     startIndex + itemsPerPage
   );
-
-  if (programs === undefined) {
-    return <Loading message="Loading programs..." size="lg" />;
-  }
 
   return (
     <div className="space-y-6 p-6">
@@ -269,7 +290,23 @@ export default function ProgramsSection() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {paginatedPrograms && paginatedPrograms.length > 0 ? (
+            {programsLoading ? (
+              Array.from({ length: 5 }).map((_, i) => (
+                <TableRow key={i} className="border-b border-muted/30">
+                  <TableCell className="py-6"><Skeleton className="h-4 w-32 rounded" /></TableCell>
+                  <TableCell className="py-6"><Skeleton className="h-4 w-8 rounded" /></TableCell>
+                  <TableCell className="py-6"><Skeleton className="h-4 w-8 rounded" /></TableCell>
+                  <TableCell className="py-6"><Skeleton className="h-4 w-8 rounded" /></TableCell>
+                  <TableCell className="py-6"><Skeleton className="h-8 w-8 rounded" /></TableCell>
+                </TableRow>
+              ))
+            ) : programsError ? (
+              <TableRow>
+                <TableCell colSpan={5} className="text-center py-8">
+                  <p className="text-sm text-muted-foreground">Something went wrong. Please refresh.</p>
+                </TableCell>
+              </TableRow>
+            ) : paginatedPrograms && paginatedPrograms.length > 0 ? (
               paginatedPrograms.map((program) => (
                 <ProgramRow key={program._id} program={program} onEdit={setEditingProgram} />
               ))

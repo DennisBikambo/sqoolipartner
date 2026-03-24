@@ -38,21 +38,36 @@ export const getAuditLogs = query({
     partner_id: v.optional(v.id("partners")),
   },
   handler: async (ctx, args) => {
+    let logs;
+
     if (args.user_id) {
-      return await ctx.db
+      logs = await ctx.db
         .query("audit_logs")
         .withIndex("by_user_id", (q) => q.eq("user_id", args.user_id!))
         .collect();
-    }
-
-    if (args.partner_id) {
-      return await ctx.db
+    } else if (args.partner_id) {
+      logs = await ctx.db
         .query("audit_logs")
         .withIndex("by_partner_id", (q) => q.eq("partner_id", args.partner_id!))
         .collect();
+    } else {
+      logs = await ctx.db.query("audit_logs").collect();
     }
 
-    return await ctx.db.query("audit_logs").collect();
+    // Enrich each log with the acting user's name and avatar
+    return await Promise.all(
+      logs.map(async (log) => {
+        const user = await ctx.db.get(log.user_id);
+        return {
+          ...log,
+          userName: user?.name ?? "Unknown",
+          userAvatar: (user as { avatar_url?: string } | null)?.avatar_url ?? null,
+          userInitials: user?.name
+            ? user.name.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2)
+            : "?",
+        };
+      })
+    );
   },
 });
 

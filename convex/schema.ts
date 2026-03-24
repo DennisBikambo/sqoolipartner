@@ -14,16 +14,23 @@ export default defineSchema({
     email: v.string(),
     phone: v.string(),
     username: v.string(),
+    social_media: v.optional(v.object({
+      twitter:   v.optional(v.string()),
+      instagram: v.optional(v.string()),
+      facebook:  v.optional(v.string()),
+      linkedin:  v.optional(v.string()),
+    })),
   }),
 
 
   users: defineTable({
-    partner_id: v.id("partners"), 
+    partner_id: v.id("partners"),
     email: v.string(),
     password_hash: v.string(),
     name: v.string(),
     phone: v.optional(v.string()),
-    extension:v.string(),
+    avatar_url: v.optional(v.string()),
+    extension: v.optional(v.string()),
     role: v.union(
       v.literal("super_admin"),
       v.literal("partner_admin"),
@@ -92,6 +99,7 @@ export default defineSchema({
     is_active: v.boolean(), // Whether this role is currently active
     created_at: v.string(),
     updated_at: v.optional(v.string()),
+    deactivation_reason: v.optional(v.string()),
   })
     .index("by_name", ["name"])
     .index("by_is_active", ["is_active"])
@@ -412,10 +420,30 @@ withdrawal_limits: defineTable({
   channels: defineTable({
     partnerId: v.id("partners"),
     name: v.string(),
-    code:v.string(),
-    subchanells:v.array(v.string()),
+    code: v.string(),                           // channel prefix code
     description: v.string(),
-  }).index("by_partner_id", ["partnerId"]),
+    subchanells: v.optional(v.array(v.string())), // deprecated — kept optional for compat
+    is_active: v.boolean(),
+    created_at: v.string(),
+    created_by: v.optional(v.string()),          // display name of the creator
+    deactivation_reason: v.optional(v.string()),
+  })
+    .index("by_partner_id", ["partnerId"])
+    .index("by_is_active", ["is_active"]),
+
+  subchannels: defineTable({
+    channel_id: v.id("channels"),
+    partner_id: v.id("partners"),
+    name: v.string(),
+    prefix_code: v.optional(v.string()),
+    description: v.optional(v.string()),
+    is_active: v.boolean(),
+    created_at: v.string(),
+    deactivation_reason: v.optional(v.string()),
+  })
+    .index("by_channel_id", ["channel_id"])
+    .index("by_partner_id", ["partner_id"])
+    .index("by_is_active", ["is_active"]),
 
   partner_inquiries: defineTable({
     org_name: v.string(),

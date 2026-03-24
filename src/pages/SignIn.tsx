@@ -190,14 +190,10 @@ export default function SignIn() {
           </div>
           
           <div className="relative h-full flex flex-col items-center justify-between p-0 w-fit rounded-3xl">
-          <img 
-              src="/images/sign-in/greeb-blob.svg" 
-              alt="" 
-              className="h-auto z-[10] absolute opacity-30 w-min"
-              style={{
-                zIndex: 9,
-                top: '-6rem',
-              }}
+          <img
+              src="/images/sign-in/greeb-blob.svg"
+              alt=""
+              className="h-auto z-[9] absolute opacity-30 w-min top-[-6rem]"
             />
             {/* Welcome text */}
             <div className="relative flex flex-col items-center gap-4 z-10">
@@ -277,7 +273,7 @@ export default function SignIn() {
                       value={loginData.email}
                       onChange={(e) => handleChange('email', e.target.value)}
                       onBlur={() => handleBlur('email')}
-                      className={`w-full h-12 text-signin-input dark:text-foreground border-[#D0D5DD] dark:border-border rounded-lg bg-white dark:bg-input ${
+                      className={`w-full h-12 text-signin-input dark:text-foreground border-border dark:border-border rounded-lg bg-white dark:bg-input ${
                         errors.email && touchedFields.has('email') ? 'border-destructive' : ''
                       }`}
                       disabled={isLoading}
@@ -299,7 +295,7 @@ export default function SignIn() {
                         value={loginData.password}
                         onChange={(e) => handleChange('password', e.target.value)}
                         onBlur={() => handleBlur('password')}
-                        className={`w-full h-12 pr-10 text-signin-input dark:text-foreground border-[#D0D5DD] dark:border-border rounded-lg bg-white dark:bg-input ${
+                        className={`w-full h-12 pr-10 text-signin-input dark:text-foreground border-border dark:border-border rounded-lg bg-white dark:bg-input ${
                           errors.password && touchedFields.has('password') ? 'border-destructive' : ''
                         }`}
                         disabled={isLoading}
@@ -307,7 +303,7 @@ export default function SignIn() {
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-[#667085] dark:text-muted-foreground hover:text-[#344054] dark:hover:text-foreground"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground dark:text-muted-foreground hover:text-foreground dark:hover:text-foreground"
                         disabled={isLoading}
                       >
                         {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -323,7 +319,7 @@ export default function SignIn() {
                     <Button
                       onClick={handleSubmit}
                       disabled={!isFormValid() || isLoading}
-                      className="w-full bg-[#3498db] hover:bg-[#2980b9] dark:bg-primary dark:hover:bg-primary/90 text-signin-button dark:text-primary-foreground h-12 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full bg-primary hover:bg-primary/90 text-primary-foreground h-12 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {isLoading ? (
                         <>

@@ -202,7 +202,7 @@ export default function OnboardingPage() {
                     className={[
                       "flex items-center gap-4 px-5 py-5 transition-colors",
                       isActive
-                        ? "bg-blue-50/50 dark:bg-blue-950/20"
+                        ? "bg-primary/5 dark:bg-primary/10"
                         : isDone
                         ? "bg-background"
                         : "bg-background opacity-60",
@@ -218,13 +218,13 @@ export default function OnboardingPage() {
                           initial={{ scale: 0 }}
                           animate={{ scale: 1 }}
                           transition={{ type: "spring", stiffness: 250, damping: 18 }}
-                          className="w-9 h-9 rounded-full bg-green-500 flex items-center justify-center"
+                          className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center"
                         >
                           <Check className="h-5 w-5 text-white stroke-[2.5]" />
                         </motion.div>
                       ) : isActive ? (
-                        <div className="w-9 h-9 rounded-full bg-blue-100 dark:bg-blue-900/40 border-2 border-blue-300 dark:border-blue-700 flex items-center justify-center">
-                          <span className="text-sm font-semibold text-blue-600 dark:text-blue-400">
+                        <div className="w-9 h-9 rounded-full bg-primary/10 border-2 border-primary/30 flex items-center justify-center">
+                          <span className="text-sm font-semibold text-primary">
                             {index + 1}
                           </span>
                         </div>

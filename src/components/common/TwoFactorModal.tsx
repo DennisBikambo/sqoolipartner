@@ -276,7 +276,7 @@ export function TwoFactorModal({
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
                 transition={{ type: "spring", stiffness: 200, damping: 15, delay: 0.1 }}
-                className="w-20 h-20 rounded-full bg-green-500 flex items-center justify-center"
+                className="w-20 h-20 rounded-full bg-secondary flex items-center justify-center"
                 aria-hidden="true"
               >
                 <Check className="h-10 w-10 text-white stroke-[2.5]" />

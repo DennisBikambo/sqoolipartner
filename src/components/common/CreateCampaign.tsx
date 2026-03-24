@@ -10,6 +10,8 @@ import { Input } from "../ui/input";
 import { Textarea } from "../ui/textarea";
 import { Alert, AlertDescription } from "../ui/alert";
 import { X, Loader2 } from "lucide-react";
+import { Skeleton } from "../ui/skeleton";
+import { useConvexQuery } from "../../hooks/useConvexQuery";
 
 interface WizardState {
   program_id: Id<"programs"> | "";
@@ -33,8 +35,16 @@ export default function CreateCampaignWizard({
 }) {
   const createCampaign = useMutation(api.campaign.createCampaign);
   const { track } = useActivityTracker(partnerId);
-  const programs = useQuery(api.program.listPrograms);
-  const channels = useQuery(api.channel.getChannelsByPartner, { partnerId });
+  const rawPrograms = useQuery(api.program.listPrograms);
+  const rawChannels = useQuery(api.channel.getChannelsByPartner, { partnerId });
+  const { data: programs, isLoading: programsLoading } = useConvexQuery(
+    `create_programs_${partnerId}`,
+    rawPrograms
+  );
+  const { data: channels, isLoading: channelsLoading } = useConvexQuery(
+    `create_channels_${partnerId}`,
+    rawChannels
+  );
 
   const [step, setStep] = useState<number>(0);
   const [isSaving, setIsSaving] = useState(false);
@@ -219,22 +229,26 @@ export default function CreateCampaignWizard({
                 <Label htmlFor="program" className="text-sm font-medium text-muted-foreground">
                   Program
                 </Label>
-                <select
-                  id="program"
-                  value={state.program_id}
-                  onChange={(e) => setState((s) => ({ 
-                    ...s, 
-                    program_id: e.target.value as Id<"programs"> 
-                  }))}
-                  className="w-full h-10 sm:h-11 px-3 rounded-md border border-input bg-background"
-                >
-                  <option value="">Select...</option>
-                  {programs?.map((p) => (
-                    <option key={p._id} value={p._id}>
-                      {p.name} ({p.start_date} → {p.end_date})
-                    </option>
-                  ))}
-                </select>
+                {programsLoading ? (
+                  <Skeleton className="h-10 w-full rounded-lg" />
+                ) : (
+                  <select
+                    id="program"
+                    value={state.program_id}
+                    onChange={(e) => setState((s) => ({
+                      ...s,
+                      program_id: e.target.value as Id<"programs">
+                    }))}
+                    className="w-full h-10 sm:h-11 px-3 rounded-md border border-input bg-background"
+                  >
+                    <option value="">Select...</option>
+                    {(programs ?? []).map((p) => (
+                      <option key={p._id} value={p._id}>
+                        {p.name} ({p.start_date} → {p.end_date})
+                      </option>
+                    ))}
+                  </select>
+                )}
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -242,26 +256,30 @@ export default function CreateCampaignWizard({
                   <Label htmlFor="channel" className="text-sm font-medium text-muted-foreground">
                     Channel
                   </Label>
-                  <select
-                    id="channel"
-                    value={state.channel_id}
-                    onChange={(e) => {
-                      const newChannelId = e.target.value as Id<"channels">;
-                      setState((s) => ({ 
-                        ...s, 
-                        channel_id: newChannelId,
-                        subchannel: "" // Reset subchannel when channel changes
-                      }));
-                    }}
-                    className="w-full h-10 sm:h-11 px-3 rounded-md border border-input bg-background"
-                  >
-                    <option value="">Select...</option>
-                    {channels?.map((c) => (
-                      <option key={c._id} value={c._id}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
+                  {channelsLoading ? (
+                    <Skeleton className="h-10 w-full rounded-lg" />
+                  ) : (
+                    <select
+                      id="channel"
+                      value={state.channel_id}
+                      onChange={(e) => {
+                        const newChannelId = e.target.value as Id<"channels">;
+                        setState((s) => ({
+                          ...s,
+                          channel_id: newChannelId,
+                          subchannel: "", // Reset subchannel when channel changes
+                        }));
+                      }}
+                      className="w-full h-10 sm:h-11 px-3 rounded-md border border-input bg-background"
+                    >
+                      <option value="">Select...</option>
+                      {(channels ?? []).map((c) => (
+                        <option key={c._id} value={c._id}>
+                          {c.name}
+                        </option>
+                      ))}
+                    </select>
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -421,8 +439,8 @@ export default function CreateCampaignWizard({
               )}
 
               {success && (
-                <Alert className="border-green-500 bg-green-50">
-                  <AlertDescription className="text-green-700">{success}</AlertDescription>
+                <Alert className="border-secondary bg-secondary/10">
+                  <AlertDescription className="text-secondary">{success}</AlertDescription>
                 </Alert>
               )}
             </div>
@@ -438,7 +456,11 @@ export default function CreateCampaignWizard({
           
           {step === 0 && (
             <div className="w-full flex justify-end">
-              <Button onClick={next} disabled={!canNext()} className="h-9 sm:h-10">
+              <Button
+                onClick={next}
+                disabled={!canNext() || programsLoading || channelsLoading}
+                className="h-9 sm:h-10"
+              >
                 Continue
               </Button>
             </div>

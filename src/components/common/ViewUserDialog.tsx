@@ -1,9 +1,9 @@
 
 import { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
-import { Eye, EyeOff, Shield, User, Mail, Smartphone, Link, Copy } from 'lucide-react';
+import { Eye, EyeOff, Shield, User, Mail, Smartphone, CheckCircle2, XCircle } from 'lucide-react';
 import type { Id } from '../../../convex/_generated/dataModel';
 import { toast } from 'sonner';
 
@@ -15,7 +15,6 @@ export interface ViewUser {
   phone?: string;
   is_account_activated: boolean;
   password_hash?: string;
-  extension?:string
 }
 
 interface ViewUserDialogProps {
@@ -30,7 +29,7 @@ export default function ViewUserDialog({ open, onOpenChange, user }: ViewUserDia
 
   useEffect(() => {
     if (showPassword) {
-      const t = setTimeout(() => setShowPassword(false), 120000); 
+      const t = setTimeout(() => setShowPassword(false), 120000);
       setTimer(t);
     }
     return () => {
@@ -40,94 +39,80 @@ export default function ViewUserDialog({ open, onOpenChange, user }: ViewUserDia
 
   if (!user) return null;
 
+  const displayPhone = user.phone
+    ? user.phone.startsWith('+') ? user.phone : `+254 ${user.phone}`
+    : null;
+
+  const infoItems = [
+    { icon: User, label: 'Full Name', value: user.name },
+    { icon: Mail, label: 'Email', value: user.email },
+    { icon: Smartphone, label: 'Phone', value: displayPhone ?? '—' },
+    { icon: Shield, label: 'Role', value: user.role.replace(/_/g, ' ') },
+  ];
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>View User</DialogTitle>
-          <DialogDescription>User details and credentials</DialogDescription>
+      <DialogContent className="max-w-2xl p-0 overflow-hidden">
+        <DialogHeader className="px-7 pt-6 pb-4 border-b border-border bg-card">
+          <DialogTitle className="text-base font-bold">User Details</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4 mt-4">
-          <div className="flex items-center gap-3">
-            <User className="h-4 w-4 text-muted-foreground" />
-            <span className="font-medium">{user.name}</span>
-          </div>
+        <div>
+          {/* Info grid */}
+          <div className="px-7 py-5">
+            <div className="grid grid-cols-2 gap-x-6 gap-y-4 mb-5">
+              {infoItems.map(({ icon: Icon, label, value }) => (
+                <div key={label}>
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1">{label}</p>
+                  <div className="flex items-center gap-2">
+                    <Icon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                    <span className="text-sm text-foreground font-medium capitalize">{value}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
 
-          <div className="flex items-center gap-2">
-            <Link className="h-4 w-4 text-muted-foreground" />
-            <span className="font-medium">{user.extension}</span>
-            {user.extension && (
+            {/* Status */}
+            <div className="flex items-center gap-2 mb-5">
+              {user.is_account_activated
+                ? <CheckCircle2 className="h-4 w-4 text-secondary" />
+                : <XCircle className="h-4 w-4 text-destructive" />
+              }
+              <span className={`text-sm font-semibold ${user.is_account_activated ? 'text-secondary' : 'text-destructive'}`}>
+                {user.is_account_activated ? 'Account Active' : 'Account Inactive'}
+              </span>
+            </div>
+
+            {/* Password */}
+            <div>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1.5">Password (hashed)</p>
+              <div className="relative">
+                <Input
+                  type={showPassword ? 'text' : 'password'}
+                  value={user.password_hash || '************'}
+                  readOnly
+                  className="pr-10 text-xs font-mono"
+                />
                 <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6 p-0"
-                onClick={() => {
-                    const url = `${window.location.origin}/signIn?extension=${user.extension}`;
-                    navigator.clipboard.writeText(url);
-                    toast.success('Extension URL copied to clipboard!');
-                }}
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
+                  onClick={() => setShowPassword(prev => !prev)}
                 >
-                <Copy className="h-4 w-4 text-muted-foreground" />
+                  {showPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
                 </Button>
-            )}
+              </div>
+              {showPassword && (
+                <p className="text-[10px] text-muted-foreground mt-1">Auto-hiding in 2 minutes</p>
+              )}
             </div>
-
-
-          <div className="flex items-center gap-3">
-            <Mail className="h-4 w-4 text-muted-foreground" />
-            <span>{user.email}</span>
           </div>
 
-          {user.phone && (
-            <div className="flex items-center gap-3">
-              <Smartphone className="h-4 w-4 text-muted-foreground" />
-              <span>{user.phone}</span>
-            </div>
-          )}
-
-          <div className="flex items-center gap-3">
-            <Shield className="h-4 w-4 text-muted-foreground" />
-            <span className="capitalize">{user.role.replace(/_/g, ' ')}</span>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <span className="text-sm text-muted-foreground">Account:</span>
-            <span className={user.is_account_activated ? 'text-green-600' : 'text-red-600'}>
-              {user.is_account_activated ? 'Active' : 'Inactive'}
-            </span>
-          </div>
-
-          <div className="relative mt-4">
-            <label className="text-xs text-muted-foreground block mb-1">Password (hashed)</label>
-            <div className="relative">
-              <Input
-                type={showPassword ? 'text' : 'password'}
-                value={user.password_hash || '************'}
-                readOnly
-                className="pr-10"
-              />
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
-                onClick={() => setShowPassword(prev => !prev)}
-              >
-                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </Button>
-            </div>
-            {showPassword && (
-              <p className="text-[10px] text-muted-foreground mt-1">
-                Password visible — auto-hiding in 2 minutes
-              </p>
-            )}
-          </div>
         </div>
 
-        <div className="mt-6 flex justify-end">
-          <Button variant="secondary" onClick={() => onOpenChange(false)}>
+        <div className="flex justify-end px-7 py-4 border-t border-border bg-card">
+          <Button variant="secondary" size="sm" onClick={() => onOpenChange(false)}>
             Close
           </Button>
         </div>

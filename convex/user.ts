@@ -18,19 +18,6 @@ function generateRandomPassword(length = 10): string {
 }
 
 /**
- * Utility to generate a secure but simple unique extension
- */
-function generateExtension(): string {
-  const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
-  let extension = "";
-  for (let i = 0; i < 8; i++) {
-    extension += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  const randomSuffix = Math.floor(1000 + Math.random() * 9000).toString();
-  return `${extension}-${randomSuffix}`;
-}
-
-/**
  * ➕ Create a new user (password + extension generated automatically)
  */
 export const createUser = mutation({
@@ -39,6 +26,7 @@ export const createUser = mutation({
     email: v.string(),
     name: v.string(),
     phone: v.optional(v.string()),
+    avatar_url: v.optional(v.string()),
     role: v.union(
       v.literal("super_admin"),
       v.literal("partner_admin"),
@@ -62,10 +50,11 @@ export const createUser = mutation({
     }
 
     const generatedPassword = generateRandomPassword(10);
-    const extension = generateExtension();
 
     // ✅ Use synchronous hash to avoid Convex setTimeout error
     const password_hash = bcrypt.hashSync(generatedPassword, 10);
+
+    const partner = await ctx.db.get(args.partner_id);
 
     const userId = await ctx.db.insert("users", {
       partner_id: args.partner_id,
@@ -73,9 +62,9 @@ export const createUser = mutation({
       password_hash,
       name: args.name,
       phone: args.phone,
+      avatar_url: args.avatar_url,
       role: args.role,
-      permission_ids: args.permission_ids, 
-      extension,
+      permission_ids: args.permission_ids,
       is_active: true,
       is_first_login: true,
       last_login: undefined,
@@ -90,11 +79,19 @@ export const createUser = mutation({
       message: `User with email ${args.email} has been created successfully`,
     });
 
+    // Send welcome email with credentials (fire-and-forget via scheduler)
+    await ctx.scheduler.runAfter(0, api.email.sendWelcomeEmail, {
+      to: args.email,
+      userName: args.name,
+      partnerName: partner?.name ?? "Sqooli",
+      password: generatedPassword,
+      loginUrl: process.env.SITE_URL ?? "https://app.sqooli.com",
+    });
+
     return {
       message: "User created successfully",
       userId,
       generatedPassword,
-      extension,
     };
   },
 });
@@ -157,10 +154,11 @@ export const updateUser = mutation({
         v.literal("merchant_admin")
       )
     ),
+    avatar_url: v.optional(v.string()),
     is_active: v.optional(v.boolean()),
     is_account_activated: v.optional(v.boolean()),
     is_first_login: v.optional(v.boolean()),
-    permission_ids: v.optional(v.array(v.id("permissions"))), // ✅ multiple permissions
+    permission_ids: v.optional(v.array(v.id("permissions"))),
     password: v.optional(v.string()),
   },
   handler: async (ctx, args) => {

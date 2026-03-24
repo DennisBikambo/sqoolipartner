@@ -82,7 +82,6 @@ export default function CreatePartnerDialog({ open, onOpenChange }: CreatePartne
     partner_name: string;
     admin_email: string;
     admin_password: string;
-    admin_extension: string;
     admin_name: string;
   } | null>(null);
 
@@ -136,7 +135,6 @@ export default function CreatePartnerDialog({ open, onOpenChange }: CreatePartne
         partner_name: result.credentials.partner_name,
         admin_email: result.credentials.admin_email,
         admin_password: result.credentials.admin_password,
-        admin_extension: result.credentials.admin_extension,
         admin_name: formData.adminName,
       });
       setShowCredDialog(true);

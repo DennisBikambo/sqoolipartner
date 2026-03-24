@@ -23,6 +23,8 @@ import CreateCampaignWizard from "../components/common/CreateCampaign";
 import CreateProgramDialog from "../components/common/CreateProgramDialog";
 import { PermissionWrapper } from "../components/common/PermissionWrapper";
 import { formatCurrency, getAvatarColor } from "../utils/formatters";
+import { Skeleton } from "../components/ui/skeleton";
+import { useConvexQuery } from "../hooks/useConvexQuery";
 
 function formatCompact(num: number): string {
   if (num >= 1_000_000) return `${(num / 1_000_000).toFixed(1)}M`;
@@ -43,14 +45,14 @@ const MoneybagIcon = () => (
 );
 
 const SendIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-primary">
     <line x1="22" y1="2" x2="11" y2="13"/>
     <polygon points="22 2 15 22 11 13 2 9 22 2"/>
   </svg>
 );
 
 const RefreshIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f97316" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-chart-3">
     <polyline points="23 4 23 10 17 10"/>
     <polyline points="1 20 1 14 7 14"/>
     <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
@@ -58,27 +60,27 @@ const RefreshIcon = () => (
 );
 
 const DropIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-secondary">
     <path d="M12 2.69l5.66 5.66a8 8 0 11-11.31 0z"/>
   </svg>
 );
 
 const ClockIcon = () => (
-  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-chart-4">
     <circle cx="12" cy="12" r="10"/>
     <polyline points="12 6 12 12 16 14"/>
   </svg>
 );
 
 const ArrowUpIcon = () => (
-  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-secondary">
     <line x1="12" y1="19" x2="12" y2="5"/>
     <polyline points="5 12 12 5 19 12"/>
   </svg>
 );
 
 const CalIcon = () => (
-  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground">
     <rect x="3" y="4" width="18" height="18" rx="2"/>
     <line x1="16" y1="2" x2="16" y2="6"/>
     <line x1="8" y1="2" x2="8" y2="6"/>
@@ -87,7 +89,7 @@ const CalIcon = () => (
 );
 
 const ChevronDownIcon = () => (
-  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-foreground">
     <polyline points="6 9 12 15 18 9"/>
   </svg>
 );
@@ -116,29 +118,50 @@ export default function DashboardSection({
 
   const partnerId = partner?._id as Id<"partners"> | undefined;
 
-  const campaigns = useQuery(
+  const rawCampaigns = useQuery(
     api.campaign.getCampaignsByPartner,
     partnerId && canViewDashboard ? { partner_id: partnerId } : "skip"
   ) as DashboardCampaign[] | undefined;
 
-  const campaignEarnings = useQuery(
+  const rawCampaignEarnings = useQuery(
     api.campaign.getCampaignEarnings,
     partnerId && canViewFullDashboard ? { partner_id: partnerId } : "skip"
   );
 
-  const withdrawalStats = useQuery(
+  const rawWithdrawalStats = useQuery(
     api.withdrawals.getTotalWithdrawals,
     partnerId && canViewFullDashboard ? { partner_id: partnerId } : "skip"
   );
 
-  const earningsTimeline = useQuery(
+  const rawEarningsTimeline = useQuery(
     api.program_enrollments.getEarningsTimeline,
     partnerId && canViewFullDashboard ? { partner_id: partnerId, days: 30 } : "skip"
   );
 
-  const auditLogs = useQuery(
+  const rawAuditLogs = useQuery(
     api.audit.getAuditLogs,
     partnerId ? { partner_id: partnerId } : "skip"
+  );
+
+  const { data: campaigns, isLoading: campaignsLoading } = useConvexQuery(
+    `dashboard_campaigns_${partnerId}`,
+    rawCampaigns
+  );
+  const { data: campaignEarnings } = useConvexQuery(
+    `dashboard_earnings_${partnerId}`,
+    rawCampaignEarnings
+  );
+  const { data: withdrawalStats } = useConvexQuery(
+    `dashboard_withdrawal_stats_${partnerId}`,
+    rawWithdrawalStats
+  );
+  const { data: earningsTimeline } = useConvexQuery(
+    `dashboard_earnings_timeline_${partnerId}`,
+    rawEarningsTimeline
+  );
+  const { data: auditLogs, isLoading: auditLogsLoading } = useConvexQuery(
+    `dashboard_audit_logs_${partnerId}`,
+    rawAuditLogs
   );
 
   if (isSuperAdmin) {
@@ -201,17 +224,17 @@ export default function DashboardSection({
   const recentLogs = auditLogs ? [...auditLogs].reverse().slice(0, 10) : [];
 
   return (
-    <div style={{ padding: "24px", background: "#f9fafb", minHeight: "100%" }}>
+    <div className="p-6 bg-muted/30 min-h-full">
 
       {/* ── Header ── */}
-      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "18px" }}>
-        <h1 style={{ fontSize: "18px", fontWeight: 700, color: "#111827", margin: 0 }}>Dashboard</h1>
-        <div style={{ display: "flex", alignItems: "flex-start", gap: "6px" }}>
-          <div style={{ marginTop: "2px" }}><CalIcon /></div>
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "2px" }}>
-            <span style={{ fontSize: "11px", color: "#6b7280" }}>12 Jan 2026 – 13 Feb 2026</span>
-            <div style={{ display: "flex", alignItems: "center", gap: "3px", cursor: "pointer" }}>
-              <span style={{ fontSize: "11px", fontWeight: 600, color: "#374151" }}>Last 28 Days</span>
+      <div className="flex items-start justify-between mb-[18px]">
+        <h1 className="text-lg font-bold text-foreground m-0">Dashboard</h1>
+        <div className="flex items-start gap-[6px]">
+          <div className="mt-0.5"><CalIcon /></div>
+          <div className="flex flex-col items-end gap-0.5">
+            <span className="text-[11px] text-muted-foreground">12 Jan 2026 – 13 Feb 2026</span>
+            <div className="flex items-center gap-[3px] cursor-pointer">
+              <span className="text-[11px] font-semibold text-foreground">Last 28 Days</span>
               <ChevronDownIcon />
             </div>
           </div>
@@ -220,56 +243,49 @@ export default function DashboardSection({
 
       {/* ── Wallet Card (from commons/Wallet.tsx) ── */}
       <PermissionWrapper requireRead="wallet" fallback={null}>
-        <div style={{ marginBottom: "16px" }}>
+        <div className="mb-4">
           <Wallet activeItem={activeItem ?? "dashboard"} setActiveItem={setActiveItem} />
         </div>
       </PermissionWrapper>
 
       {/* ── Main 2-col grid ── */}
-      <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "14px" }}>
+      <div className="grid grid-cols-[2fr_1fr] gap-[14px]">
 
         {/* LEFT column */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+        <div className="flex flex-col gap-[14px]">
 
           {/* EARNINGS + STATS PANEL */}
-          <div style={{
-            background: "#fff", borderRadius: "12px", border: "1px solid #f3f4f6",
-            padding: "16px 18px", boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
-          }}>
+          <div className="bg-card rounded-xl border border-border px-[18px] py-4 shadow-[0_1px_4px_rgba(0,0,0,0.06)]">
             {/* Total Earnings */}
             <PermissionWrapper
               permissionKey="dashboard.admin"
               fallback={
-                <div style={{ marginBottom: "14px" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "4px" }}>
-                    <div style={{ width: "30px", height: "30px", borderRadius: "8px", background: "#ffedd5", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <div className="mb-[14px]">
+                  <div className="flex items-center gap-[6px] mb-1">
+                    <div className="w-[30px] h-[30px] rounded-lg bg-soft-peach flex items-center justify-center">
                       <MoneybagIcon />
                     </div>
-                    <span style={{ fontSize: "11px", color: "#9ca3af" }}>Total Earnings</span>
+                    <span className="text-[11px] text-muted-foreground">Total Earnings</span>
                   </div>
-                  <div style={{ paddingLeft: "24px" }}>
-                    <span style={{ fontSize: "16px", fontWeight: 700, color: "#9ca3af", filter: "blur(4px)", userSelect: "none" }}>KES ••••</span>
+                  <div className="pl-6">
+                    <span className="text-base font-bold text-muted-foreground blur-[4px] select-none">KES ••••</span>
                   </div>
                 </div>
               }
             >
-              <div style={{ marginBottom: "14px" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "4px" }}>
-                  <div style={{ width: "30px", height: "30px", borderRadius: "8px", background: "#ffedd5", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <div className="mb-[14px]">
+                <div className="flex items-center gap-[6px] mb-1">
+                  <div className="w-[30px] h-[30px] rounded-lg bg-soft-peach flex items-center justify-center">
                     <MoneybagIcon />
                   </div>
-                  <span style={{ fontSize: "11px", color: "#9ca3af" }}>Total Earnings</span>
+                  <span className="text-[11px] text-muted-foreground">Total Earnings</span>
                 </div>
-                <div style={{ display: "flex", alignItems: "center", gap: "8px", paddingLeft: "24px" }}>
-                  <span style={{ fontSize: "16px", fontWeight: 700, color: "#111827" }}>
+                <div className="flex items-center gap-2 pl-6">
+                  <span className="text-base font-bold text-foreground">
                     {formatCurrency(totalEarnings)}
                   </span>
                   {totalEarnings > 0 && (
-                    <span style={{
-                      display: "flex", alignItems: "center", gap: "3px",
-                      fontSize: "10px", color: "#16a34a", fontWeight: 600,
-                      background: "#dcfce7", padding: "2px 7px", borderRadius: "999px",
-                    }}>
+                    <span className="flex items-center gap-[3px] text-[10px] text-secondary font-semibold bg-secondary/10 py-0.5 px-[7px] rounded-full">
                       <ArrowUpIcon />
                       10% since last month
                     </span>
@@ -278,65 +294,58 @@ export default function DashboardSection({
               </div>
             </PermissionWrapper>
 
-            <div style={{ borderTop: "1px solid #f3f4f6", marginBottom: "14px" }}/>
+            <div className="border-t border-border mb-[14px]"/>
 
             {/* 3-col stats */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr" }}>
-              <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
-                <div style={{ width: "30px", height: "30px", borderRadius: "8px", background: "#dbeafe", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <div className="grid grid-cols-3">
+              <div className="flex flex-col gap-[3px]">
+                <div className="w-[30px] h-[30px] rounded-lg bg-light-blue-bg flex items-center justify-center">
                   <SendIcon />
                 </div>
-                <span style={{ fontSize: "11px", color: "#9ca3af", marginTop: "3px" }}>Total Campaigns</span>
-                <span style={{ fontSize: "16px", fontWeight: 700, color: "#111827" }}>{totalCampaigns}</span>
+                <span className="text-[11px] text-muted-foreground mt-[3px]">Total Campaigns</span>
+                <span className="text-base font-bold text-foreground">{totalCampaigns}</span>
               </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
-                <div style={{ width: "30px", height: "30px", borderRadius: "8px", background: "#ffedd5", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <div className="flex flex-col gap-[3px]">
+                <div className="w-[30px] h-[30px] rounded-lg bg-soft-peach flex items-center justify-center">
                   <RefreshIcon />
                 </div>
-                <span style={{ fontSize: "11px", color: "#9ca3af", marginTop: "3px" }}>Ongoing Campaigns</span>
-                <span style={{ fontSize: "16px", fontWeight: 700, color: "#111827" }}>{ongoingCampaigns}</span>
+                <span className="text-[11px] text-muted-foreground mt-[3px]">Ongoing Campaigns</span>
+                <span className="text-base font-bold text-foreground">{ongoingCampaigns}</span>
               </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
-                <div style={{ width: "30px", height: "30px", borderRadius: "8px", background: "#dcfce7", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <div className="flex flex-col gap-[3px]">
+                <div className="w-[30px] h-[30px] rounded-lg bg-soft-mint/30 flex items-center justify-center">
                   <DropIcon />
                 </div>
-                <span style={{ fontSize: "11px", color: "#9ca3af", marginTop: "3px" }}>Engagements</span>
-                <span style={{ fontSize: "16px", fontWeight: 700, color: "#111827" }}>{formatCompact(totalEngagements)}</span>
+                <span className="text-[11px] text-muted-foreground mt-[3px]">Engagements</span>
+                <span className="text-base font-bold text-foreground">{formatCompact(totalEngagements)}</span>
               </div>
             </div>
           </div>
 
           {/* CHART PANEL */}
           <PermissionWrapper permissionKey="dashboard.read" fallback={null}>
-            <div style={{ background: "#f9fafb", borderRadius: "12px", overflow: "hidden" }}>
+            <div className="bg-muted/30 rounded-xl overflow-hidden">
               {/* Tab strip with sliding indicator */}
-              <div style={{ position: "relative", display: "grid", gridTemplateColumns: "1fr 1fr 1fr", paddingTop: "4px" }}>
-                <div style={{
-                  position: "absolute", top: "4px", bottom: "-1px",
-                  left: `${activeTabIdx * 33.333}%`, width: "33.333%",
-                  background: "#fff", borderRadius: "8px 8px 0 0",
-                  transition: "left 0.22s cubic-bezier(0.4,0,0.2,1)",
-                  zIndex: 1, pointerEvents: "none",
-                }}/>
+              <div className="relative grid grid-cols-3 pt-1">
+                <div
+                  className="absolute top-1 -bottom-px rounded-t-lg bg-card z-[1] pointer-events-none transition-[left] duration-[220ms] ease-[cubic-bezier(0.4,0,0.2,1)]"
+                  style={{ left: `${activeTabIdx * 33.333}%`, width: "33.333%" }}
+                />
                 {chartTabConfig.map((t) => (
                   <button
                     key={t.key}
                     onClick={() => setChartTab(t.key)}
-                    style={{
-                      position: "relative", zIndex: 2,
-                      background: "transparent", border: "none", cursor: "pointer",
-                      padding: "10px 14px 12px", textAlign: "left",
-                    }}
+                    className="relative z-[2] bg-transparent border-none cursor-pointer pt-[10px] pr-[14px] pb-3 pl-[14px] text-left"
                   >
-                    <div style={{ fontSize: "10px", color: "#9ca3af", marginBottom: "3px" }}>{t.label}</div>
-                    <div style={{ fontSize: "13px", fontWeight: 700, color: chartTab === t.key ? "#111827" : "#6b7280" }}>
+                    <div className="text-[10px] text-muted-foreground mb-[3px]">{t.label}</div>
+                    <div className={`text-[13px] font-bold ${chartTab === t.key ? "text-foreground" : "text-muted-foreground"}`}>
                       {t.value}
                     </div>
                   </button>
                 ))}
               </div>
               {/* Chart area */}
-              <div style={{ background: "#fff", borderRadius: "0 0 12px 12px", padding: "14px 18px 16px" }}>
+              <div className="bg-card rounded-b-xl px-[18px] pt-[14px] pb-4">
                 {chartData.length > 0 ? (
                   <ResponsiveContainer width="100%" height={155}>
                     <LineChart data={chartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
@@ -347,7 +356,7 @@ export default function DashboardSection({
                         tickFormatter={(v) => chartTab === "engagements" ? formatCompact(v) : `${(v / 1000).toFixed(0)}k`}
                       />
                       <Tooltip
-                        contentStyle={{ fontSize: 11, borderRadius: 8, border: "1px solid #e5e7eb" }}
+                        contentStyle={{ fontSize: 11, borderRadius: 8, border: "1px solid var(--border)" }}
                         formatter={(value: number) => [
                           chartTab === "engagements" ? formatCompact(value) : formatCurrency(value),
                           chartTab === "earnings" ? "Earnings" : chartTab === "withdrawals" ? "Withdrawals" : "Engagements",
@@ -357,8 +366,8 @@ export default function DashboardSection({
                     </LineChart>
                   </ResponsiveContainer>
                 ) : (
-                  <div style={{ height: "140px", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <span style={{ fontSize: "11px", color: "#9ca3af" }}>Not enough data to show trend</span>
+                  <div className="h-[140px] flex items-center justify-center">
+                    <span className="text-[11px] text-muted-foreground">Not enough data to show trend</span>
                   </div>
                 )}
               </div>
@@ -367,68 +376,76 @@ export default function DashboardSection({
         </div>
 
         {/* RIGHT column */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+        <div className="flex flex-col gap-[14px]">
 
           {/* UPCOMING CAMPAIGNS */}
-          <div style={{ borderRadius: "12px", border: "1px solid #ddd6fe", overflow: "hidden", background: "#ede9fe" }}>
-            <div style={{ padding: "12px 14px", display: "flex", alignItems: "center", gap: "6px" }}>
+          <div className="rounded-xl border border-accent/30 overflow-hidden bg-accent/10">
+            <div className="px-[14px] py-3 flex items-center gap-[6px]">
               <ClockIcon />
-              <span style={{ fontSize: "12px", fontWeight: 600, color: "#374151" }}>Upcoming Campaigns</span>
+              <span className="text-xs font-semibold text-foreground">Upcoming Campaigns</span>
             </div>
-            {campaigns && campaigns.length > 0 ? (
-              <div style={{ display: "flex", flexDirection: "column", gap: "8px", padding: "0 10px 12px" }}>
+            {campaignsLoading ? (
+              <div className="flex flex-col gap-2 px-[10px] pb-3">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <Skeleton key={i} className="h-10 w-full rounded-lg" />
+                ))}
+              </div>
+            ) : campaigns && campaigns.length > 0 ? (
+              <div className="flex flex-col gap-2 px-[10px] pb-3">
                 {campaigns.slice(0, 5).map((c) => (
                   <div
                     key={c._id}
-                    style={{
-                      background: "#fff", border: "1px solid #e5e7eb", borderRadius: "8px",
-                      padding: "8px 12px", display: "flex", alignItems: "center", gap: "10px",
-                    }}
+                    className="bg-card border border-border rounded-lg py-2 px-3 flex items-center gap-[10px]"
                   >
-                    <span style={{ fontSize: "10px", color: "#9ca3af", whiteSpace: "nowrap" }}>{c.duration_start}</span>
-                    <span style={{ fontSize: "11px", fontWeight: 600, color: "#374151", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.name}</span>
+                    <span className="text-[10px] text-muted-foreground whitespace-nowrap">{c.duration_start}</span>
+                    <span className="text-[11px] font-semibold text-foreground overflow-hidden text-ellipsis whitespace-nowrap">{c.name}</span>
                   </div>
                 ))}
               </div>
             ) : (
-              <div style={{ padding: "22px 14px", display: "flex", justifyContent: "center" }}>
-                <span style={{ fontSize: "11px", color: "#9ca3af" }}>You have no upcoming campaigns.</span>
+              <div className="py-[22px] px-[14px] flex justify-center">
+                <span className="text-[11px] text-muted-foreground">You have no upcoming campaigns.</span>
               </div>
             )}
           </div>
 
           {/* RECENT ACTIVITY */}
-          <div style={{ background: "#fff", borderRadius: "12px", border: "1px solid #f3f4f6", padding: "14px 16px", flex: 1 }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "14px" }}>
-              <span style={{ fontSize: "12px", fontWeight: 600, color: "#374151" }}>Recent Activity</span>
-              {auditLogs && auditLogs.length > 5 && (
-                <button style={{ background: "none", border: "none", fontSize: "11px", color: "#06b6d4", cursor: "pointer" }}>
+          <div className="bg-card rounded-xl border border-border px-4 py-[14px] flex-1">
+            <div className="flex items-center justify-between mb-[14px]">
+              <span className="text-xs font-semibold text-foreground">Recent Activity</span>
+              {!auditLogsLoading && auditLogs && auditLogs.length > 5 && (
+                <button className="bg-transparent border-none text-[11px] text-primary cursor-pointer">
                   View All
                 </button>
               )}
             </div>
-            {recentLogs.length > 0 ? (
-              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+            {auditLogsLoading ? (
+              <div className="flex flex-col gap-3">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <Skeleton key={i} className="h-10 w-full rounded-lg" />
+                ))}
+              </div>
+            ) : recentLogs.length > 0 ? (
+              <div className="flex flex-col gap-3">
                 {recentLogs.map((log) => (
-                  <div key={log._id} style={{ display: "flex", alignItems: "flex-start", gap: "8px" }}>
+                  <div key={log._id} className="flex items-start gap-2">
                     <div
-                      style={{ width: "28px", height: "28px", borderRadius: "50%", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}
-                      className={getAvatarColor(log.user_id)}
+                      className={`w-7 h-7 rounded-full shrink-0 flex items-center justify-center ${getAvatarColor(log.user_id)}`}
                     >
-                      <span style={{ fontSize: "9px", fontWeight: 700, color: "#fff" }}>
+                      <span className="text-[9px] font-bold text-white">
                         {log.entity_type.charAt(0).toUpperCase()}
                       </span>
                     </div>
                     <div>
-                      <p style={{ margin: 0, fontSize: "11px", lineHeight: 1.4 }}>
-                        <span style={{ color: "#3b82f6", fontWeight: 600, textTransform: "capitalize" }}>{log.entity_type}</span>
+                      <p className="m-0 text-[11px] leading-[1.4]">
+                        <span className="text-primary font-semibold capitalize">{log.entity_type}</span>
                         {" "}
-                        <span style={{ color: "#6b7280" }}>{log.action}</span>
+                        <span className="text-muted-foreground">{log.action}</span>
                       </p>
                       {log.details && (
-                        <p style={{ margin: "1px 0 0", fontSize: "10px", color: "#9ca3af" }}>{log.details}</p>
+                        <p className="mt-px mb-0 text-[10px] text-muted-foreground">{log.details}</p>
                       )}
-                      <p style={{ margin: "2px 0 0", fontSize: "9px", color: "#9ca3af" }}>
+                      <p className="mt-0.5 mb-0 text-[9px] text-muted-foreground">
                         {new Date(log.created_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}
                       </p>
                     </div>
@@ -436,8 +453,8 @@ export default function DashboardSection({
                 ))}
               </div>
             ) : (
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "80px" }}>
-                <span style={{ fontSize: "11px", color: "#9ca3af" }}>No recent activity</span>
+              <div className="flex items-center justify-center h-20">
+                <span className="text-[11px] text-muted-foreground">No recent activity</span>
               </div>
             )}
           </div>

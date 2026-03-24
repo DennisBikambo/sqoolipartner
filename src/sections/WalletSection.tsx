@@ -10,6 +10,8 @@ import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Badge } from "../components/ui/badge";
+import { Skeleton } from "../components/ui/skeleton";
+import { useConvexQuery } from "../hooks/useConvexQuery";
 import { maskPhoneNumber } from "../lib/maskPhoneNumber";
 import SuperAdminWalletSection from "../components/common/SuperAdminWalletSection";
 import {
@@ -63,48 +65,58 @@ export default function WalletSection({
 
   // Derive from user.role directly — avoids waiting for PermissionContext to hydrate
   const isSuperAdmin = (isConvexUser(user) && user.role === 'super_admin') || userRole === 'super_admin';
-  const campaigns = useQuery(
+  const rawCampaigns = useQuery(
     api.campaign.getCampaignsByPartner,
     partner?._id ? { partner_id: partner._id } : "skip"
   );
 
   // Fetch all transactions
-  const transactions = useQuery(
+  const rawTransactions = useQuery(
     api.transactions.getTransactionsByPartner,
     partner?._id ? { partner_id: partner._id } : "skip"
   );
 
   // Fetch withdrawals
-  const withdrawals = useQuery(
+  const rawWithdrawals = useQuery(
     api.withdrawals.getWithdrawals,
     partner?._id ? { partner_id: partner._id } : "skip"
   );
 
+  useConvexQuery(`wallet_campaigns_${partner?._id}`, rawCampaigns);
+  const { data: transactions, isLoading: transactionsLoading, isError: transactionsError } = useConvexQuery(
+    `wallet_transactions_${partner?._id}`,
+    rawTransactions
+  );
+  const { data: withdrawals, isLoading: withdrawalsLoading, isError: withdrawalsError } = useConvexQuery(
+    `wallet_withdrawals_${partner?._id}`,
+    rawWithdrawals
+  );
+
   // Filter transactions based on search query
   const filteredTransactions = useMemo(() => {
-    if (!transactions) return [];
-    
+    if (transactions === undefined) return undefined;
+
     return transactions.filter((transaction: Doc<"transactions">) => {
-      const matchesSearch = searchQuery === "" || 
+      const matchesSearch = searchQuery === "" ||
         transaction.student_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         transaction.phone_number.includes(searchQuery) ||
         transaction.mpesa_code.toLowerCase().includes(searchQuery.toLowerCase()) ||
         transaction.campaign_code.toLowerCase().includes(searchQuery.toLowerCase());
-      
+
       return matchesSearch;
     });
   }, [transactions, searchQuery]);
 
   // Filter withdrawals based on search query
   const filteredWithdrawals = useMemo(() => {
-    if (!withdrawals) return [];
-    
+    if (withdrawals === undefined) return undefined;
+
     return withdrawals.filter((withdrawal: Doc<"withdrawals">) => {
-      const matchesSearch = searchQuery === "" || 
+      const matchesSearch = searchQuery === "" ||
         withdrawal.reference_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
         withdrawal.destination_details.account_number.includes(searchQuery) ||
         withdrawal.amount.toString().includes(searchQuery);
-      
+
       return matchesSearch;
     });
   }, [withdrawals, searchQuery]);
@@ -157,10 +169,6 @@ export default function WalletSection({
   // For regular partners: wait for auth + partner to resolve
   if (authLoading || !partner) {
     return <Loading message="Loading your wallet..." size="lg" />;
-  }
-
-  if (campaigns === undefined || transactions === undefined || withdrawals === undefined) {
-    return <Loading message="Loading transactions..." size="lg" />;
   }
 
   return (
@@ -232,7 +240,17 @@ export default function WalletSection({
 
                 {/* PAYMENTS TAB */}
                 <TabsContent value="payments" className="mt-0">
-                  {filteredTransactions.length === 0 ? (
+                  {transactionsLoading ? (
+                    <div className="space-y-2">
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <Skeleton key={i} className="h-10 w-full rounded-lg" />
+                      ))}
+                    </div>
+                  ) : transactionsError ? (
+                    <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
+                      <p className="text-sm">Something went wrong. Please refresh.</p>
+                    </div>
+                  ) : filteredTransactions === undefined || filteredTransactions.length === 0 ? (
                     <div className="text-center py-8 lg:py-12">
                       <div className="flex flex-col items-center gap-4">
                         <div className="w-20 h-20 lg:w-24 lg:h-24 rounded-full bg-muted flex items-center justify-center">
@@ -411,7 +429,7 @@ export default function WalletSection({
                       {/* Pagination */}
                       <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-4 lg:mt-6 pt-4 border-t border-border">
                         <div className="text-xs sm:text-sm text-muted-foreground">
-                          Showing {filteredTransactions.length} of {transactions?.length || 0} payments
+                          Showing {filteredTransactions?.length ?? 0} of {transactions?.length || 0} payments
                         </div>
                         <div className="flex items-center gap-2">
                           <Button variant="outline" size="sm" disabled>
@@ -428,7 +446,17 @@ export default function WalletSection({
 
                 {/* WITHDRAWALS TAB */}
                 <TabsContent value="withdrawals" className="mt-0">
-                  {filteredWithdrawals.length === 0 ? (
+                  {withdrawalsLoading ? (
+                    <div className="space-y-2">
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <Skeleton key={i} className="h-10 w-full rounded-lg" />
+                      ))}
+                    </div>
+                  ) : withdrawalsError ? (
+                    <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
+                      <p className="text-sm">Something went wrong. Please refresh.</p>
+                    </div>
+                  ) : filteredWithdrawals === undefined || filteredWithdrawals.length === 0 ? (
                     <div className="text-center py-8 lg:py-12">
                       <div className="flex flex-col items-center gap-4">
                         <div className="w-20 h-20 lg:w-24 lg:h-24 rounded-full bg-muted flex items-center justify-center">
@@ -635,7 +663,7 @@ export default function WalletSection({
                       {/* Pagination - Withdrawals */}
                       <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-4 lg:mt-6 pt-4 border-t border-border">
                         <div className="text-xs sm:text-sm text-muted-foreground">
-                          Showing {filteredWithdrawals.length} of {withdrawals?.length || 0} withdrawals
+                          Showing {filteredWithdrawals?.length ?? 0} of {withdrawals?.length || 0} withdrawals
                         </div>
                         <div className="flex items-center gap-2">
                           <Button variant="outline" size="sm" disabled>

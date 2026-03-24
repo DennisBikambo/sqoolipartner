@@ -60,7 +60,7 @@ export function UserCredentialsDialog({
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Check className="h-5 w-5 text-green-600" />
+            <Check className="h-5 w-5 text-secondary" />
             Account Created Successfully!
           </DialogTitle>
           <DialogDescription>
@@ -101,7 +101,7 @@ export function UserCredentialsDialog({
                   onClick={() => copyToClipboard(email, 'Email')}
                 >
                   {copiedField === 'Email' ? (
-                    <Check className="h-4 w-4 text-green-600" />
+                    <Check className="h-4 w-4 text-secondary" />
                   ) : (
                     <Copy className="h-4 w-4" />
                   )}
@@ -125,7 +125,7 @@ export function UserCredentialsDialog({
                     onClick={() => copyToClipboard(username, 'Username')}
                   >
                     {copiedField === 'Username' ? (
-                      <Check className="h-4 w-4 text-green-600" />
+                      <Check className="h-4 w-4 text-secondary" />
                     ) : (
                       <Copy className="h-4 w-4" />
                     )}
@@ -150,7 +150,7 @@ export function UserCredentialsDialog({
                     onClick={() => copyToClipboard(extension, 'Extension')}
                   >
                     {copiedField === 'Extension' ? (
-                      <Check className="h-4 w-4 text-green-600" />
+                      <Check className="h-4 w-4 text-secondary" />
                     ) : (
                       <Copy className="h-4 w-4" />
                     )}
@@ -174,7 +174,7 @@ export function UserCredentialsDialog({
                   onClick={() => copyToClipboard(password, 'Password')}
                 >
                   {copiedField === 'Password' ? (
-                    <Check className="h-4 w-4 text-green-600" />
+                    <Check className="h-4 w-4 text-secondary" />
                   ) : (
                     <Copy className="h-4 w-4" />
                   )}

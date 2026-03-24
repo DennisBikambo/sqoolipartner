@@ -101,11 +101,11 @@ export default function Hero() {
         <div className="max-w-7xl mx-auto px-6 lg:pl-20">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div className="space-y-8">
-              <h1 className="text-4xl lg:text-5xl xl:text-6xl font-medium text-[#101828] dark:text-foreground leading-tight" style={{ fontFamily: 'Outfit, sans-serif' }}>
+              <h1 className="text-4xl lg:text-5xl xl:text-6xl font-medium text-text-dark dark:text-foreground leading-tight" style={{ fontFamily: 'Outfit, sans-serif' }}>
                 Empower Education.<br />
                 <span className="text-primary">Inspire Change.</span>
               </h1>
-              <p className="text-lg lg:text-xl font-light text-[#111111] dark:text-muted-foreground leading-relaxed max-w-xl" style={{ fontFamily: 'Outfit, sans-serif' }}>
+              <p className="text-lg lg:text-xl font-light text-foreground dark:text-muted-foreground leading-relaxed max-w-xl" style={{ fontFamily: 'Outfit, sans-serif' }}>
                 Whether you're a content creator, media brand, or corporate donor — Sqooli gives you a way to make education accessible and rewarding for everyone.
               </p>
               <Button
@@ -120,7 +120,7 @@ export default function Hero() {
             
             <div className="hidden relative h-full md:w-[120%] md:flex justify-start">
               {/* Decorative blob SVGs in background - behind everything */}
-              <div className="relative rounded-2xl overflow-visible h-full" style={{ zIndex: 1 }}>
+              <div className="relative rounded-2xl overflow-visible h-full z-[1]">
                 {/* Main hero image */}
                 <div className="relative bottom-4 w-full h-full">
                   <img
@@ -139,10 +139,10 @@ export default function Hero() {
       <section className="py-16 lg:py-20 bg-white dark:bg-background">
         <div className="max-w-7xl mx-auto px-6 lg:px-20">
           <div className="text-center mb-12 lg:mb-16 space-y-4">
-            <h2 className="text-3xl lg:text-4xl font-medium text-[#101828] dark:text-foreground" style={{ fontFamily: 'Outfit, sans-serif' }}>
+            <h2 className="text-3xl lg:text-4xl font-medium text-text-dark dark:text-foreground" style={{ fontFamily: 'Outfit, sans-serif' }}>
               Why Partner with Sqooli
             </h2>
-            <p className="text-base font-light text-[#475467] dark:text-muted-foreground max-w-2xl mx-auto leading-relaxed" style={{ fontFamily: 'Outfit, sans-serif' }}>
+            <p className="text-base font-light text-text-gray dark:text-muted-foreground max-w-2xl mx-auto leading-relaxed" style={{ fontFamily: 'Outfit, sans-serif' }}>
               Sqooli empowers digital schools to reach more learners through innovation. Partners help us amplify access, visibility, and opportunity.
             </p>
           </div>
@@ -177,7 +177,7 @@ export default function Hero() {
       </section>
 
       {/* Partnership Types Section */}
-      <section className="py-16 lg:py-20 bg-[#f8fafc] dark:bg-muted/20">
+      <section className="py-16 lg:py-20 bg-muted/30 dark:bg-muted/20">
         <div className="max-w-7xl mx-auto px-6 lg:px-20">
           <div className="grid lg:grid-cols-2 gap-6">
             <PartnershipCard
@@ -222,10 +222,10 @@ export default function Hero() {
       <section className="py-16 lg:py-20 bg-white dark:bg-background">
         <div className="max-w-7xl mx-auto px-6 lg:px-20">
           <div className="text-center mb-12 lg:mb-16 space-y-4">
-            <h2 className="text-3xl lg:text-4xl font-medium text-[#101828] dark:text-foreground" style={{ fontFamily: 'Outfit, sans-serif' }}>
+            <h2 className="text-3xl lg:text-4xl font-medium text-text-dark dark:text-foreground" style={{ fontFamily: 'Outfit, sans-serif' }}>
               How it works
             </h2>
-            <p className="text-base font-light text-[#475467] dark:text-muted-foreground max-w-2xl mx-auto" style={{ fontFamily: 'Outfit, sans-serif' }}>
+            <p className="text-base font-light text-text-gray dark:text-muted-foreground max-w-2xl mx-auto" style={{ fontFamily: 'Outfit, sans-serif' }}>
               Its easy. Here is a 3 step visual timeline of what to expect by partnering with us
             </p>
           </div>
@@ -265,31 +265,31 @@ export default function Hero() {
           <div className="grid lg:grid-cols-2 gap-12 items-start">
             <div>
               <div className="flex items-center gap-3 mb-6">
-                <h2 className="text-3xl lg:text-4xl font-medium text-[#101828] dark:text-foreground" style={{ fontFamily: 'Outfit, sans-serif' }}>
+                <h2 className="text-3xl lg:text-4xl font-medium text-text-dark dark:text-foreground" style={{ fontFamily: 'Outfit, sans-serif' }}>
                   Ready to Make an Impact?
                 </h2>
                 <span className="text-3xl">✨</span>
               </div>
-              <p className="text-base font-light text-[#475467] dark:text-muted-foreground mb-8" style={{ fontFamily: 'Lexend, sans-serif' }}>
+              <p className="text-base font-light text-text-gray dark:text-muted-foreground mb-8" style={{ fontFamily: 'Lexend, sans-serif' }}>
                 Join the Sqooli Partners Network today.
               </p>
               
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="space-y-2">
-                  <Label htmlFor="orgName" className="text-sm font-normal text-[#475467] dark:text-muted-foreground" style={{ fontFamily: 'Lexend, sans-serif' }}>
+                  <Label htmlFor="orgName" className="text-sm font-normal text-text-gray dark:text-muted-foreground" style={{ fontFamily: 'Lexend, sans-serif' }}>
                     Organization Name
                   </Label>
                   <Input
                     id="orgName"
                     value={formData.orgName}
                     onChange={(e) => setFormData({ ...formData, orgName: e.target.value })}
-                    className="bg-[#eceefd] dark:bg-input border-[#dfe2fc] dark:border-border rounded-xl h-12"
+                    className="bg-form-bg dark:bg-input border-form-border dark:border-border rounded-xl h-12"
                     required
                   />
                 </div>
-                
+
                 <div className="space-y-2">
-                  <Label htmlFor="email" className="text-sm font-normal text-[#475467] dark:text-muted-foreground" style={{ fontFamily: 'Lexend, sans-serif' }}>
+                  <Label htmlFor="email" className="text-sm font-normal text-text-gray dark:text-muted-foreground" style={{ fontFamily: 'Lexend, sans-serif' }}>
                     Email Address
                   </Label>
                   <Input
@@ -297,13 +297,13 @@ export default function Hero() {
                     type="email"
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    className="bg-[#eceefd] dark:bg-input border-[#dfe2fc] dark:border-border rounded-xl h-12"
+                    className="bg-form-bg dark:bg-input border-form-border dark:border-border rounded-xl h-12"
                     required
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-sm font-normal text-[#475467] dark:text-muted-foreground" style={{ fontFamily: 'Lexend, sans-serif' }}>
+                  <Label className="text-sm font-normal text-text-gray dark:text-muted-foreground" style={{ fontFamily: 'Lexend, sans-serif' }}>
                     Type of Partnership
                   </Label>
                   <RadioGroup
@@ -313,14 +313,14 @@ export default function Hero() {
                   >
                     {['Media', 'Influencer', 'Sponsor', 'Donor'].map((type) => (
                       <div key={type} className="flex items-center space-x-2">
-                        <RadioGroupItem 
-                          value={type} 
+                        <RadioGroupItem
+                          value={type}
                           id={type}
-                          className="border-[#d0d5dd] dark:border-border"
+                          className="border-radio-border dark:border-border"
                         />
-                        <Label 
-                          htmlFor={type} 
-                          className="text-sm font-normal text-[#475467] dark:text-muted-foreground cursor-pointer"
+                        <Label
+                          htmlFor={type}
+                          className="text-sm font-normal text-text-gray dark:text-muted-foreground cursor-pointer"
                           style={{ fontFamily: 'Outfit, sans-serif' }}
                         >
                           {type}
@@ -331,7 +331,7 @@ export default function Hero() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="message" className="text-sm font-normal text-[#475467] dark:text-muted-foreground" style={{ fontFamily: 'Lexend, sans-serif' }}>
+                  <Label htmlFor="message" className="text-sm font-normal text-text-gray dark:text-muted-foreground" style={{ fontFamily: 'Lexend, sans-serif' }}>
                     Message
                   </Label>
                   <Textarea
@@ -339,7 +339,7 @@ export default function Hero() {
                     rows={5}
                     value={formData.message}
                     onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                    className="bg-[#eceefd] dark:bg-input border-[#dfe2fc] dark:border-border rounded-xl resize-none"
+                    className="bg-form-bg dark:bg-input border-form-border dark:border-border rounded-xl resize-none"
                     required
                   />
                 </div>
@@ -355,24 +355,24 @@ export default function Hero() {
                 </Button>
 
                 {result === "validation" && (
-                  <div className="p-4 bg-yellow-50 dark:bg-yellow-950/30 border border-yellow-200 dark:border-yellow-800 rounded-xl">
-                    <p className="text-sm text-yellow-800 dark:text-yellow-400 font-medium" style={{ fontFamily: 'Outfit, sans-serif' }}>
+                  <div className="p-4 bg-chart-3/10 border border-chart-3/30 rounded-xl">
+                    <p className="text-sm text-chart-3 font-medium" style={{ fontFamily: 'Outfit, sans-serif' }}>
                       ⚠ Please fill in all required fields with valid information.
                     </p>
                   </div>
                 )}
 
                 {result === "success" && (
-                  <div className="p-4  dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-xl">
-                    <p className="text-sm font-medium" style={{ fontFamily: 'Outfit, sans-serif' }}>
+                  <div className="p-4 bg-secondary/10 border border-secondary/30 rounded-xl">
+                    <p className="text-sm text-secondary font-medium" style={{ fontFamily: 'Outfit, sans-serif' }}>
                       ✓ Thank you! Your application has been submitted successfully. We'll get back to you soon.
                     </p>
                   </div>
                 )}
 
                 {result === "error" && (
-                  <div className="p-4 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-xl">
-                    <p className="text-sm text-red-800 dark:text-red-400 font-medium" style={{ fontFamily: 'Outfit, sans-serif' }}>
+                  <div className="p-4 bg-destructive/10 border border-destructive/30 rounded-xl">
+                    <p className="text-sm text-destructive font-medium" style={{ fontFamily: 'Outfit, sans-serif' }}>
                       ✗ Something went wrong. Please try again or contact us directly.
                     </p>
                   </div>

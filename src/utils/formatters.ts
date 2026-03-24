@@ -45,11 +45,11 @@ export const getInitials = (name: string = ""): string =>
  */
 export const getAvatarColor = (name: string): string => {
   const colors = [
-    "bg-blue-500",
-    "bg-green-500",
-    "bg-purple-500",
-    "bg-pink-500",
-    "bg-orange-500",
+    "bg-primary",
+    "bg-secondary",
+    "bg-chart-4",
+    "bg-chart-5",
+    "bg-chart-3",
   ];
   const index = name.charCodeAt(0) % colors.length;
   return colors[index];

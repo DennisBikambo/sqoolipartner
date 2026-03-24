@@ -42,7 +42,7 @@ export default function PartnerCarousel() {
 
   return (
     <div className="w-full overflow-hidden">
-      <p className="text-center text-base font-normal text-[#475467] mb-8" style={{ fontFamily: 'Outfit, sans-serif' }}>
+      <p className="text-center text-base font-normal text-text-gray mb-8" style={{ fontFamily: 'Outfit, sans-serif' }}>
         Join the list of our amazing partners
       </p>
 
@@ -96,7 +96,7 @@ export default function PartnerCarousel() {
               onClick={() => setCurrentIndex(index)}
               className={`w-2 h-2 rounded-full transition-all ${index === currentIndex
                   ? 'bg-primary w-6'
-                  : 'bg-gray-300'
+                  : 'bg-muted-foreground/30'
                 }`}
               aria-label={`Go to slide ${index + 1}`}
             />

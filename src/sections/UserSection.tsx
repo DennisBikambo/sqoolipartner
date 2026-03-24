@@ -1,91 +1,153 @@
-
 import { useState } from 'react';
-import { Eye, Plus, Search, Filter, UserX, UserCheck, Lock, AlertCircle } from 'lucide-react';
+import { Plus, Lock, AlertCircle } from 'lucide-react';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import type { Id } from '../../convex/_generated/dataModel';
 import { Button } from '../components/ui/button';
-import { Input } from '../components/ui/input';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
-import { Avatar, AvatarFallback } from '../components/ui/avatar';
-import { Separator } from '../components/ui/separator';
-import { ScrollArea } from '../components/ui/scroll-area';
-import { Loading } from '../components/common/Loading';
+import { Skeleton } from '../components/ui/skeleton';
+import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
+import { Card, CardContent } from '../components/ui/card';
 import { useAuth } from '../hooks/useAuth';
 import { usePermissions } from '../hooks/usePermission';
 import { PermissionWrapper } from '../components/common/PermissionWrapper';
 import AddUserDialog from '../components/common/AddUserDialog';
 import { ConfirmDialog } from '../components/common/ConfirmationDialog';
-import ViewUserDialog, { type ViewUser } from '../components/common/ViewUserDialog';
+import { DeactivateWithReasonDialog } from '../components/common/DeactivateWithReasonDialog';
+import { UserDetailModal } from '../components/common/UserDetailModal';
 import PartnerManagement from '../components/common/PartnerManagement';
-import { isConvexUser } from '../types/auth.types';
+import { isConvexUser, type ConvexUser } from '../types/auth.types';
 import { toast } from 'sonner';
 import { getInitials, getAvatarColor } from '../utils/formatters';
+import { useConvexQuery } from '../hooks/useConvexQuery';
+
+// ── SVG Icons ────────────────────────────────────────────────────────────────
+const SearchIcon = () => (
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-muted-foreground">
+    <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+  </svg>
+);
+const FilterIcon = () => (
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-muted-foreground">
+    <line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/>
+  </svg>
+);
+const EyeIcon = () => (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-primary">
+    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+  </svg>
+);
+const TrashIcon = () => (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-destructive">
+    <polyline points="3 6 5 6 21 6"/>
+    <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
+    <path d="M10 11v6M14 11v6M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/>
+  </svg>
+);
 
 export default function UserSection() {
   const { user: currentUser, partner } = useAuth();
   const [showAddModal, setShowAddModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [auditSearchQuery, setAuditSearchQuery] = useState('');
+  const [activeTab, setActiveTab] = useState<'active' | 'inactive'>('active');
+
+  // Activate flow
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<Id<'users'> | null>(null);
-  const [isActivating, setIsActivating] = useState(false);
-  const [viewUser, setViewUser] = useState<ViewUser | null>(null);
-  const [viewOpen, setViewOpen] = useState(false);
+  const [selectedUserId, setSelectedUserId] = useState<Id<'users'> | null>(null);
+
+  // Deactivate-with-reason flow
+  const [deactivateOpen, setDeactivateOpen] = useState(false);
+  const [deactivateTargetId, setDeactivateTargetId] = useState<Id<'users'> | null>(null);
+  const [deactivateLoading, setDeactivateLoading] = useState(false);
+
+  // Detail modal
+  const [detailUser, setDetailUser] = useState<ConvexUser | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
 
   const { canRead, canWrite } = usePermissions();
   const partnerId = partner?._id;
-
-  // Permission checks
   const canViewUsers = canRead('users');
   const canManageUsers = canWrite('users');
 
-  // ✅ Only fetch if partnerId exists AND user has permission
-  const users = useQuery(
+  const rawUsers = useQuery(
     api.user.getUsers,
     partnerId && canViewUsers ? { partner_id: partnerId } : 'skip'
   );
+  const { data: users, isLoading: usersLoading } = useConvexQuery(
+    `users_${partnerId ?? 'none'}`,
+    rawUsers
+  );
 
-  const auditLogs = useQuery(
+  const rawAuditLogs = useQuery(
     api.audit.getAuditLogs,
     partnerId && canViewUsers ? { partner_id: partnerId } : 'skip'
+  );
+  const { data: auditLogs, isLoading: auditLoading } = useConvexQuery(
+    `audit_partner_${partnerId ?? 'none'}`,
+    rawAuditLogs
   );
 
   const updateUser = useMutation(api.user.updateUser);
 
-  const handleViewUser = (user: ViewUser) => {
-    setViewUser(user);
-    setViewOpen(true);
-  };
-
-  const handleToggleActivation = (userId: Id<'users'>, activate: boolean) => {
-    if (!canManageUsers) {
-      toast.error("You don't have permission to activate/deactivate users");
-      return;
-    }
-    setSelectedUser(userId);
-    setIsActivating(activate);
+  // ── Handlers ──────────────────────────────────────────────────────────────
+  const handleActivate = (userId: Id<'users'>) => {
+    if (!canManageUsers) { toast.error("No permission"); return; }
+    setSelectedUserId(userId);
     setConfirmOpen(true);
   };
 
-  const handleConfirmToggle = async () => {
-    if (!selectedUser || !canManageUsers) return;
-    await updateUser({ user_id: selectedUser, is_account_activated: isActivating });
+  const handleConfirmActivate = async () => {
+    if (!selectedUserId) return;
+    await updateUser({ user_id: selectedUserId, is_account_activated: true });
+    toast.success('User activated');
     setConfirmOpen(false);
-    setSelectedUser(null);
+    setSelectedUserId(null);
+    setDetailOpen(false);
   };
 
-  // ✅ Filter users safely
-  const filteredUsers = (users || []).filter(user => 
-    user.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    user.email?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const handleDeactivate = (userId: Id<'users'>) => {
+    if (!canManageUsers) { toast.error("No permission"); return; }
+    setDeactivateTargetId(userId);
+    setDeactivateOpen(true);
+  };
 
+  const handleConfirmDeactivate = async (reason: string) => {
+    if (!deactivateTargetId) return;
+    setDeactivateLoading(true);
+    try {
+      await updateUser({ user_id: deactivateTargetId, is_account_activated: false });
+      toast.success(reason ? `User deactivated: ${reason}` : 'User deactivated');
+      setDeactivateOpen(false);
+      setDeactivateTargetId(null);
+      setDetailOpen(false);
+    } finally {
+      setDeactivateLoading(false);
+    }
+  };
+
+  const openDetail = (user: ConvexUser) => {
+    setDetailUser(user);
+    setDetailOpen(true);
+  };
+
+  // ── Filters ────────────────────────────────────────────────────────────────
+  const allUsers = users ?? [];
+  const filteredUsers = allUsers.filter(
+    u =>
+      u.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      u.email?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
   const activeUsers = filteredUsers.filter(u => u.is_account_activated);
   const inactiveUsers = filteredUsers.filter(u => !u.is_account_activated);
+  const displayedUsers = activeTab === 'active' ? activeUsers : inactiveUsers;
 
-  // No permission to view
+  const filteredAuditLogs = (auditLogs ?? []).filter(
+    log =>
+      log.action.toLowerCase().includes(auditSearchQuery.toLowerCase()) ||
+      log.entity_type.toLowerCase().includes(auditSearchQuery.toLowerCase())
+  );
+
+  // ── Guards ─────────────────────────────────────────────────────────────────
   if (!canViewUsers) {
     return (
       <div className="flex items-center justify-center min-h-[60vh] p-6">
@@ -95,18 +157,11 @@ export default function UserSection() {
               <div className="h-12 w-12 rounded-full bg-destructive/10 flex items-center justify-center">
                 <Lock className="h-6 w-6 text-destructive" />
               </div>
-              <div>
-                <h3 className="text-lg font-semibold text-foreground">User Access Restricted</h3>
-              </div>
+              <h3 className="text-lg font-semibold text-foreground">User Access Restricted</h3>
             </div>
-            <div className="space-y-3">
-              <div className="flex items-start gap-2 text-sm text-muted-foreground">
-                <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                <p>You don't have permission to view users.</p>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Contact your administrator to request <span className="font-medium text-foreground">user.read</span> permission.
-              </p>
+            <div className="flex items-start gap-2 text-sm text-muted-foreground">
+              <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+              <p>You don't have permission to view users. Contact your administrator to request <span className="font-medium text-foreground">user.read</span> permission.</p>
             </div>
           </CardContent>
         </Card>
@@ -114,240 +169,223 @@ export default function UserSection() {
     );
   }
 
-  // Super admin sees Partner Management — check before loading guard
-  const isSuperAdmin = isConvexUser(currentUser) && currentUser.role === 'super_admin';
-  if (isSuperAdmin) {
+  if (isConvexUser(currentUser) && currentUser.role === 'super_admin') {
     return <PartnerManagement />;
   }
 
-  // Loading state (non-super-admin only)
-  if (!partnerId || users === undefined) {
-    return <Loading message="Loading users..." size="md" />;
-  }
-
+  // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-muted/30 p-6">
-      <div className="max-w-7xl mx-auto">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Left Sidebar - Audit Logs */}
-          <div className="lg:col-span-3">
-            <Card className="sticky top-24 border-0 shadow-sm">
-              <CardHeader>
-                <CardTitle className="text-sm">Audit Logs</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search"
-                    value={auditSearchQuery}
-                    onChange={e => setAuditSearchQuery(e.target.value)}
-                    className="pl-9 pr-8"
-                  />
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
-                  >
-                    <Filter className="h-4 w-4" />
-                  </Button>
-                </div>
-                <ScrollArea className="h-[600px]">
-                  <div className="space-y-3">
-                    {(auditLogs || []).map(log => (
-                      <div
-                        key={log._id}
-                        className="flex items-start gap-3 p-2 hover:bg-muted/50 rounded-lg transition-colors cursor-pointer"
-                      >
-                        <Avatar className="h-8 w-8">
-                          <AvatarFallback className={`${getAvatarColor(log.action)} text-white text-xs`}>
-                            {getInitials(log.action)}
+    <div className="min-h-screen bg-muted/30 p-6 font-sans">
+      <div className="max-w-[1100px] mx-auto">
+
+        {/* Header */}
+        <div className="flex items-center justify-between mb-5">
+          <h1 className="text-lg font-bold text-foreground">Users</h1>
+          <PermissionWrapper requireWrite="users" fallback="button" fallbackProps={{ buttonText: 'Add User' }}>
+            <Button
+              onClick={() => setShowAddModal(true)}
+              className="flex items-center gap-1.5 rounded-lg text-xs px-4 py-2"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              Add User
+            </Button>
+          </PermissionWrapper>
+        </div>
+
+        {/* Two-column layout */}
+        <div className="grid gap-4" style={{ gridTemplateColumns: '220px 1fr' }}>
+
+          {/* ── LEFT: Audit Logs ── */}
+          <div className="bg-card rounded-xl border border-border p-3.5 shadow-sm max-h-[600px] overflow-y-auto">
+            <h3 className="text-[13px] font-bold text-foreground mb-2.5">Audit Logs</h3>
+
+            {/* Search */}
+            <div className="flex items-center border border-border rounded-lg px-2.5 py-1.5 bg-muted/40 mb-3.5 gap-1.5">
+              <SearchIcon />
+              <input
+                placeholder="Search"
+                value={auditSearchQuery}
+                onChange={e => setAuditSearchQuery(e.target.value)}
+                className="flex-1 border-none outline-none text-[11px] bg-transparent text-foreground placeholder:text-muted-foreground"
+              />
+              <FilterIcon />
+            </div>
+
+            {/* Entries */}
+            <div className="flex flex-col gap-3">
+              {auditLoading ? (
+                Array.from({ length: 5 }).map((_, i) => (
+                  <Skeleton key={i} className="h-9 w-full rounded-lg" />
+                ))
+              ) : filteredAuditLogs.length === 0 ? (
+                <p className="text-xs text-muted-foreground text-center py-4">No audit logs</p>
+              ) : (
+                filteredAuditLogs.map(log => {
+                    const enriched = log as typeof log & { userName?: string; userAvatar?: string | null; userInitials?: string };
+                    return (
+                      <div key={log._id} className="flex items-start gap-2">
+                        <Avatar className="h-7 w-7 shrink-0">
+                          {enriched.userAvatar && (
+                            <AvatarImage src={enriched.userAvatar} alt={enriched.userName ?? ''} className="object-cover" />
+                          )}
+                          <AvatarFallback className={`${getAvatarColor(enriched.userName ?? log.action)} text-primary-foreground text-[10px] font-bold`}>
+                            {enriched.userInitials ?? getInitials(log.action)}
                           </AvatarFallback>
                         </Avatar>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs font-medium truncate">{log.action}</p>
-                          <p className="text-xs text-muted-foreground mt-0.5 truncate">{log.entity_type}</p>
-                          <p className="text-[10px] text-muted-foreground mt-1">
+                        <div className="min-w-0">
+                          <p className="text-[11px] leading-snug">
+                            <span className="text-primary font-semibold">{enriched.userName ?? 'Unknown'}</span>{' '}
+                            <span className="text-foreground">{log.action}</span>
+                          </p>
+                          <p className="text-[9px] text-muted-foreground mt-0.5">
                             {new Date(log.created_at).toLocaleString()}
                           </p>
                         </div>
                       </div>
-                    ))}
-                    {(auditLogs || []).length === 0 && (
-                      <p className="text-xs text-muted-foreground text-center py-4">No audit logs</p>
-                    )}
-                  </div>
-                </ScrollArea>
-              </CardContent>
-            </Card>
+                    );
+                  })
+              )}
+            </div>
           </div>
 
-          {/* Main Content - Users Table */}
-          <div className="lg:col-span-9">
-            <Card className="border-0 shadow-sm">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle>Users</CardTitle>
-                    <CardDescription>Manage your team members and their permissions</CardDescription>
-                    {!canManageUsers && (
-                      <p className="text-xs text-muted-foreground mt-1">
-                        <Lock className="h-3 w-3 inline mr-1" />
-                        View-only mode
-                      </p>
-                    )}
-                  </div>
-                  <PermissionWrapper
-                    requireWrite="users"
-                    fallback="button"
-                    fallbackProps={{ buttonText: 'Add User' }}
-                  >
-                    <Button onClick={() => setShowAddModal(true)}>
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add User
-                    </Button>
-                  </PermissionWrapper>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search users..."
-                    value={searchQuery}
-                    onChange={e => setSearchQuery(e.target.value)}
-                    className="pl-9 pr-8"
-                  />
-                </div>
+          {/* ── RIGHT: Users table ── */}
+          <div className="bg-card rounded-xl border border-border p-4 shadow-sm">
 
-                <Tabs defaultValue="active" className="w-full">
-                  <TabsList>
-                    <TabsTrigger value="active">Active ({activeUsers.length})</TabsTrigger>
-                    <TabsTrigger value="inactive">Inactive ({inactiveUsers.length})</TabsTrigger>
-                  </TabsList>
+            {/* Search + filter */}
+            <div className="flex items-center border border-border rounded-lg px-3 py-2 bg-muted/30 mb-3.5 gap-2">
+              <SearchIcon />
+              <input
+                placeholder="Search"
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                className="flex-1 border-none outline-none text-xs bg-transparent text-foreground placeholder:text-muted-foreground"
+              />
+              <FilterIcon />
+            </div>
 
-                  <TabsContent value="active" className="space-y-3 mt-4">
-                    {activeUsers.length === 0 ? (
-                      <p className="text-sm text-muted-foreground text-center py-8">No active users</p>
-                    ) : (
-                      activeUsers.map(user => (
-                        <div
-                          key={user._id}
-                          className="flex items-center justify-between p-4 hover:bg-muted/50 rounded-lg transition-colors group"
-                        >
-                          <div className="flex items-center gap-3">
-                            <Avatar>
-                              <AvatarFallback className={`${getAvatarColor(user.name)} text-white`}>
-                                {getInitials(user.name)}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div>
-                              <p className="text-sm font-medium">{user.name}</p>
-                              <p className="text-xs text-muted-foreground capitalize">
-                                {user.role.replace(/_/g, ' ')}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <Button variant="ghost" size="icon" onClick={() => handleViewUser(user as ViewUser)} className='hover:bg-primary/10 hover:text-primary'>
-                              <Eye className="h-4 w-4 text-primary group-hover:text-primary" />
-                            </Button>
-                            {canManageUsers ? (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleToggleActivation(user._id, false)}
-                                className="hover:bg-destructive/10 hover:text-destructive"
-                              >
-                                <UserX className="h-4 w-4 text-destructive group-hover:text-destructive" />
-                              </Button>
-                            ) : (
-                              <Button variant="ghost" size="icon" disabled title="No permission">
-                                <Lock className="h-4 w-4 text-muted-foreground" />
-                              </Button>
-                            )}
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </TabsContent>
+            {/* Tabs */}
+            <div className="flex gap-5 border-b border-border mb-3">
+              {(['active', 'inactive'] as const).map(t => (
+                <button
+                  key={t}
+                  onClick={() => setActiveTab(t)}
+                  className={[
+                    'pb-2 text-xs font-semibold capitalize border-b-2 -mb-px transition-colors',
+                    activeTab === t
+                      ? 'text-primary border-primary'
+                      : 'text-muted-foreground border-transparent hover:text-foreground',
+                  ].join(' ')}
+                >
+                  {t.charAt(0).toUpperCase() + t.slice(1)}
+                </button>
+              ))}
+            </div>
 
-                  <TabsContent value="inactive" className="space-y-3 mt-4">
-                    {inactiveUsers.length === 0 ? (
-                      <p className="text-sm text-muted-foreground text-center py-8">No inactive users</p>
-                    ) : (
-                      inactiveUsers.map(user => (
-                        <div
-                          key={user._id}
-                          className="flex items-center justify-between p-4 hover:bg-muted/50 rounded-lg transition-colors group"
-                        >
-                          <div className="flex items-center gap-3">
-                            <Avatar>
-                              <AvatarFallback className={`${getAvatarColor(user.name)} text-white`}>
-                                {getInitials(user.name)}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div>
-                              <p className="text-sm font-medium">{user.name}</p>
-                              <p className="text-xs text-muted-foreground capitalize">
-                                {user.role.replace(/_/g, ' ')}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <Button variant="ghost" size="icon" onClick={() => handleViewUser(user as ViewUser)} className='hover:bg-primary/10 hover:text-primary'>
-                              <Eye className="h-4 w-4 text-primary group-hover:text-primary" />
-                            </Button>
-                            {canManageUsers ? (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleToggleActivation(user._id, true)}
-                                className='hover:bg-secondary/10 hover:text-secondary'
-                              >
-                                <UserCheck className="h-4 w-4 text-secondary group-hover:text-secondary" />
-                              </Button>
-                            ) : (
-                              <Button variant="ghost" size="icon" disabled title="No permission">
-                                <Lock className="h-4 w-4 text-muted-foreground" />
-                              </Button>
-                            )}
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </TabsContent>
-                </Tabs>
-
-                <Separator />
-                <p className="text-sm text-muted-foreground text-center py-2">
-                  {filteredUsers.length} total users for this partner
+            {/* User rows */}
+            <div className="flex flex-col">
+              {usersLoading ? (
+                Array.from({ length: 5 }).map((_, i) => (
+                  <Skeleton key={i} className="h-[52px] w-full rounded-lg mb-1" />
+                ))
+              ) : displayedUsers.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-8">
+                  No {activeTab} users
                 </p>
-              </CardContent>
-            </Card>
+              ) : (
+                displayedUsers.map(user => (
+                  <div
+                    key={user._id}
+                    className="flex items-center gap-3 px-1 py-2.5 border-b border-border/40 last:border-0"
+                  >
+                    <Avatar className="h-9 w-9 shrink-0">
+                      {user.avatar_url && (
+                        <AvatarImage src={user.avatar_url} alt={user.name} className="object-cover" />
+                      )}
+                      <AvatarFallback className={`${getAvatarColor(user.name)} text-primary-foreground text-xs font-semibold`}>
+                        {getInitials(user.name)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[13px] font-semibold text-foreground truncate">{user.name}</p>
+                      <p className="text-[11px] text-muted-foreground capitalize">{user.role.replace(/_/g, ' ')}</p>
+                    </div>
+                    <div className="flex items-center gap-2.5">
+                      {/* View detail */}
+                      <button
+                        onClick={() => openDetail(user as ConvexUser)}
+                        className="p-1 rounded hover:bg-primary/10 transition-colors"
+                        title="View user"
+                      >
+                        <EyeIcon />
+                      </button>
+                      {/* Deactivate (active) / nothing (inactive — use detail modal) */}
+                      {activeTab === 'active' && canManageUsers && (
+                        <button
+                          onClick={() => handleDeactivate(user._id)}
+                          className="p-1 rounded hover:bg-destructive/10 transition-colors"
+                          title="Deactivate user"
+                        >
+                          <TrashIcon />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Pagination */}
+            <div className="flex items-center justify-between mt-3.5 pt-3 border-t border-border">
+              <span className="text-[11px] text-muted-foreground">
+                Page <strong className="text-foreground">1</strong> of {Math.max(1, Math.ceil(displayedUsers.length / 10))}
+              </span>
+              <div className="flex gap-2">
+                {['Previous', 'Next'].map(label => (
+                  <button
+                    key={label}
+                    className="bg-card border border-border rounded-md px-3.5 py-1.5 text-[11px] text-foreground font-medium hover:bg-muted/50 transition-colors"
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Add User Dialog - Only if user has permission */}
+      {/* ── Modals ── */}
       {canManageUsers && (
         <AddUserDialog open={showAddModal} onOpenChange={setShowAddModal} />
       )}
 
-      {/* Confirm Activation / Inactivation Dialog */}
       <ConfirmDialog
         open={confirmOpen}
         onOpenChange={setConfirmOpen}
-        title={isActivating ? "Activate User" : "Inactivate User"}
-        description={isActivating
-          ? "Are you sure you want to activate this user? They will regain access."
-          : "Are you sure you want to inactivate this user? They will no longer have access."}
-        confirmLabel={isActivating ? "Activate" : "Inactivate"}
-        onConfirm={handleConfirmToggle}
+        title="Activate User"
+        description="Are you sure you want to activate this user? They will regain access."
+        confirmLabel="Activate"
+        onConfirm={handleConfirmActivate}
       />
 
-      {/* View User Dialog */}
-      <ViewUserDialog open={viewOpen} onOpenChange={setViewOpen} user={viewUser} />
+      <DeactivateWithReasonDialog
+        open={deactivateOpen}
+        onOpenChange={setDeactivateOpen}
+        title="Deactivate User"
+        description="Are you sure you want to deactivate this user? They will lose access."
+        onConfirm={handleConfirmDeactivate}
+        loading={deactivateLoading}
+      />
+
+      {detailOpen && detailUser && (
+        <UserDetailModal
+          user={detailUser}
+          onClose={() => { setDetailOpen(false); setDetailUser(null); }}
+          onActivate={() => handleActivate(detailUser._id)}
+          onDeactivate={() => handleDeactivate(detailUser._id)}
+          canManage={canManageUsers}
+        />
+      )}
     </div>
   );
 }

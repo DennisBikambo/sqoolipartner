@@ -25,6 +25,8 @@ import { useState, useMemo } from "react";
 import { CartesianGrid, Line, LineChart as RechartsLineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { toast } from "sonner";
 import { formatCurrency, formatDate } from "../../utils/formatters";
+import { Skeleton } from "../ui/skeleton";
+import { useConvexQuery } from "../../hooks/useConvexQuery";
 
 interface CampaignDetailDialogProps {
   campaign: Doc<"campaigns"> | null;
@@ -44,21 +46,34 @@ export function CampaignDetailDialog({
    const {partner} = useAuth();
 
   // Fetch enrollments for this campaign to get actual engagement numbers
-  const enrollments = useQuery(
+  const rawEnrollments = useQuery(
     api.program_enrollments.listByCampaign,
     campaign ? { campaignId: campaign._id } : "skip"
   );
 
   // Fetch program data to show program details
-  const program = useQuery(
+  const rawProgram = useQuery(
     api.program.getProgramById,
     campaign ? { id: campaign.program_id } : "skip"
   );
 
   // Fetch revenue logs for this campaign
-  const revenueLogs = useQuery(
+  const rawRevenueLogs = useQuery(
     api.partner_revenue.getByCampaign,
     campaign ? { campaignId: campaign._id } : "skip"
+  );
+
+  const { data: enrollments, isLoading: enrollmentsLoading } = useConvexQuery(
+    `campaign_enrollments_${campaign?._id}`,
+    rawEnrollments
+  );
+  const { data: program, isLoading: programLoading } = useConvexQuery(
+    `campaign_program_${campaign?._id}`,
+    rawProgram
+  );
+  const { data: revenueLogs, isLoading: revenueLogsLoading } = useConvexQuery(
+    `campaign_revenue_${campaign?._id}`,
+    rawRevenueLogs
   );
 
   const updateCampaignStatus = useMutation(api.campaign.updateCampaignStatus);
@@ -280,14 +295,19 @@ export function CampaignDetailDialog({
                   </div>
 
                   {/* Program */}
-                  {program && (
+                  {programLoading ? (
+                    <div>
+                      <div className="text-muted-foreground mb-1">Program:</div>
+                      <Skeleton className="h-5 w-32 rounded" />
+                    </div>
+                  ) : program ? (
                     <div>
                       <div className="text-muted-foreground mb-1">Program:</div>
                       <div className="font-semibold text-foreground">
                         {program.name}
                       </div>
                     </div>
-                  )}
+                  ) : null}
                 </div>
 
                 {/* Action Buttons */}
@@ -375,20 +395,30 @@ export function CampaignDetailDialog({
                 <Card className="border border-muted">
                   <CardContent className="pt-6 pb-6">
                     <div className="text-sm text-muted-foreground mb-2">Engagements</div>
-                    <div className="text-3xl font-bold text-foreground mb-1">
-                      {actualEngagements >= 1000 
-                        ? `${(actualEngagements / 1000).toFixed(1)}K` 
-                        : actualEngagements}
-                    </div>
-                    <div className="text-xs text-muted-foreground mb-2">
-                      Target: {campaign.target_signups >= 1000 
-                        ? `${(campaign.target_signups / 1000).toFixed(0)}K` 
-                        : campaign.target_signups}
-                    </div>
-                    <div className="flex items-center gap-1 text-sm text-chart-2">
-                      <TrendingUp className="h-3 w-3" />
-                      <span>{calculateGrowthPercentage()}% achieved</span>
-                    </div>
+                    {enrollmentsLoading ? (
+                      <div className="space-y-2">
+                        <Skeleton className="h-9 w-20 rounded" />
+                        <Skeleton className="h-4 w-28 rounded" />
+                        <Skeleton className="h-4 w-24 rounded" />
+                      </div>
+                    ) : (
+                      <>
+                        <div className="text-3xl font-bold text-foreground mb-1">
+                          {actualEngagements >= 1000
+                            ? `${(actualEngagements / 1000).toFixed(1)}K`
+                            : actualEngagements}
+                        </div>
+                        <div className="text-xs text-muted-foreground mb-2">
+                          Target: {campaign.target_signups >= 1000
+                            ? `${(campaign.target_signups / 1000).toFixed(0)}K`
+                            : campaign.target_signups}
+                        </div>
+                        <div className="flex items-center gap-1 text-sm text-chart-2">
+                          <TrendingUp className="h-3 w-3" />
+                          <span>{calculateGrowthPercentage()}% achieved</span>
+                        </div>
+                      </>
+                    )}
                   </CardContent>
                 </Card>
               </div>
@@ -408,7 +438,11 @@ export function CampaignDetailDialog({
                   <CardContent className="pt-4 pb-4">
                     <div className="text-xs text-muted-foreground mb-1">Redeemed</div>
                     <div className="text-lg font-bold text-foreground">
-                      {enrollments?.filter(e => e.status === "redeemed").length}
+                      {enrollmentsLoading ? (
+                        <Skeleton className="h-6 w-12 rounded" />
+                      ) : (
+                        enrollments?.filter(e => e.status === "redeemed").length ?? 0
+                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -417,7 +451,11 @@ export function CampaignDetailDialog({
                   <CardContent className="pt-4 pb-4">
                     <div className="text-xs text-muted-foreground mb-1">Pending</div>
                     <div className="text-lg font-bold text-foreground">
-                      {enrollments?.filter(e => e.status === "pending").length}
+                      {enrollmentsLoading ? (
+                        <Skeleton className="h-6 w-12 rounded" />
+                      ) : (
+                        enrollments?.filter(e => e.status === "pending").length ?? 0
+                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -430,33 +468,43 @@ export function CampaignDetailDialog({
                   <div>
                     <div className="text-sm text-muted-foreground mb-1">Cumulative Earnings</div>
                     <div className="text-xl font-bold text-foreground">
-                      {formatCurrency(cumulativeEarnings)}
+                      {revenueLogsLoading ? (
+                        <Skeleton className="h-7 w-24 rounded" />
+                      ) : (
+                        formatCurrency(cumulativeEarnings)
+                      )}
                     </div>
                   </div>
                   <div className="text-right">
                     <div className="text-sm text-muted-foreground mb-1">Total Transactions</div>
                     <div className="text-xl font-bold text-foreground">
-                      {revenueLogs?.length || 0}
+                      {revenueLogsLoading ? (
+                        <Skeleton className="h-7 w-12 rounded ml-auto" />
+                      ) : (
+                        revenueLogs?.length ?? 0
+                      )}
                     </div>
                   </div>
                 </div>
 
-                {chartData.length > 0 ? (
+                {revenueLogsLoading ? (
+                  <Skeleton className="h-48 w-full rounded-lg" />
+                ) : chartData.length > 0 ? (
                   <div className="h-48 w-full">
                     <ResponsiveContainer width="100%" height="100%">
                       <RechartsLineChart data={chartData}>
                         <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                        <XAxis 
-                          dataKey="date" 
+                        <XAxis
+                          dataKey="date"
                           className="text-xs"
                           tick={{ fill: 'hsl(var(--muted-foreground))' }}
                         />
-                        <YAxis 
+                        <YAxis
                           className="text-xs"
                           tick={{ fill: 'hsl(var(--muted-foreground))' }}
                           tickFormatter={(value) => `${value}`}
                         />
-                        <Tooltip 
+                        <Tooltip
                           contentStyle={{
                             backgroundColor: 'hsl(var(--card))',
                             border: '1px solid hsl(var(--border))',

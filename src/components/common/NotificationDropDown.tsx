@@ -27,6 +27,8 @@ import {
 } from "lucide-react";
 import { cn } from "../../lib/utils";
 import { toast } from "sonner";
+import { Skeleton } from "../ui/skeleton";
+import { useConvexQuery } from "../../hooks/useConvexQuery";
 
 interface NotificationDropdownProps {
   partnerId: Id<"partners">;
@@ -37,7 +39,7 @@ export function NotificationDropdown({ partnerId }: NotificationDropdownProps) {
   const [lastCount, setLastCount] = useState(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  const notifications = useQuery(api.notifications.getNotifications, {
+  const rawNotifications = useQuery(api.notifications.getNotifications, {
     partnerId,
     limit: 20,
   });
@@ -45,6 +47,11 @@ export function NotificationDropdown({ partnerId }: NotificationDropdownProps) {
   const unreadCount = useQuery(api.notifications.getUnreadCount, {
     partnerId,
   });
+
+  const { data: notifications, isLoading: notificationsLoading } = useConvexQuery(
+    `notifications_${partnerId}`,
+    rawNotifications
+  );
 
   const markAsRead = useMutation(api.notifications.markAsRead);
   const markAllAsRead = useMutation(api.notifications.markAllAsRead);
@@ -123,15 +130,15 @@ export function NotificationDropdown({ partnerId }: NotificationDropdownProps) {
   const getNotificationIcon = (type: string) => {
     switch (type) {
       case "withdrawal":
-        return <DollarSign className="h-4 w-4 text-orange-600" />;
+        return <DollarSign className="h-4 w-4 text-chart-3" />;
       case "campaign":
-        return <TrendingUp className="h-4 w-4 text-blue-600" />;
+        return <TrendingUp className="h-4 w-4 text-primary" />;
       case "error":
-        return <XCircle className="h-4 w-4 text-red-600" />;
+        return <XCircle className="h-4 w-4 text-destructive" />;
       case "success":
-        return <CheckCircle className="h-4 w-4 text-green-600" />;
+        return <CheckCircle className="h-4 w-4 text-secondary" />;
       case "warning":
-        return <AlertCircle className="h-4 w-4 text-yellow-600" />;
+        return <AlertCircle className="h-4 w-4 text-chart-3" />;
       default:
         return <Info className="h-4 w-4 text-muted-foreground" />;
     }
@@ -140,15 +147,15 @@ export function NotificationDropdown({ partnerId }: NotificationDropdownProps) {
   const getNotificationColor = (type: string) => {
     switch (type) {
       case "withdrawal":
-        return "bg-orange-50 border-orange-200 dark:bg-orange-950/20";
+        return "bg-chart-3/5 border-chart-3/20";
       case "campaign":
-        return "bg-blue-50 border-blue-200 dark:bg-blue-950/20";
+        return "bg-primary/5 border-primary/20";
       case "error":
-        return "bg-red-50 border-red-200 dark:bg-red-950/20";
+        return "bg-destructive/5 border-destructive/20";
       case "success":
-        return "bg-green-50 border-green-200 dark:bg-green-950/20";
+        return "bg-secondary/5 border-secondary/20";
       case "warning":
-        return "bg-yellow-50 border-yellow-200 dark:bg-yellow-950/20";
+        return "bg-chart-3/5 border-chart-3/20";
       default:
         return "bg-muted/50 border-border";
     }
@@ -232,7 +239,13 @@ export function NotificationDropdown({ partnerId }: NotificationDropdownProps) {
 
         {/* Notifications List */}
         <ScrollArea className="h-[400px]">
-          {!notifications || notifications.length === 0 ? (
+          {notificationsLoading ? (
+            <div className="space-y-2 p-3">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <Skeleton key={i} className="h-12 w-full rounded-lg" />
+              ))}
+            </div>
+          ) : notifications === undefined || notifications.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 px-4">
               <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center mb-4">
                 <Inbox className="h-8 w-8 text-muted-foreground" />

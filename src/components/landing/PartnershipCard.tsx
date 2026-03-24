@@ -21,11 +21,11 @@ export default function PartnershipCard({
   variant,
   onButtonClick
 }: PartnershipCardProps) {
-  const bgGradient = variant === 'primary' 
-    ? 'from-[#e2f2f9] to-[#e2f2f9] dark:from-primary/10 dark:to-primary/10' 
-    : 'from-[#d1f4e0] to-[#d1f4e0] dark:from-secondary/10 dark:to-secondary/10';
-  
-  const iconBg = variant === 'primary' ? 'bg-[#e2f2f9] dark:bg-primary/20' : 'bg-[#d1f4e0] dark:bg-secondary/20';
+  const bgGradient = variant === 'primary'
+    ? 'from-light-blue-bg to-light-blue-bg dark:from-primary/10 dark:to-primary/10'
+    : 'from-soft-mint/40 to-soft-mint/40 dark:from-secondary/10 dark:to-secondary/10';
+
+  const iconBg = variant === 'primary' ? 'bg-light-blue-bg dark:bg-primary/20' : 'bg-soft-mint/40 dark:bg-secondary/20';
   const iconColor = variant === 'primary' ? 'text-primary' : 'text-secondary';
   const buttonBg = variant === 'primary' ? 'bg-primary hover:bg-primary/90' : 'bg-secondary hover:bg-secondary/90';
 
@@ -37,7 +37,7 @@ export default function PartnershipCard({
         </div>
       </div>
       
-      <h3 className="text-2xl lg:text-3xl font-medium text-[#101828] dark:text-foreground leading-snug" style={{ fontFamily: 'Outfit, sans-serif' }}>
+      <h3 className="text-2xl lg:text-3xl font-medium text-text-dark dark:text-foreground leading-snug" style={{ fontFamily: 'Outfit, sans-serif' }}>
         {title}
       </h3>
       

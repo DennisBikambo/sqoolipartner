@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -36,6 +36,8 @@ import { ConfirmDialog } from "../components/common/ConfirmationDialog";
 import type { Doc } from "../../convex/_generated/dataModel";
 import { toast } from "sonner";
 import { formatDate } from "../utils/formatters";
+import { Skeleton } from "../components/ui/skeleton";
+import { useConvexQuery } from "../hooks/useConvexQuery";
 import CreateCampaignWizard from "../components/common/CreateCampaign";
 import { isConvexUser } from '../types/auth.types';
 
@@ -48,7 +50,6 @@ export default function CampaignSection() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showCreateWizard, setShowCreateWizard] = useState(false);
-  const [hasLoaded, setHasLoaded] = useState(false);
 
   const { user,partner } = useAuth();
   const { canRead, canWrite, loading: permissionsLoading } = usePermissions();
@@ -58,19 +59,16 @@ export default function CampaignSection() {
   const canManageCampaigns = canWrite("campaigns");
 
   // Fetch campaigns using query
-  const campaigns = useQuery(
+  const rawCampaigns = useQuery(
     api.campaign.getCampaignsByPartner,
     partner?._id && canViewCampaigns ? { partner_id: partner._id } : "skip"
   );
+  const { data: campaigns, isLoading: campaignsLoading, isError: campaignsError } = useConvexQuery(
+    `campaigns_${partner?._id}`,
+    rawCampaigns
+  );
 
   const updateCampaignStatus = useMutation(api.campaign.updateCampaignStatus);
-
-  // Track when campaigns have loaded at least once
-  useEffect(() => {
-    if (campaigns !== undefined) {
-      setHasLoaded(true);
-    }
-  }, [campaigns]);
 
   // Filter campaigns based on tab and search query
   const filteredCampaigns = useMemo(() => {
@@ -152,12 +150,6 @@ export default function CampaignSection() {
         </Card>
       </div>
     );
-  }
-
-  // Show loading spinner only if we haven't loaded data yet
-  // Once loaded, show the UI even if campaigns is undefined (reactivity will update it)
-  if (!hasLoaded && campaigns === undefined) {
-    return <Loading message="Loading campaigns..." size="md" />;
   }
 
   return (
@@ -242,7 +234,17 @@ export default function CampaignSection() {
               </div>
 
               <TabsContent value={activeTab} className="mt-0">
-                {filteredCampaigns.length === 0 ? (
+                {campaignsLoading ? (
+                  <div className="space-y-3 p-6">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <Skeleton key={i} className="h-12 w-full rounded-lg" />
+                    ))}
+                  </div>
+                ) : campaignsError ? (
+                  <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
+                    <p className="text-sm">Something went wrong. Please refresh.</p>
+                  </div>
+                ) : filteredCampaigns.length === 0 ? (
                   <div className="text-center py-12 text-muted-foreground">
                     {searchQuery
                       ? "No campaigns match your search"

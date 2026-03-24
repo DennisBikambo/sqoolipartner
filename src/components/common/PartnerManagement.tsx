@@ -3,7 +3,6 @@
  * For Super Admins to view and manage all partner organizations
  */
 
-
 import { useState } from 'react';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
@@ -12,6 +11,7 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Badge } from '../ui/badge';
 import { Avatar, AvatarFallback } from '../ui/avatar';
+import { Skeleton } from '../ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 import {
   Table,
@@ -33,6 +33,7 @@ import {
   UserX,
   UserCheck,
   ArrowLeft,
+  X,
 } from 'lucide-react';
 import CreatePartnerDialog from './CreatePartnerDialog';
 import AddUserDialog from './AddUserDialog';
@@ -40,6 +41,16 @@ import ViewUserDialog, { type ViewUser } from './ViewUserDialog';
 import { ConfirmDialog } from './ConfirmationDialog';
 import type { Id } from '../../../convex/_generated/dataModel';
 import { formatDate, getInitials, getAvatarColor } from '../../utils/formatters';
+
+const ROLE_COLORS: Record<string, string> = {
+  partner_admin: "bg-primary/10 text-primary border-primary/20",
+  accountant: "bg-secondary/10 text-secondary border-secondary/20",
+  campaign_manager: "bg-chart-3/10 text-chart-3 border-chart-3/20",
+  viewer: "bg-muted text-muted-foreground border-border",
+  super_agent: "bg-chart-4/10 text-chart-4 border-chart-4/20",
+  master_agent: "bg-chart-4/10 text-chart-4 border-chart-4/20",
+  merchant_admin: "bg-chart-3/10 text-chart-3 border-chart-3/20",
+};
 
 export default function PartnerManagement() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -52,6 +63,7 @@ export default function PartnerManagement() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState<Id<'users'> | null>(null);
   const [isActivating, setIsActivating] = useState(false);
+  const [detailsPanelOpen, setDetailsPanelOpen] = useState(false);
 
   const partners = useQuery(api.createPartner.listPartners);
   const selectedPartner = useQuery(
@@ -90,6 +102,12 @@ export default function PartnerManagement() {
   const handleViewPartnerUsers = (partnerId: Id<'partners'>) => {
     setSelectedPartnerId(partnerId);
     setViewingUsers(true);
+    setDetailsPanelOpen(false);
+  };
+
+  const handleOpenDetails = (partnerId: Id<'partners'>) => {
+    setSelectedPartnerId(partnerId);
+    setDetailsPanelOpen(true);
   };
 
   const handleBackToPartners = () => {
@@ -100,6 +118,7 @@ export default function PartnerManagement() {
   // Filter users when viewing a specific partner
   const activeUsers = (selectedPartner?.users || []).filter(u => u.is_active);
   const inactiveUsers = (selectedPartner?.users || []).filter(u => !u.is_active);
+  const totalUsers = (selectedPartner?.users || []).length;
 
   return (
     <div className="space-y-6 p-6">
@@ -110,14 +129,18 @@ export default function PartnerManagement() {
             <div className="flex items-center gap-3">
               <Button
                 variant="ghost"
-                size="icon"
+                size="sm"
                 onClick={handleBackToPartners}
+                className="flex items-center gap-1 text-muted-foreground hover:text-foreground"
               >
                 <ArrowLeft className="h-4 w-4" />
+                Partners
               </Button>
+              <span className="text-muted-foreground">/</span>
               <div>
                 <h2 className="text-2xl font-semibold text-foreground">
-                  {selectedPartner.partner.name} - Users
+                  {selectedPartner.partner.name}
+                  <span className="text-muted-foreground font-normal"> — Users</span>
                 </h2>
                 <p className="text-sm text-muted-foreground">
                   Manage users for this partner organization
@@ -151,12 +174,12 @@ export default function PartnerManagement() {
         /* User Management View */
         <>
           {/* User Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Card>
               <CardContent className="p-6">
                 <div className="flex items-center gap-4">
-                  <div className="p-3 bg-green-500/10 rounded-lg">
-                    <UserCheck className="h-6 w-6 text-green-500" />
+                  <div className="p-3 bg-secondary/10 rounded-lg">
+                    <UserCheck className="h-6 w-6 text-secondary" />
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Active Users</p>
@@ -169,12 +192,26 @@ export default function PartnerManagement() {
             <Card>
               <CardContent className="p-6">
                 <div className="flex items-center gap-4">
-                  <div className="p-3 bg-red-500/10 rounded-lg">
-                    <UserX className="h-6 w-6 text-red-500" />
+                  <div className="p-3 bg-destructive/10 rounded-lg">
+                    <UserX className="h-6 w-6 text-destructive" />
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Inactive Users</p>
                     <p className="text-2xl font-bold">{inactiveUsers.length}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-primary/10 rounded-lg">
+                    <Users className="h-6 w-6 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Total Users</p>
+                    <p className="text-2xl font-bold">{totalUsers}</p>
                   </div>
                 </div>
               </CardContent>
@@ -192,12 +229,15 @@ export default function PartnerManagement() {
 
                 <TabsContent value="active" className="space-y-3 mt-4">
                   {activeUsers.length === 0 ? (
-                    <p className="text-sm text-muted-foreground text-center py-8">No active users</p>
+                    <div className="text-center py-8 text-muted-foreground">
+                      <UserCheck className="h-10 w-10 mx-auto mb-2 opacity-40" />
+                      <p className="text-sm">No active users</p>
+                    </div>
                   ) : (
                     activeUsers.map((user) => (
                       <div
                         key={user.id}
-                        className="flex items-center justify-between p-4 hover:bg-muted/50 rounded-lg transition-colors group"
+                        className="flex items-center justify-between p-4 hover:bg-muted/50 rounded-lg transition-colors group border border-transparent hover:border-border"
                       >
                         <div className="flex items-center gap-3">
                           <Avatar>
@@ -208,7 +248,10 @@ export default function PartnerManagement() {
                           <div>
                             <p className="text-sm font-medium">{user.name}</p>
                             <p className="text-xs text-muted-foreground">{user.email}</p>
-                            <Badge variant="outline" className="text-xs mt-1 capitalize">
+                            <Badge
+                              variant="outline"
+                              className={`text-xs mt-1 capitalize ${ROLE_COLORS[user.role] ?? ''}`}
+                            >
                               {user.role.replace(/_/g, ' ')}
                             </Badge>
                           </div>
@@ -238,12 +281,15 @@ export default function PartnerManagement() {
 
                 <TabsContent value="inactive" className="space-y-3 mt-4">
                   {inactiveUsers.length === 0 ? (
-                    <p className="text-sm text-muted-foreground text-center py-8">No inactive users</p>
+                    <div className="text-center py-8 text-muted-foreground">
+                      <UserX className="h-10 w-10 mx-auto mb-2 opacity-40" />
+                      <p className="text-sm">No inactive users</p>
+                    </div>
                   ) : (
                     inactiveUsers.map((user) => (
                       <div
                         key={user.id}
-                        className="flex items-center justify-between p-4 hover:bg-muted/50 rounded-lg transition-colors group"
+                        className="flex items-center justify-between p-4 hover:bg-muted/50 rounded-lg transition-colors group border border-transparent hover:border-border"
                       >
                         <div className="flex items-center gap-3">
                           <Avatar>
@@ -254,7 +300,10 @@ export default function PartnerManagement() {
                           <div>
                             <p className="text-sm font-medium">{user.name}</p>
                             <p className="text-xs text-muted-foreground">{user.email}</p>
-                            <Badge variant="outline" className="text-xs mt-1 capitalize">
+                            <Badge
+                              variant="outline"
+                              className={`text-xs mt-1 capitalize ${ROLE_COLORS[user.role] ?? ''}`}
+                            >
                               {user.role.replace(/_/g, ' ')}
                             </Badge>
                           </div>
@@ -287,7 +336,7 @@ export default function PartnerManagement() {
         </>
       ) : (
         /* Partners List View */
-        <>
+        <div className="relative">
           {/* Stats Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Card>
@@ -298,7 +347,11 @@ export default function PartnerManagement() {
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Total Partners</p>
-                    <p className="text-2xl font-bold">{partners?.length || 0}</p>
+                    {partners === undefined ? (
+                      <Skeleton className="h-8 w-16 mt-1 rounded" />
+                    ) : (
+                      <p className="text-2xl font-bold">{partners.length}</p>
+                    )}
                   </div>
                 </div>
               </CardContent>
@@ -307,14 +360,18 @@ export default function PartnerManagement() {
             <Card>
               <CardContent className="p-6">
                 <div className="flex items-center gap-4">
-                  <div className="p-3 bg-blue-500/10 rounded-lg">
-                    <Users className="h-6 w-6 text-blue-500" />
+                  <div className="p-3 bg-primary/10 rounded-lg">
+                    <Users className="h-6 w-6 text-primary" />
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Total Users</p>
-                    <p className="text-2xl font-bold">
-                      {partners?.reduce((sum, p) => sum + p.user_count, 0) || 0}
-                    </p>
+                    {partners === undefined ? (
+                      <Skeleton className="h-8 w-16 mt-1 rounded" />
+                    ) : (
+                      <p className="text-2xl font-bold">
+                        {partners.reduce((sum, p) => sum + p.user_count, 0)}
+                      </p>
+                    )}
                   </div>
                 </div>
               </CardContent>
@@ -323,14 +380,18 @@ export default function PartnerManagement() {
             <Card>
               <CardContent className="p-6">
                 <div className="flex items-center gap-4">
-                  <div className="p-3 bg-green-500/10 rounded-lg">
-                    <Calendar className="h-6 w-6 text-green-500" />
+                  <div className="p-3 bg-secondary/10 rounded-lg">
+                    <Calendar className="h-6 w-6 text-secondary" />
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Total Campaigns</p>
-                    <p className="text-2xl font-bold">
-                      {partners?.reduce((sum, p) => sum + p.campaign_count, 0) || 0}
-                    </p>
+                    {partners === undefined ? (
+                      <Skeleton className="h-8 w-16 mt-1 rounded" />
+                    ) : (
+                      <p className="text-2xl font-bold">
+                        {partners.reduce((sum, p) => sum + p.campaign_count, 0)}
+                      </p>
+                    )}
                   </div>
                 </div>
               </CardContent>
@@ -338,7 +399,7 @@ export default function PartnerManagement() {
           </div>
 
           {/* Search */}
-          <div className="relative">
+          <div className="relative mt-4">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Search partners by name, email, or username..."
@@ -349,35 +410,49 @@ export default function PartnerManagement() {
           </div>
 
           {/* Partners Table */}
-          <Card>
+          <Card className="mt-4">
             <CardHeader>
               <CardTitle>All Partners</CardTitle>
             </CardHeader>
             <CardContent>
-              {filteredPartners.length === 0 ? (
-                <div className="text-center py-12">
-                  <Building2 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <p className="text-muted-foreground">
-                    {searchQuery ? 'No partners found matching your search' : 'No partners yet'}
-                  </p>
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Partner</TableHead>
+                      <TableHead>Contact</TableHead>
+                      <TableHead>Username</TableHead>
+                      <TableHead>Users</TableHead>
+                      <TableHead>Campaigns</TableHead>
+                      <TableHead>Created</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {partners === undefined ? (
+                      Array.from({ length: 5 }).map((_, i) => (
+                        <TableRow key={i}>
+                          {Array.from({ length: 8 }).map((__, j) => (
+                            <TableCell key={j}>
+                              <Skeleton className="h-4 w-full rounded" />
+                            </TableCell>
+                          ))}
+                        </TableRow>
+                      ))
+                    ) : filteredPartners.length === 0 ? (
                       <TableRow>
-                        <TableHead>Partner</TableHead>
-                        <TableHead>Contact</TableHead>
-                        <TableHead>Username</TableHead>
-                        <TableHead>Users</TableHead>
-                        <TableHead>Campaigns</TableHead>
-                        <TableHead>Created</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
+                        <TableCell colSpan={8}>
+                          <div className="text-center py-12">
+                            <Building2 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                            <p className="text-muted-foreground">
+                              {searchQuery ? 'No partners found matching your search' : 'No partners yet'}
+                            </p>
+                          </div>
+                        </TableCell>
                       </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredPartners.map((partner) => (
+                    ) : (
+                      filteredPartners.map((partner) => (
                         <TableRow key={partner.id}>
                           <TableCell>
                             <div className="flex items-center gap-3">
@@ -386,7 +461,9 @@ export default function PartnerManagement() {
                               </div>
                               <div>
                                 <p className="font-medium">{partner.name}</p>
-                                <p className="text-xs text-muted-foreground">ID: {partner.id}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  @{partner.username}
+                                </p>
                               </div>
                             </div>
                           </TableCell>
@@ -428,11 +505,11 @@ export default function PartnerManagement() {
                           </TableCell>
                           <TableCell>
                             {partner.is_first_login ? (
-                              <Badge variant="outline" className="bg-yellow-500/10 text-yellow-700">
+                              <Badge variant="outline" className="bg-chart-3/10 text-chart-3">
                                 Pending
                               </Badge>
                             ) : (
-                              <Badge variant="outline" className="bg-green-500/10 text-green-700">
+                              <Badge variant="outline" className="bg-secondary/10 text-secondary">
                                 Active
                               </Badge>
                             )}
@@ -451,7 +528,7 @@ export default function PartnerManagement() {
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                onClick={() => setSelectedPartnerId(partner.id)}
+                                onClick={() => handleOpenDetails(partner.id)}
                                 title="View Details"
                               >
                                 <Eye className="h-4 w-4" />
@@ -459,83 +536,130 @@ export default function PartnerManagement() {
                             </div>
                           </TableCell>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              )}
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
             </CardContent>
           </Card>
 
-          {/* Partner Details Sidebar */}
-          {selectedPartner && !viewingUsers && (
-            <Card className="mt-6">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle>Partner Details: {selectedPartner.partner.name}</CardTitle>
-                  <Button variant="ghost" size="sm" onClick={() => setSelectedPartnerId(null)}>
-                    Close
+          {/* Right Slide-over Panel for Partner Details */}
+          {detailsPanelOpen && (
+            <div className="fixed inset-0 z-40 flex justify-end pointer-events-none">
+              {/* Backdrop */}
+              <div
+                className="absolute inset-0 bg-black/20 pointer-events-auto"
+                onClick={() => setDetailsPanelOpen(false)}
+              />
+              {/* Panel */}
+              <div className="relative w-[380px] h-full bg-background border-l border-border shadow-xl pointer-events-auto overflow-y-auto">
+                <div className="flex items-center justify-between p-5 border-b border-border sticky top-0 bg-background z-10">
+                  <h3 className="text-base font-semibold">Partner Details</h3>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setDetailsPanelOpen(false)}
+                  >
+                    <X className="h-4 w-4" />
                   </Button>
                 </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-6">
-                  {/* Partner Info */}
-                  <div>
-                    <h4 className="text-sm font-semibold mb-3">Organization Information</h4>
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div>
-                        <p className="text-muted-foreground">Email</p>
-                        <p className="font-medium">{selectedPartner.partner.email}</p>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground">Phone</p>
-                        <p className="font-medium">{selectedPartner.partner.phone || 'N/A'}</p>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground">Username</p>
-                        <p className="font-medium">{selectedPartner.partner.username}</p>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground">Campaigns</p>
-                        <p className="font-medium">{selectedPartner.campaign_count}</p>
-                      </div>
-                    </div>
-                  </div>
 
-                  {/* Users List */}
-                  <div>
-                    <h4 className="text-sm font-semibold mb-3">Users ({selectedPartner.users.length})</h4>
-                    <div className="space-y-2">
-                      {selectedPartner.users.map((user) => (
-                        <div
-                          key={user.id}
-                          className="flex items-center justify-between p-3 bg-muted/30 rounded-lg"
-                        >
-                          <div>
-                            <p className="font-medium text-sm">{user.name}</p>
-                            <p className="text-xs text-muted-foreground">{user.email}</p>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Badge variant="outline" className="text-xs capitalize">
-                              {user.role.replace(/_/g, ' ')}
-                            </Badge>
-                            <Badge
-                              variant={user.is_active ? 'default' : 'secondary'}
-                              className="text-xs"
-                            >
-                              {user.is_active ? 'Active' : 'Inactive'}
-                            </Badge>
-                          </div>
+                {selectedPartner ? (
+                  <div className="p-5 space-y-6">
+                    {/* Org info */}
+                    <div>
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                          <Building2 className="h-6 w-6 text-primary" />
                         </div>
-                      ))}
+                        <div>
+                          <p className="font-semibold text-foreground">{selectedPartner.partner.name}</p>
+                          <p className="text-xs text-muted-foreground">@{selectedPartner.partner.username}</p>
+                        </div>
+                      </div>
+                      <div className="space-y-3 text-sm">
+                        <div className="flex items-start gap-2">
+                          <Mail className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                          <span className="text-foreground break-all">{selectedPartner.partner.email}</span>
+                        </div>
+                        {selectedPartner.partner.phone && (
+                          <div className="flex items-center gap-2">
+                            <Phone className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                            <span className="text-foreground">{selectedPartner.partner.phone}</span>
+                          </div>
+                        )}
+                        <div className="flex items-center gap-2">
+                          <Calendar className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                          <span className="text-muted-foreground">
+                            Joined {formatDate(selectedPartner.partner._creationTime)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Quick stats */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="bg-muted/40 rounded-lg p-3 text-center">
+                        <p className="text-xl font-bold text-foreground">{selectedPartner.users.length}</p>
+                        <p className="text-xs text-muted-foreground">Users</p>
+                      </div>
+                      <div className="bg-muted/40 rounded-lg p-3 text-center">
+                        <p className="text-xl font-bold text-foreground">{selectedPartner.campaign_count}</p>
+                        <p className="text-xs text-muted-foreground">Campaigns</p>
+                      </div>
+                    </div>
+
+                    {/* Users List */}
+                    <div>
+                      <h4 className="text-sm font-semibold mb-3">Users ({selectedPartner.users.length})</h4>
+                      <div className="space-y-2">
+                        {selectedPartner.users.map((user) => (
+                          <div
+                            key={user.id}
+                            className="flex items-center justify-between p-3 bg-muted/30 rounded-lg"
+                          >
+                            <div className="flex items-center gap-2">
+                              <Avatar className="h-7 w-7">
+                                <AvatarFallback className={`${getAvatarColor(user.name)} text-white text-xs`}>
+                                  {getInitials(user.name)}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div>
+                                <p className="font-medium text-sm">{user.name}</p>
+                                <p className="text-xs text-muted-foreground">{user.email}</p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2 flex-shrink-0">
+                              <Badge
+                                variant="outline"
+                                className={`text-xs capitalize ${ROLE_COLORS[user.role] ?? ''}`}
+                              >
+                                {user.role.replace(/_/g, ' ')}
+                              </Badge>
+                              <Badge
+                                variant={user.is_active ? 'default' : 'secondary'}
+                                className="text-xs"
+                              >
+                                {user.is_active ? 'Active' : 'Inactive'}
+                              </Badge>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
+                ) : (
+                  <div className="p-5 space-y-4">
+                    <Skeleton className="h-16 w-full rounded-lg" />
+                    <Skeleton className="h-24 w-full rounded-lg" />
+                    <Skeleton className="h-32 w-full rounded-lg" />
+                  </div>
+                )}
+              </div>
+            </div>
           )}
-        </>
+        </div>
       )}
 
       {/* Dialogs */}

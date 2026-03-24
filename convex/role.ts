@@ -222,6 +222,39 @@ export const deleteRole = mutation({
 });
 
 /**
+ * 🔴 Deactivate a role (set is_active = false)
+ */
+export const deactivateRole = mutation({
+  args: { role_id: v.id("roles"), reason: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    const role = await ctx.db.get(args.role_id);
+    if (!role) throw new Error("Role not found");
+    await ctx.db.patch(args.role_id, {
+      is_active: false,
+      updated_at: new Date().toISOString(),
+      deactivation_reason: args.reason,
+    });
+    return { message: "Role deactivated" };
+  },
+});
+
+/**
+ * 🟢 Activate a role (set is_active = true)
+ */
+export const activateRole = mutation({
+  args: { role_id: v.id("roles") },
+  handler: async (ctx, args) => {
+    const role = await ctx.db.get(args.role_id);
+    if (!role) throw new Error("Role not found");
+    await ctx.db.patch(args.role_id, {
+      is_active: true,
+      updated_at: new Date().toISOString(),
+    });
+    return { message: "Role activated" };
+  },
+});
+
+/**
  * 🔄 Assign permissions to a role
  */
 export const assignPermissionsToRole = mutation({

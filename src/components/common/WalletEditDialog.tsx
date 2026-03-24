@@ -393,8 +393,8 @@ export function WalletEditDialog({
                 </div>
               </div>
 
-              <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
-                <p className="text-sm text-amber-800 dark:text-amber-200">
+              <div className="bg-chart-3/10 border border-chart-3/30 rounded-lg p-4">
+                <p className="text-sm text-chart-3">
                   <strong>Important:</strong> Make sure these details are correct.
                   All future withdrawals will be sent to this account.
                 </p>

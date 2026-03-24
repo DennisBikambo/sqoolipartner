@@ -36,15 +36,15 @@ export function SocialMediaModal({ open, onClose, onComplete }: SocialMediaModal
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && handleClose()}>
-      <DialogContent className="!max-w-[480px] p-0" showCloseButton={false}>
-        <DialogHeader className="px-6 pt-6 pb-0">
+      <DialogContent className="!max-w-[680px] p-0" showCloseButton={false}>
+        <DialogHeader className="px-7 pt-6 pb-4 border-b border-border">
           <div className="flex items-start justify-between">
             <div>
-              <DialogTitle className="text-lg font-bold text-foreground">
+              <DialogTitle className="text-base font-bold text-foreground">
                 Social Media Links
               </DialogTitle>
-              <p className="text-sm text-muted-foreground mt-1">
-                Setup your social media links to grow your audience
+              <p className="text-xs text-muted-foreground mt-1">
+                Connect your social media profiles to grow your audience
               </p>
             </div>
             <button
@@ -57,32 +57,35 @@ export function SocialMediaModal({ open, onClose, onComplete }: SocialMediaModal
           </div>
         </DialogHeader>
 
-        <div className="px-6 pb-6 space-y-4 mt-4">
-          {(
-            [
-              { id: "twitter", label: "X (Twitter)", placeholder: "https://x.com/yourhandle" },
-              { id: "instagram", label: "Instagram", placeholder: "https://instagram.com/yourhandle" },
-              { id: "facebook", label: "Facebook", placeholder: "https://facebook.com/yourpage" },
-              { id: "youtube", label: "YouTube", placeholder: "https://youtube.com/@yourchannel" },
-            ] as const
-          ).map(({ id, label, placeholder }) => (
-            <div key={id} className="space-y-1.5">
-              <Label htmlFor={`social-${id}`} className="text-sm">{label}</Label>
-              <Input
-                id={`social-${id}`}
-                type="url"
-                placeholder={placeholder}
-                value={links[id]}
-                onChange={setField(id)}
-              />
-            </div>
-          ))}
+        <div className="px-7 py-6">
+          <div className="grid grid-cols-2 gap-4 mb-6">
+            {(
+              [
+                { id: "twitter", label: "X (Twitter)", placeholder: "https://x.com/yourhandle" },
+                { id: "instagram", label: "Instagram", placeholder: "https://instagram.com/yourhandle" },
+                { id: "facebook", label: "Facebook", placeholder: "https://facebook.com/yourpage" },
+                { id: "youtube", label: "YouTube", placeholder: "https://youtube.com/@yourchannel" },
+              ] as const
+            ).map(({ id, label, placeholder }) => (
+              <div key={id} className="space-y-1.5">
+                <Label htmlFor={`social-${id}`} className="text-xs font-medium">{label}</Label>
+                <Input
+                  id={`social-${id}`}
+                  type="url"
+                  placeholder={placeholder}
+                  value={links[id]}
+                  onChange={setField(id)}
+                  className="text-xs"
+                />
+              </div>
+            ))}
+          </div>
 
-          <div className="flex justify-end gap-2 pt-2">
-            <Button variant="ghost" onClick={handleClose}>
+          <div className="flex justify-end gap-2">
+            <Button variant="ghost" size="sm" onClick={handleClose}>
               Cancel
             </Button>
-            <Button onClick={handleSave} className="min-w-[120px]">
+            <Button size="sm" onClick={handleSave} className="min-w-[100px]">
               Save Links
             </Button>
           </div>

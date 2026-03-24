@@ -50,7 +50,8 @@ export interface ConvexUser {
   phone?: string;
   role: "super_admin" | "partner_admin" | "accountant" | "campaign_manager" | "viewer" | "super_agent" | "master_agent" | "merchant_admin";
   permission_ids: Id<"permissions">[];
-  extension: string;
+  extension?: string;
+  avatar_url?: string;
   is_active: boolean;
   is_first_login: boolean;
   is_account_activated: boolean;
@@ -71,6 +72,12 @@ export interface ConvexPartner {
   permission_ids: Id<"permissions">[];
   username: string;
   role: string;
+  social_media?: {
+    twitter?: string;
+    instagram?: string;
+    facebook?: string;
+    linkedin?: string;
+  };
 }
 
 /**
@@ -108,7 +115,7 @@ export interface UseAuthReturn {
  */
 export function isConvexUser(user: ConvexUser | null): user is ConvexUser {
   if (!user) return false;
-  return '_id' in user && 'extension' in user;
+  return '_id' in user && 'partner_id' in user;
 }
 
 /**
