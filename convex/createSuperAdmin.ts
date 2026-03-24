@@ -92,7 +92,7 @@ export const createSuperAdminUser = mutation({
       },
       credentials: {
         email: args.email,
-        extension: extension,
+        extension: systemPartner.username,
       },
     };
   },

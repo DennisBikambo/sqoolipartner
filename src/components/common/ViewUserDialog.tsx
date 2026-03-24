@@ -5,7 +5,6 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Eye, EyeOff, Shield, User, Mail, Smartphone, CheckCircle2, XCircle } from 'lucide-react';
 import type { Id } from '../../../convex/_generated/dataModel';
-import { toast } from 'sonner';
 
 export interface ViewUser {
   _id: Id<'users'>;
