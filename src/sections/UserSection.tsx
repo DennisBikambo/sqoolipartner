@@ -59,6 +59,7 @@ export default function UserSection() {
   const [deactivateOpen, setDeactivateOpen] = useState(false);
   const [deactivateTargetId, setDeactivateTargetId] = useState<Id<'users'> | null>(null);
   const [deactivateLoading, setDeactivateLoading] = useState(false);
+  const [activateLoading, setActivateLoading] = useState(false);
 
   // Detail modal
   const [detailUser, setDetailUser] = useState<ConvexUser | null>(null);
@@ -98,11 +99,16 @@ export default function UserSection() {
 
   const handleConfirmActivate = async () => {
     if (!selectedUserId) return;
-    await updateUser({ user_id: selectedUserId, is_account_activated: true });
-    toast.success('User activated');
-    setConfirmOpen(false);
-    setSelectedUserId(null);
-    setDetailOpen(false);
+    setActivateLoading(true);
+    try {
+      await updateUser({ user_id: selectedUserId, is_account_activated: true });
+      toast.success('User activated');
+      setConfirmOpen(false);
+      setSelectedUserId(null);
+      setDetailOpen(false);
+    } finally {
+      setActivateLoading(false);
+    }
   };
 
   const handleDeactivate = (userId: Id<'users'>) => {
@@ -334,22 +340,14 @@ export default function UserSection() {
               )}
             </div>
 
-            {/* Pagination */}
-            <div className="flex items-center justify-between mt-3.5 pt-3 border-t border-border">
-              <span className="text-[11px] text-muted-foreground">
-                Page <strong className="text-foreground">1</strong> of {Math.max(1, Math.ceil(displayedUsers.length / 10))}
-              </span>
-              <div className="flex gap-2">
-                {['Previous', 'Next'].map(label => (
-                  <button
-                    key={label}
-                    className="bg-card border border-border rounded-md px-3.5 py-1.5 text-[11px] text-foreground font-medium hover:bg-muted/50 transition-colors"
-                  >
-                    {label}
-                  </button>
-                ))}
+            {/* Pagination — only visible when there are multiple pages */}
+            {displayedUsers.length > 0 && (
+              <div className="flex items-center justify-between mt-3.5 pt-3 border-t border-border">
+                <span className="text-[11px] text-muted-foreground">
+                  {displayedUsers.length} {activeTab} user{displayedUsers.length !== 1 ? 's' : ''}
+                </span>
               </div>
-            </div>
+            )}
           </div>
         </div>
       </div>
@@ -366,6 +364,7 @@ export default function UserSection() {
         description="Are you sure you want to activate this user? They will regain access."
         confirmLabel="Activate"
         onConfirm={handleConfirmActivate}
+        loading={activateLoading}
       />
 
       <DeactivateWithReasonDialog

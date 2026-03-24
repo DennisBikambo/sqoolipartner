@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuth } from "../../hooks/useAuth";
 import { api } from "../../../convex/_generated/api";
 import { useQuery } from "convex/react";
@@ -13,31 +13,256 @@ import { toast } from "sonner";
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
 
-const EyeOffIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-primary-foreground/75">
+const EyeOffIcon = ({ size = 20 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
+    stroke="rgba(255,255,255,0.75)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94"/>
     <path d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19"/>
     <line x1="1" y1="1" x2="23" y2="23"/>
   </svg>
 );
 
-const EyeIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-primary-foreground/75">
+const EyeIcon = ({ size = 20 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
+    stroke="rgba(255,255,255,0.75)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
     <circle cx="12" cy="12" r="3"/>
   </svg>
 );
 
-// ─────────────────────────────────────────────────────────────────────────────
+const DotsIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+    <circle cx="12" cy="5"  r="1.5" fill="rgba(255,255,255,0.85)"/>
+    <circle cx="12" cy="12" r="1.5" fill="rgba(255,255,255,0.85)"/>
+    <circle cx="12" cy="19" r="1.5" fill="rgba(255,255,255,0.85)"/>
+  </svg>
+);
+
+const WithdrawIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+    stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="2" y="5" width="20" height="14" rx="2"/>
+    <line x1="2" y1="10" x2="22" y2="10"/>
+  </svg>
+);
+
+const EditIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+    stroke="#374151" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+    <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+  </svg>
+);
+
+const BankIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+    stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+    className="text-muted-foreground shrink-0">
+    <rect x="3" y="10" width="18" height="11" rx="1"/>
+    <path d="M12 2L2 7h20L12 2z"/>
+    <line x1="7" y1="10" x2="7" y2="21"/>
+    <line x1="12" y1="10" x2="12" y2="21"/>
+    <line x1="17" y1="10" x2="17" y2="21"/>
+  </svg>
+);
+
+// ── Constants ─────────────────────────────────────────────────────────────────
+
+const GRADIENT = "linear-gradient(135deg, #7B9EEA 0%, #5E7AE0 35%, #5FA3E2 100%)";
+const BOTTOM_BG = "#E1EEFA";
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function maskAccount(str: string) {
+  return str.replace(/^(.{2})(.*)(.{4})$/, (_, a, b, c) => `${a}${"*".repeat(b.length)}${c}`);
+}
+function maskPaybill(str: string) {
+  return str.replace(/^(.)(.*)(.{1})$/, (_, a, b, c) => `${a}${"*".repeat(b.length)}${c}`);
+}
+function fmtKes(n: number) {
+  return `KES ${n.toLocaleString("en-KE", { minimumFractionDigits: 2 })}`;
+}
+
+// ── Sub-components ────────────────────────────────────────────────────────────
+
+function GradientSection({
+  wallet,
+  isActive,
+  showBalance,
+  onToggleBalance,
+  compact = false,
+}: {
+  wallet?: Doc<"wallets">;
+  isActive: boolean;
+  showBalance: boolean;
+  onToggleBalance: () => void;
+  compact?: boolean;
+}) {
+  return (
+    <div
+      style={{ background: isActive ? GRADIENT : "#94a3b8", position: "relative", overflow: "hidden" }}
+      className={compact ? "px-[18px] py-4 flex flex-col justify-center h-full" : "p-4 pb-5 min-h-[155px]"}
+    >
+      {/* Decorative circles */}
+      <div style={{
+        position: "absolute", right: "-50px", top: "50%", transform: "translateY(-50%)",
+        width: "160px", height: "160px", borderRadius: "50%",
+        background: "rgba(255,255,255,0.15)", zIndex: 0,
+      }}/>
+      <div style={{
+        position: "absolute", right: "-18px", top: "50%", transform: "translateY(-50%)",
+        width: "100px", height: "100px", borderRadius: "50%",
+        background: "rgba(255,255,255,0.10)", zIndex: 0,
+      }}/>
+
+      {/* A/C + 3-dot */}
+      <div style={{ position: "relative", zIndex: 1 }}
+        className="flex items-center justify-between mb-3">
+        <span style={{ fontSize: "11px", color: "rgba(255,255,255,0.85)", fontWeight: 500 }}>
+          {wallet?.account_number
+            ? `A/C ${maskAccount(wallet.account_number)}`
+            : "A/C ——"}
+        </span>
+        <button style={{ background: "none", border: "none", cursor: "pointer", padding: "2px 4px", lineHeight: 0 }}>
+          <DotsIcon />
+        </button>
+      </div>
+
+      {/* Available Balance */}
+      <div style={{ position: "relative", zIndex: 1 }} className="mb-2">
+        <p style={{ margin: "0 0 2px", fontSize: "11px", color: "rgba(255,255,255,0.8)", fontWeight: 400 }}>
+          Available Balance
+        </p>
+        <p style={{ margin: 0, fontSize: "16px", fontWeight: 700, color: "#fff", lineHeight: 1.2 }}>
+          {isActive && showBalance ? fmtKes(wallet?.balance ?? 0) : "KES ••••"}
+        </p>
+      </div>
+
+      {/* Actual Balance = balance + pending_balance */}
+      {!compact && (
+        <div style={{ position: "relative", zIndex: 1 }}>
+          <p style={{ margin: "0 0 2px", fontSize: "11px", color: "rgba(255,255,255,0.8)", fontWeight: 400 }}>
+            Actual Balance
+          </p>
+          <p style={{ margin: 0, fontSize: "22px", fontWeight: 800, color: "#fff", lineHeight: 1.2 }}>
+            {isActive && showBalance
+              ? fmtKes((wallet?.balance ?? 0) + (wallet?.pending_balance ?? 0))
+              : "KES ••••••"}
+          </p>
+        </div>
+      )}
+
+      {/* Eye toggle — bottom right */}
+      <button
+        style={{ position: "absolute", bottom: "14px", right: "14px", zIndex: 1,
+          background: "none", border: "none", cursor: "pointer", padding: 0, lineHeight: 0 }}
+        onClick={onToggleBalance}
+      >
+        {showBalance ? <EyeOffIcon /> : <EyeIcon />}
+      </button>
+    </div>
+  );
+}
+
+function InfoSection({
+  wallet,
+  isActive,
+  onWithdraw,
+  onEdit,
+  onActivate,
+  row = false,
+  hideEdit = false,
+}: {
+  wallet?: Doc<"wallets">;
+  isActive: boolean;
+  onWithdraw: () => void;
+  onEdit: () => void;
+  onActivate: () => void;
+  row?: boolean;
+  hideEdit?: boolean;
+}) {
+  return (
+    <div style={{ background: BOTTOM_BG }}
+      className={row ? "flex-1 flex flex-col justify-center px-[22px] py-4" : "px-4 pb-[18px] pt-4"}>
+      {isActive ? (
+        <>
+          <p style={{ margin: "0 0 6px", fontSize: "12px", fontWeight: 600, color: "#374151" }}>
+            Saved Method:
+          </p>
+          <div className="flex items-center gap-[7px] mb-[3px]">
+            {wallet?.withdrawal_method === "bank" ? (
+              <BankIcon />
+            ) : (
+              <img src="/mpesa.svg" alt="M-Pesa" className="h-[18px] w-auto shrink-0" />
+            )}
+            <span style={{ fontSize: "12px", color: "#374151", fontWeight: 500 }}>
+              {wallet?.withdrawal_method === "mpesa" && "M-Pesa"}
+              {wallet?.withdrawal_method === "paybill" && `Paybill: ${wallet.paybill_number ? maskPaybill(wallet.paybill_number) : ""}`}
+              {wallet?.withdrawal_method === "bank" && (wallet.bank_name ?? "Bank")}
+            </span>
+          </div>
+          <p style={{ margin: "0 0 14px", fontSize: "11px", color: "#6b7280", paddingLeft: "35px" }}>
+            Account No: {wallet?.account_number ? maskAccount(wallet.account_number) : "—"}
+            {wallet?.withdrawal_method === "bank" && wallet?.branch ? ` · ${wallet.branch}` : ""}
+          </p>
+          <div className="flex gap-[10px]">
+            <button
+              onClick={onWithdraw}
+              style={{
+                flex: hideEdit ? "0 0 auto" : 1,
+                display: "flex", alignItems: "center", justifyContent: "center", gap: "6px",
+                background: "#3b82f6", color: "#fff", border: "none",
+                borderRadius: "10px", padding: "9px 16px", fontSize: "12px", fontWeight: 600, cursor: "pointer",
+              }}
+            >
+              <WithdrawIcon /> Withdraw
+            </button>
+            {!hideEdit && (
+              <button
+                onClick={onEdit}
+                style={{
+                  flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: "6px",
+                  background: "#fff", color: "#374151", border: "1.5px solid #e5e7eb",
+                  borderRadius: "10px", padding: "9px 0", fontSize: "12px", fontWeight: 600, cursor: "pointer",
+                }}
+              >
+                <EditIcon /> Edit
+              </button>
+            )}
+          </div>
+        </>
+      ) : (
+        <>
+          <p style={{ margin: "0 0 10px", fontSize: "12px", color: "#6b7280" }}>
+            Activate your wallet to start withdrawing earnings.
+          </p>
+          <button
+            onClick={onActivate}
+            style={{
+              width: "100%", background: "#ef4444", color: "#fff", border: "none",
+              borderRadius: "10px", padding: "9px 0", fontSize: "12px", fontWeight: 600, cursor: "pointer",
+            }}
+          >
+            Activate Wallet
+          </button>
+        </>
+      )}
+    </div>
+  );
+}
+
+// ── Main Component ────────────────────────────────────────────────────────────
 
 export default function Wallet({
   activeItem,
   setActiveItem,
+  variant = "horizontal",
 }: {
   activeItem: string;
   setActiveItem: (item: string) => void;
+  variant?: "horizontal" | "vertical";
 }) {
-  const { user, partner } = useAuth();
+  const { user, partner, loading: authLoading } = useAuth();
   const [showBalance, setShowBalance] = useState(false);
   const [pinDialogOpen, setPinDialogOpen] = useState(false);
   const [showSetupDialog, setShowSetupDialog] = useState(false);
@@ -48,9 +273,16 @@ export default function Wallet({
   const wallet = useQuery(
     api.wallet.getWalletByPartnerId,
     partnerId ? { partner_id: partnerId } : "skip"
-  ) as Doc<"wallets"> | undefined;
+  ) as Doc<"wallets"> | null | undefined;
 
-  // Auto-hide balance after 3 minutes
+  // Cache the last known real wallet doc so a transient null (stale Convex
+  // cache) never flips the card back to the "activate" state.
+  const lastGoodWallet = useRef<Doc<"wallets"> | undefined>(undefined);
+  if (wallet != null) lastGoodWallet.current = wallet;
+  // displayWallet: use real doc when present; fall back to cached doc when null;
+  // remain undefined (→ skeleton) until we've seen at least one real value.
+  const displayWallet = wallet != null ? wallet : lastGoodWallet.current;
+
   useEffect(() => {
     if (showBalance) {
       const timer = setTimeout(() => setShowBalance(false), 3 * 60 * 1000);
@@ -58,165 +290,77 @@ export default function Wallet({
     }
   }, [showBalance]);
 
-  function handleShowBalance() {
+  function handleToggleBalance() {
     if (!wallet) return;
-    setPinDialogOpen(true);
+    if (!showBalance) setPinDialogOpen(true);
+    else setShowBalance(false);
   }
 
-  function setUpWallet() {
+  function handleActivate() {
     if (activeItem === "wallet") setShowSetupDialog(true);
     else setActiveItem("wallet");
   }
 
-  function withdraw() {
+  function handleWithdraw() {
     if (!wallet) { toast.error("Wallet not available."); return; }
     if (!wallet.is_setup_complete) { toast.error("Wallet is not set up yet."); setShowSetupDialog(true); return; }
     setWithdrawalDialogOpen(true);
   }
 
-  function editWallet() {
+  function handleEdit() {
     if (!wallet) { toast.error("Wallet not available."); return; }
     if (!wallet.is_setup_complete) { toast.error("Please setup your wallet first."); setShowSetupDialog(true); return; }
     setEditDialogOpen(true);
   }
 
-  const isActive = wallet?.is_setup_complete === true;
+  const isActive = displayWallet != null && displayWallet.is_setup_complete === true;
 
-  // Skeleton while loading
-  if (partner && wallet === undefined) {
-    return (
-      <div className="flex rounded-2xl overflow-hidden border border-border h-[110px]">
-        <div className="w-[220px] bg-muted shrink-0 animate-pulse" />
-        <div className="flex-1 bg-card px-[22px] flex flex-col justify-center gap-2">
-          <div className="h-[10px] w-[80px] rounded bg-muted animate-pulse" />
-          <div className="h-[12px] w-[140px] rounded bg-muted animate-pulse" />
-          <div className="h-[10px] w-[110px] rounded bg-muted animate-pulse" />
+  // ── Skeleton ──────────────────────────────────────────────────────────────
+  // Show skeleton until we have a displayWallet (real doc or cached doc).
+
+  if (authLoading || !partner || displayWallet === undefined) {
+    if (variant === "vertical") {
+      return (
+        <div style={{ borderRadius: "20px", overflow: "hidden", boxShadow: "0 4px 20px rgba(94,122,224,0.25)" }}>
+          <div className="h-[155px] bg-muted animate-pulse" />
+          <div style={{ background: BOTTOM_BG }} className="p-4 space-y-3">
+            <div className="h-3 w-24 rounded bg-muted/60 animate-pulse" />
+            <div className="h-3 w-40 rounded bg-muted/60 animate-pulse" />
+            <div className="h-9 rounded-[10px] bg-muted/60 animate-pulse" />
+          </div>
         </div>
+      );
+    }
+    return (
+      <div style={{ borderRadius: "20px", overflow: "hidden", boxShadow: "0 4px 20px rgba(94,122,224,0.25)" }}
+        className="flex h-[110px]">
+        <div className="w-[240px] bg-muted shrink-0 animate-pulse" />
+        <div style={{ background: BOTTOM_BG }} className="flex-1 animate-pulse" />
       </div>
     );
   }
 
+  // ── Render ────────────────────────────────────────────────────────────────
+
+  const sharedGradientProps = { wallet: displayWallet, isActive, showBalance, onToggleBalance: handleToggleBalance };
+  const sharedInfoProps = { wallet: displayWallet, isActive, onWithdraw: handleWithdraw, onEdit: handleEdit, onActivate: handleActivate };
+
   return (
     <>
-      {/* ── Card ── */}
-      <div className="flex rounded-2xl overflow-hidden border border-border h-[110px]">
-        {/* LEFT half */}
-        {isActive ? (
-          <div className="relative w-[220px] shrink-0 overflow-hidden bg-gradient-to-br from-primary to-primary/70">
-            <div className="absolute inset-0 z-[1] flex flex-col justify-center px-[18px] gap-[6px]">
-              <span className="text-[11px] font-medium text-primary-foreground/85">
-                Wallet Balance
-              </span>
-              <div className="flex items-center gap-[6px]">
-                <span className="text-[22px] font-bold text-primary-foreground leading-none">
-                  {showBalance
-                    ? `KES ${(wallet?.balance ?? 0).toLocaleString("en-KE", { minimumFractionDigits: 2 })}`
-                    : "KES ••••••"}
-                </span>
-                <button
-                  className="bg-transparent border-none p-0 cursor-pointer leading-none mt-px"
-                  onClick={handleShowBalance}
-                >
-                  {showBalance ? <EyeOffIcon /> : <EyeIcon />}
-                </button>
-              </div>
-            </div>
-            {/* Decorative circles */}
-            <div className="absolute -right-[45px] top-1/2 -translate-y-1/2 w-[130px] h-[130px] rounded-full bg-white/20 z-0" />
-            <div className="absolute -right-[16px] top-1/2 -translate-y-1/2 w-[78px] h-[78px] rounded-full bg-white/[0.13] z-0" />
-          </div>
-        ) : (
-          <div className="relative w-[220px] shrink-0 overflow-hidden bg-muted">
-            <div className="absolute inset-0 z-[1] flex flex-col justify-center px-[18px] gap-[6px]">
-              <span className="text-[11px] font-medium text-muted-foreground">Wallet Balance</span>
-              <span className="text-[22px] font-bold text-foreground leading-none">KES 0.00</span>
-            </div>
-            <div className="absolute -right-[45px] top-1/2 -translate-y-1/2 w-[130px] h-[130px] rounded-full bg-muted-foreground/30 z-0" />
-            <div className="absolute -right-[16px] top-1/2 -translate-y-1/2 w-[78px] h-[78px] rounded-full bg-muted-foreground/20 z-0 flex items-center justify-center">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"
-                className="text-muted-foreground ml-[18px]">
-                <rect x="5" y="11" width="14" height="10" rx="2"/>
-                <path d="M8 11V7a4 4 0 018 0v4"/>
-              </svg>
-            </div>
-          </div>
-        )}
-
-        {/* RIGHT half */}
-        <div className="flex-1 bg-card flex flex-col justify-center px-[22px] gap-1">
-          {isActive ? (
-            <>
-              <span className="text-[11px] text-muted-foreground">Saved Method:</span>
-
-              {/* Method logo + label row */}
-              <div className="flex items-center gap-[6px]">
-                {wallet?.withdrawal_method === "bank" ? (
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground shrink-0">
-                    <rect x="3" y="10" width="18" height="11" rx="1"/>
-                    <path d="M12 2L2 7h20L12 2z"/>
-                    <line x1="7" y1="10" x2="7" y2="21"/>
-                    <line x1="12" y1="10" x2="12" y2="21"/>
-                    <line x1="17" y1="10" x2="17" y2="21"/>
-                  </svg>
-                ) : (
-                  <img src="/mpesa.svg" alt="M-Pesa" className="h-4 w-auto shrink-0" />
-                )}
-
-                <span className="text-[12px] text-foreground font-medium">
-                  {wallet?.withdrawal_method === "mpesa" && "M-Pesa"}
-                  {wallet?.withdrawal_method === "paybill" && (
-                    <>
-                      Paybill:{" "}
-                      {wallet.paybill_number
-                        ? wallet.paybill_number.replace(/^(.)(.*)(.{1})$/, (_, a, b, c) => `${a}${"*".repeat(b.length)}${c}`)
-                        : ""}
-                    </>
-                  )}
-                  {wallet?.withdrawal_method === "bank" && (wallet.bank_name ?? "Bank")}
-                </span>
-              </div>
-
-              {/* Secondary detail row */}
-              <span className="text-[11px] text-muted-foreground">
-                {wallet?.withdrawal_method === "bank" ? "Account" : "Account No"}:{" "}
-                {wallet?.account_number
-                  ? wallet.account_number.replace(/^(.{2})(.*)(.{4})$/, (_, a, b, c) => `${a}${"*".repeat(b.length)}${c}`)
-                  : ""}
-                {wallet?.withdrawal_method === "bank" && wallet?.branch ? ` · ${wallet.branch}` : ""}
-              </span>
-
-              <div className="mt-1 flex gap-2">
-                <button
-                  onClick={withdraw}
-                  className="bg-primary border-none text-primary-foreground text-[11px] font-semibold py-1 px-4 rounded-full cursor-pointer"
-                >
-                  Withdraw
-                </button>
-                <button
-                  onClick={editWallet}
-                  className="bg-transparent border border-border text-muted-foreground text-[11px] font-medium py-1 px-3 rounded-full cursor-pointer"
-                >
-                  Edit
-                </button>
-              </div>
-            </>
-          ) : (
-            <>
-              <span className="text-[12px] text-muted-foreground leading-relaxed">
-                Activate Wallet to withdraw your earnings.
-              </span>
-              <div className="mt-[6px]">
-                <button
-                  onClick={setUpWallet}
-                  className="bg-destructive border-none text-white text-[11px] font-semibold py-[5px] px-4 rounded-full cursor-pointer"
-                >
-                  Activate Wallet
-                </button>
-              </div>
-            </>
-          )}
+      {variant === "vertical" ? (
+        <div style={{ borderRadius: "20px", overflow: "hidden", boxShadow: "0 4px 20px rgba(94,122,224,0.25)" }}>
+          <GradientSection {...sharedGradientProps} />
+          <InfoSection {...sharedInfoProps} />
         </div>
-      </div>
+      ) : (
+        <div style={{ borderRadius: "20px", overflow: "hidden", boxShadow: "0 4px 20px rgba(94,122,224,0.25)" }}
+          className="flex h-[140px]">
+          <div className="w-[260px] shrink-0 h-full">
+            <GradientSection {...sharedGradientProps} compact />
+          </div>
+          <InfoSection {...sharedInfoProps} row hideEdit />
+        </div>
+      )}
 
       {/* ── Dialogs ── */}
       {wallet && partner && (
@@ -228,7 +372,6 @@ export default function Wallet({
           onSuccess={() => setShowBalance(true)}
         />
       )}
-
       {partner?._id && (
         <WalletSetupDialog
           open={showSetupDialog}
@@ -237,7 +380,6 @@ export default function Wallet({
           userId={isConvexUser(user) ? user._id : (partner._id as unknown as Id<"users">)}
         />
       )}
-
       {partner?._id && wallet && (
         <WithdrawalDialog
           open={withdrawalDialogOpen}
@@ -247,7 +389,6 @@ export default function Wallet({
           userId={isConvexUser(user) ? user._id : (partner._id as unknown as Id<"users">)}
         />
       )}
-
       {wallet && partner?._id && (
         <WalletEditDialog
           open={editDialogOpen}

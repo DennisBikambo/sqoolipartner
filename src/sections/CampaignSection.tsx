@@ -2,7 +2,6 @@ import { useState, useMemo } from "react";
 import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
-import { Loading } from "../components/common/Loading";
 import {
   Search,
   Eye,
@@ -118,9 +117,34 @@ export default function CampaignSection() {
     }
   };
 
-  // Loading state
+  // Loading state — show skeleton layout instead of blocking spinner
   if (permissionsLoading || !partner) {
-    return <Loading message="Loading your campaigns..." size="md" />;
+    return (
+      <div className="p-6 space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div className="space-y-2">
+            <Skeleton className="h-7 w-40 rounded-lg" />
+            <Skeleton className="h-4 w-56 rounded" />
+          </div>
+          <Skeleton className="h-9 w-32 rounded-lg" />
+        </div>
+        {/* Search */}
+        <Skeleton className="h-10 w-full rounded-lg" />
+        {/* Tabs */}
+        <div className="flex gap-6 border-b border-border pb-0">
+          <Skeleton className="h-5 w-16 rounded" />
+          <Skeleton className="h-5 w-16 rounded" />
+          <Skeleton className="h-5 w-16 rounded" />
+        </div>
+        {/* Table rows */}
+        <div className="space-y-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Skeleton key={i} className="h-14 w-full rounded-lg" />
+          ))}
+        </div>
+      </div>
+    );
   }
 
   // No permission to view - Full page access denied
@@ -241,8 +265,13 @@ export default function CampaignSection() {
                     ))}
                   </div>
                 ) : campaignsError ? (
-                  <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
-                    <p className="text-sm">Something went wrong. Please refresh.</p>
+                  <div className="flex flex-col items-center justify-center py-10 gap-3 text-muted-foreground">
+                    <AlertCircle className="h-8 w-8 text-destructive/50" />
+                    <p className="text-sm font-medium text-foreground">Failed to load campaigns</p>
+                    <p className="text-xs">Check your connection and try again.</p>
+                    <Button variant="outline" size="sm" onClick={() => window.location.reload()}>
+                      Retry
+                    </Button>
                   </div>
                 ) : filteredCampaigns.length === 0 ? (
                   <div className="text-center py-12 text-muted-foreground">

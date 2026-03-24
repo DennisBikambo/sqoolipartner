@@ -2,474 +2,379 @@
 import { useState } from "react";
 import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
-import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
-import { Button } from "../ui/button";
-import { Badge } from "../ui/badge";
 import { Skeleton } from "../ui/skeleton";
+import { Button } from "../ui/button";
 import CreateProgramDialog from "./CreateProgramDialog";
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
 import {
   TrendingUp,
   TrendingDown,
   BookOpen,
   GraduationCap,
   Users,
-  DollarSign,
   Wallet as WalletIcon,
-  Award,
   BarChart3,
-  Shield,
+  Building2,
+  ArrowUpRight,
+  Zap,
+  DollarSign,
 } from "lucide-react";
-import { formatCurrency } from "../../utils/formatters";
+import { formatCurrency, getInitials, getAvatarColor } from "../../utils/formatters";
 
 interface SuperAdminDashboardProps {
   setActiveItem: (item: string) => void;
 }
 
-export default function SuperAdminDashboard({
-  setActiveItem,
-}: SuperAdminDashboardProps) {
+function KpiCard({
+  label,
+  value,
+  sub,
+  icon: Icon,
+  loading,
+}: {
+  label: string;
+  value: string | number;
+  sub?: string;
+  icon: React.ElementType;
+  loading?: boolean;
+}) {
+  return (
+    <div className="bg-primary/10 rounded-2xl px-4 py-3.5 flex items-center gap-3">
+      <div className="h-9 w-9 rounded-xl bg-primary/20 flex items-center justify-center flex-shrink-0">
+        <Icon className="h-4 w-4 text-primary" />
+      </div>
+      <div>
+        <p className="text-[10px] text-primary/70 uppercase tracking-widest font-medium">{label}</p>
+        {loading ? (
+          <Skeleton className="h-5 w-20 rounded mt-0.5 bg-primary/20" />
+        ) : (
+          <p className="text-[15px] font-bold text-primary-foreground leading-tight">{value}</p>
+        )}
+        {sub && !loading && <p className="text-[10px] text-primary/60">{sub}</p>}
+      </div>
+    </div>
+  );
+}
+
+function RankBadge({ rank }: { rank: number }) {
+  const styles = [
+    "bg-chart-3 text-white",
+    "bg-muted-foreground/50 text-background",
+    "bg-chart-3/50 text-foreground",
+  ];
+  return (
+    <span className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-black flex-shrink-0 ${styles[rank - 1] ?? "bg-muted text-muted-foreground"}`}>
+      {rank}
+    </span>
+  );
+}
+
+export default function SuperAdminDashboard({ setActiveItem }: SuperAdminDashboardProps) {
   const [showCreateProgramDialog, setShowCreateProgramDialog] = useState(false);
 
-  // Fetch system-wide data
-  const subjects = useQuery(api.subjects.listSubjects);
-  const curricula = useQuery(api.curricula.listCurricula);
-  const programs = useQuery(api.program.listPrograms);
-  const wallets = useQuery(api.wallet.getAllWallets);
-  const partners = useQuery(api.partner.getAllPartners);
-  const transactions = useQuery(api.transactions.getAllTransactions);
-
-  // Calculate partner earnings summary
-  const partnerEarningsSummary = useQuery(api.partner_revenue.getPartnerEarningsSummary);
-
-  // Get earnings timeline for chart
-  const systemEarningsTimeline = useQuery(
-    api.partner_revenue.getSystemEarningsTimeline,
-    { days: 30 }
-  );
-
-  // Top earning partners
-  const topPartners = useQuery(api.partner_revenue.getTopEarningPartners, { limit: 5 });
+  const subjects        = useQuery(api.subjects.listSubjects);
+  const curricula       = useQuery(api.curricula.listCurricula);
+  const programs        = useQuery(api.program.listPrograms);
+  const wallets         = useQuery(api.wallet.getAllWallets);
+  const partners        = useQuery(api.partner.getAllPartners);
+  const transactions    = useQuery(api.transactions.getAllTransactions);
+  const partnerEarnings = useQuery(api.partner_revenue.getPartnerEarningsSummary);
+  const timeline        = useQuery(api.partner_revenue.getSystemEarningsTimeline, { days: 30 });
+  const topPartners     = useQuery(api.partner_revenue.getTopEarningPartners, { limit: 5 });
 
   const primaryLoading =
     wallets === undefined ||
     partners === undefined ||
     transactions === undefined ||
-    partnerEarningsSummary === undefined;
+    partnerEarnings === undefined;
 
-  const secondaryLoading =
-    subjects === undefined ||
-    curricula === undefined ||
-    programs === undefined;
+  const secondaryLoading = subjects === undefined || curricula === undefined || programs === undefined;
 
-  const metrics = {
-    totalSubjects: subjects?.length || 0,
-    totalCurricula: curricula?.length || 0,
-    totalPrograms: programs?.length || 0,
-    totalWallets: wallets?.length || 0,
-    totalPartners: partners?.length || 0,
-    totalTransactions: transactions?.length || 0,
-    totalPartnerEarnings: partnerEarningsSummary?.total_earnings || 0,
-    totalSystemRevenue: partnerEarningsSummary?.total_revenue || 0,
-  };
-
-  const partnerSharePct = metrics.totalSystemRevenue > 0
-    ? Math.round((metrics.totalPartnerEarnings / metrics.totalSystemRevenue) * 100)
-    : 0;
-  const sqooliSharePct = metrics.totalSystemRevenue > 0
-    ? Math.round(((metrics.totalSystemRevenue - metrics.totalPartnerEarnings) / metrics.totalSystemRevenue) * 100)
-    : 0;
-
-  const getRankCircle = (index: number) => {
-    const styles = [
-      "bg-primary text-primary-foreground",
-      "bg-muted-foreground/60 text-background",
-      "bg-chart-3/70 text-background",
-    ];
-    const style = styles[index] ?? "bg-muted text-muted-foreground";
-    return (
-      <div className={`h-8 w-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${style}`}>
-        #{index + 1}
-      </div>
-    );
-  };
+  const totalRevenue    = partnerEarnings?.total_revenue ?? 0;
+  const totalPartnerPay = partnerEarnings?.total_earnings ?? 0;
+  const sqooliRevenue   = totalRevenue - totalPartnerPay;
+  const partnerPct      = totalRevenue > 0 ? Math.round((totalPartnerPay / totalRevenue) * 100) : 0;
+  const sqooliPct       = 100 - partnerPct;
+  const totalTxns       = transactions?.length ?? 0;
+  const totalPrograms   = programs?.length ?? 0;
+  const totalPartners   = partners?.length ?? 0;
 
   return (
-    <div className="space-y-6 p-6">
-      {/* HEADER */}
-      <div className="flex items-center justify-between">
-        <div>
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-semibold text-foreground">System Dashboard</h1>
-            <Badge variant="secondary" className="flex items-center gap-1">
-              <Shield className="h-3 w-3" />
-              Super Admin
-            </Badge>
+    <div className="min-h-full bg-muted/30">
+
+      {/* ── HEADER BANNER ──────────────────────────────────────────────────────── */}
+      <div className="bg-gradient-to-br from-primary to-primary/80 px-6 pt-6 pb-5">
+        <div className="flex items-start justify-between mb-6">
+          <div>
+            <p className="text-[11px] font-bold tracking-[0.2em] text-primary-foreground/60 uppercase mb-1">
+              Sqooli · Command Center
+            </p>
+            <h1 className="text-[24px] font-bold text-primary-foreground leading-none">
+              System Dashboard
+            </h1>
           </div>
-          <p className="text-sm text-muted-foreground mt-1">
-            System-wide analytics and management
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
           <Button
             onClick={() => setShowCreateProgramDialog(true)}
-            className="bg-primary text-primary-foreground hover:bg-primary/90"
+            size="sm"
+            variant="secondary"
           >
-            + New Program
+            <GraduationCap className="h-3.5 w-3.5 mr-1.5" />
+            New Program
           </Button>
         </div>
+
+        {/* KPI strip */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {primaryLoading ? (
+            Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} className="h-14 rounded-xl bg-primary-foreground/10" />
+            ))
+          ) : (
+            <>
+              <div className="bg-primary-foreground/15 rounded-xl px-4 py-2.5">
+                <p className="text-[10px] text-primary-foreground/60 uppercase tracking-wide mb-0.5">System Revenue</p>
+                <p className="text-lg font-bold text-primary-foreground">{formatCurrency(totalRevenue)}</p>
+              </div>
+              <div className="bg-primary-foreground/15 rounded-xl px-4 py-2.5">
+                <p className="text-[10px] text-primary-foreground/60 uppercase tracking-wide mb-0.5">Partner Earnings</p>
+                <p className="text-lg font-bold text-primary-foreground">{formatCurrency(totalPartnerPay)}</p>
+              </div>
+              <div className="bg-primary-foreground/15 rounded-xl px-4 py-2.5">
+                <p className="text-[10px] text-primary-foreground/60 uppercase tracking-wide mb-0.5">Transactions</p>
+                <p className="text-lg font-bold text-primary-foreground">{totalTxns}</p>
+              </div>
+              <div className="bg-primary-foreground/15 rounded-xl px-4 py-2.5">
+                <p className="text-[10px] text-primary-foreground/60 uppercase tracking-wide mb-0.5">Partners</p>
+                <p className="text-lg font-bold text-primary-foreground">{totalPartners}</p>
+                {totalPrograms > 0 && (
+                  <p className="text-[10px] text-primary-foreground/50">{totalPrograms} programs</p>
+                )}
+              </div>
+            </>
+          )}
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* LEFT - Main Content */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Primary Metrics — 4 individual cards */}
-          {primaryLoading ? (
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <Skeleton key={i} className="h-28 w-full rounded-xl" />
-              ))}
+      {/* ── MAIN BODY ─────────────────────────────────────────────────────────── */}
+      <div className="p-6 grid grid-cols-1 xl:grid-cols-3 gap-5">
+
+        {/* ── LEFT ── */}
+        <div className="xl:col-span-2 flex flex-col gap-5">
+
+          {/* Revenue chart */}
+          <div className="bg-card rounded-2xl border border-border overflow-hidden">
+            <div className="flex items-center justify-between px-5 pt-5 pb-3">
+              <div>
+                <p className="text-[11px] text-muted-foreground uppercase tracking-widest font-medium">Revenue Trend</p>
+                <p className="text-base font-bold text-foreground">Last 30 Days</p>
+              </div>
+              <TrendingUp className="h-4 w-4 text-primary" />
             </div>
-          ) : (
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              <Card className="border-l-4 border-l-secondary border-border">
-                <CardContent className="p-5">
-                  <div className="h-8 w-8 rounded-lg bg-secondary/10 flex items-center justify-center mb-3">
-                    <DollarSign className="h-4 w-4 text-secondary" />
-                  </div>
-                  <p className="text-xs text-muted-foreground mb-1">System Revenue</p>
-                  <p className="text-xl font-bold text-foreground">
-                    {formatCurrency(metrics.totalSystemRevenue)}
-                  </p>
-                </CardContent>
-              </Card>
 
-              <Card className="border-l-4 border-l-chart-3 border-border">
-                <CardContent className="p-5">
-                  <div className="h-8 w-8 rounded-lg bg-chart-3/10 flex items-center justify-center mb-3">
-                    <Users className="h-4 w-4 text-chart-3" />
-                  </div>
-                  <p className="text-xs text-muted-foreground mb-1">Partner Earnings</p>
-                  <p className="text-xl font-bold text-foreground">
-                    {formatCurrency(metrics.totalPartnerEarnings)}
-                  </p>
-                </CardContent>
-              </Card>
+            {timeline === undefined ? (
+              <div className="px-5 pb-5"><Skeleton className="h-[180px] w-full rounded-xl" /></div>
+            ) : timeline.length > 0 ? (
+              <ResponsiveContainer width="100%" height={200}>
+                <AreaChart data={timeline} margin={{ top: 4, right: 24, left: -10, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="revenueGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="var(--color-primary)" stopOpacity={0.3} />
+                      <stop offset="100%" stopColor="var(--color-primary)" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <XAxis dataKey="formatted_date" tick={{ fontSize: 10, fill: "var(--color-muted-foreground)" }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 10, fill: "var(--color-muted-foreground)" }} axisLine={false} tickLine={false} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
+                  <Tooltip
+                    contentStyle={{ fontSize: 11, borderRadius: 10, border: "1px solid var(--color-border)", background: "var(--color-card)" }}
+                    formatter={(v: number) => [formatCurrency(v), "Revenue"]}
+                  />
+                  <Area type="monotone" dataKey="amount" stroke="var(--color-primary)" strokeWidth={2.5} fill="url(#revenueGrad)" dot={false} activeDot={{ r: 4 }} />
+                </AreaChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex flex-col items-center justify-center h-[180px] pb-5">
+                <TrendingDown className="h-8 w-8 text-muted-foreground/30 mb-2" />
+                <p className="text-xs text-muted-foreground">No revenue data yet</p>
+              </div>
+            )}
+          </div>
 
-              <Card className="border-l-4 border-l-primary border-border">
-                <CardContent className="p-5">
-                  <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center mb-3">
-                    <GraduationCap className="h-4 w-4 text-primary" />
-                  </div>
-                  <p className="text-xs text-muted-foreground mb-1">Total Programs</p>
-                  <p className="text-xl font-bold text-foreground">{metrics.totalPrograms}</p>
-                </CardContent>
-              </Card>
+          {/* Content library + Revenue split */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
 
-              <Card className="border-l-4 border-l-chart-4 border-border">
-                <CardContent className="p-5">
-                  <div className="h-8 w-8 rounded-lg bg-chart-4/10 flex items-center justify-center mb-3">
-                    <BarChart3 className="h-4 w-4 text-chart-4" />
-                  </div>
-                  <p className="text-xs text-muted-foreground mb-1">Transactions</p>
-                  <p className="text-xl font-bold text-foreground">{metrics.totalTransactions}</p>
-                </CardContent>
-              </Card>
-            </div>
-          )}
-
-          {/* Secondary Stats — inline pills in one card */}
-          {secondaryLoading ? (
-            <Skeleton className="h-20 w-full rounded-xl" />
-          ) : (
-            <Card className="border border-muted">
-              <CardContent className="p-5">
-                <div className="flex items-center gap-8 flex-wrap">
-                  <div className="flex items-center gap-3">
-                    <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                      <BookOpen className="h-4 w-4 text-primary" />
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">Subjects</p>
-                      <p className="text-lg font-bold text-foreground">{metrics.totalSubjects}</p>
-                    </div>
-                  </div>
-                  <div className="h-8 w-px bg-border" />
-                  <div className="flex items-center gap-3">
-                    <div className="h-8 w-8 rounded-lg bg-chart-4/10 flex items-center justify-center">
-                      <BookOpen className="h-4 w-4 text-chart-4" />
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">Curricula</p>
-                      <p className="text-lg font-bold text-foreground">{metrics.totalCurricula}</p>
-                    </div>
-                  </div>
-                  <div className="h-8 w-px bg-border" />
-                  <div className="flex items-center gap-3">
-                    <div className="h-8 w-8 rounded-lg bg-secondary/10 flex items-center justify-center">
-                      <WalletIcon className="h-4 w-4 text-secondary" />
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">Active Wallets</p>
-                      <p className="text-lg font-bold text-foreground">{metrics.totalWallets}</p>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* System Earnings Chart */}
-          <Card className="border border-muted">
-            <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
-                <TrendingUp className="h-5 w-5 text-primary" />
-                System Revenue Over Time (Last 30 Days)
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-6">
-              {systemEarningsTimeline === undefined ? (
-                <Skeleton className="h-64 w-full rounded-lg" />
-              ) : systemEarningsTimeline.length > 0 ? (
-                <div className="h-80">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={systemEarningsTimeline}>
-                      <defs>
-                        <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3}/>
-                          <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                      <XAxis
-                        dataKey="formatted_date"
-                        stroke="hsl(var(--muted-foreground))"
-                        tick={{ fontSize: 12 }}
-                      />
-                      <YAxis
-                        stroke="hsl(var(--muted-foreground))"
-                        tick={{ fontSize: 12 }}
-                        tickFormatter={(value) => `KES ${value}`}
-                      />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: "hsl(var(--background))",
-                          border: "1px solid hsl(var(--border))",
-                          borderRadius: "8px",
-                        }}
-                        formatter={(value: number) => [formatCurrency(value), "Revenue"]}
-                      />
-                      <Area
-                        type="monotone"
-                        dataKey="amount"
-                        stroke="hsl(var(--primary))"
-                        strokeWidth={2}
-                        fill="url(#colorRevenue)"
-                      />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </div>
+            {/* Content library */}
+            <div className="bg-card rounded-2xl border border-border p-5">
+              <p className="text-[11px] text-muted-foreground uppercase tracking-widest font-medium mb-4">Content Library</p>
+              {secondaryLoading ? (
+                <div className="space-y-3">{[1, 2, 3].map((i) => <Skeleton key={i} className="h-10 w-full rounded-lg" />)}</div>
               ) : (
-                <div className="h-64 flex flex-col items-center justify-center text-muted-foreground">
-                  <TrendingDown className="h-12 w-12 mb-3 opacity-50" />
-                  <p className="text-sm">No revenue data available yet</p>
-                  <p className="text-xs mt-1">System revenue will appear here</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Top Earning Partners */}
-          <Card className="border border-muted">
-            <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
-                <Award className="h-5 w-5 text-chart-3" />
-                Top Earning Partners
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {topPartners === undefined ? (
-                <div className="space-y-3">
-                  {Array.from({ length: 3 }).map((_, i) => (
-                    <Skeleton key={i} className="h-16 w-full rounded-lg" />
+                <div className="space-y-1">
+                  {[
+                    { icon: BookOpen,      label: "Subjects",  value: subjects?.length ?? 0,  color: "bg-primary/10 text-primary" },
+                    { icon: GraduationCap, label: "Curricula", value: curricula?.length ?? 0,  color: "bg-secondary/10 text-secondary" },
+                    { icon: WalletIcon,    label: "Wallets",   value: wallets?.length ?? 0,    color: "bg-chart-3/10 text-chart-3" },
+                  ].map(({ icon: Icon, label, value, color }) => (
+                    <div key={label} className="flex items-center justify-between py-2.5 border-b border-border last:border-0">
+                      <div className="flex items-center gap-2.5">
+                        <div className={`h-7 w-7 rounded-lg flex items-center justify-center ${color}`}>
+                          <Icon className="h-3.5 w-3.5" />
+                        </div>
+                        <span className="text-sm text-muted-foreground">{label}</span>
+                      </div>
+                      <span className="text-sm font-bold text-foreground">{value}</span>
+                    </div>
                   ))}
                 </div>
-              ) : topPartners.length > 0 ? (
-                <div className="space-y-3">
-                  {topPartners.map((partner, index) => (
-                    <div
-                      key={partner.partner_id}
-                      className="flex items-center justify-between p-4 bg-gradient-to-r from-muted/30 to-transparent rounded-lg border border-border hover:border-primary/50 transition-colors"
-                    >
-                      <div className="flex items-center gap-4 flex-1">
-                        {getRankCircle(index)}
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-foreground truncate">
-                            {partner.partner_name}
-                          </p>
-                          <div className="flex items-center gap-3 mt-1">
-                            <span className="text-xs text-muted-foreground">
-                              {partner.total_campaigns} campaigns
-                            </span>
-                            <span className="text-xs text-muted-foreground">•</span>
-                            <span className="text-xs text-muted-foreground">
-                              {partner.total_enrollments} enrollments
-                            </span>
-                          </div>
+              )}
+            </div>
+
+            {/* Revenue split */}
+            <div className="bg-card rounded-2xl border border-border p-5">
+              <p className="text-[11px] text-muted-foreground uppercase tracking-widest font-medium mb-4">Revenue Split</p>
+              {primaryLoading ? (
+                <div className="space-y-4"><Skeleton className="h-10 w-full rounded-lg" /><Skeleton className="h-10 w-full rounded-lg" /></div>
+              ) : (
+                <div className="space-y-4">
+                  {[
+                    { label: "Sqooli Share",   amount: sqooliRevenue,   pct: sqooliPct,  colorClass: "bg-primary" },
+                    { label: "Partner Share",  amount: totalPartnerPay, pct: partnerPct, colorClass: "bg-secondary" },
+                  ].map(({ label, amount, pct, colorClass }) => (
+                    <div key={label}>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="text-xs text-muted-foreground font-medium">{label}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold text-foreground">{formatCurrency(amount)}</span>
+                          <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full">{pct}%</span>
                         </div>
                       </div>
-                      <div className="text-right flex-shrink-0 ml-4">
-                        <p className="text-base font-bold text-primary">
-                          {formatCurrency(partner.total_earnings)}
-                        </p>
-                        <p className="text-xs text-muted-foreground">earned</p>
+                      <div className="h-2 bg-muted rounded-full overflow-hidden">
+                        <div className={`h-full rounded-full transition-all duration-700 ${colorClass}`} style={{ width: `${pct}%` }} />
                       </div>
                     </div>
                   ))}
-                </div>
-              ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Award className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                  <p className="text-sm">No partner earnings yet</p>
-                  <p className="text-xs mt-1">Partner earnings will appear here</p>
+                  <div className="pt-2 border-t border-border flex items-center justify-between">
+                    <span className="text-xs text-muted-foreground">Total</span>
+                    <span className="text-sm font-bold text-foreground">{formatCurrency(totalRevenue)}</span>
+                  </div>
                 </div>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </div>
 
-        {/* RIGHT - Sidebar */}
-        <div className="space-y-6">
-          {/* System Summary Card */}
-          {primaryLoading ? (
-            <Skeleton className="h-48 w-full rounded-xl" />
-          ) : (
-            <Card className="border border-muted">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base">System Overview</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between py-2 border-b border-border">
-                    <span className="text-sm text-muted-foreground">Total Partners</span>
-                    <span className="text-sm font-semibold text-foreground">{metrics.totalPartners}</span>
+        {/* ── RIGHT ── */}
+        <div className="flex flex-col gap-5">
+
+          {/* Quick actions */}
+          <div className="bg-card rounded-2xl border border-border p-5">
+            <p className="text-[11px] text-muted-foreground uppercase tracking-widest font-medium mb-3">Quick Actions</p>
+            <div className="space-y-2">
+              {[
+                { icon: Building2,  label: "Manage Partners", key: "users"    },
+                { icon: BarChart3,  label: "View Programs",   key: "programs" },
+                { icon: WalletIcon, label: "Wallet Overview", key: "wallet"   },
+              ].map(({ icon: Icon, label, key }) => (
+                <button
+                  key={key}
+                  onClick={() => setActiveItem(key)}
+                  className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium text-foreground bg-muted/40 hover:bg-muted hover:text-primary transition-colors group"
+                >
+                  <div className="h-7 w-7 rounded-lg bg-background border border-border flex items-center justify-center group-hover:border-primary/30 transition-colors">
+                    <Icon className="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
                   </div>
-                  <div className="flex items-center justify-between py-2 border-b border-border">
-                    <span className="text-sm text-muted-foreground">Active Wallets</span>
-                    <span className="text-sm font-semibold text-foreground">{metrics.totalWallets}</span>
-                  </div>
-                  <div className="flex items-center justify-between py-2 border-b border-border">
-                    <span className="text-sm text-muted-foreground">Transactions</span>
-                    <span className="text-sm font-semibold text-foreground">{metrics.totalTransactions}</span>
-                  </div>
-                  <div className="flex items-center justify-between py-2">
-                    <span className="text-sm text-muted-foreground">Programs</span>
-                    <span className="text-sm font-semibold text-foreground">{metrics.totalPrograms}</span>
-                  </div>
+                  <span className="flex-1 text-left">{label}</span>
+                  <ArrowUpRight className="h-3.5 w-3.5 text-muted-foreground/40 group-hover:text-primary transition-colors" />
+                </button>
+              ))}
+              <button
+                onClick={() => setShowCreateProgramDialog(true)}
+                className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium text-primary-foreground bg-primary hover:bg-primary/90 transition-colors mt-1"
+              >
+                <div className="h-7 w-7 rounded-lg bg-primary-foreground/20 flex items-center justify-center">
+                  <Zap className="h-3.5 w-3.5" />
                 </div>
-              </CardContent>
-            </Card>
-          )}
+                <span className="flex-1 text-left">New Program</span>
+              </button>
+            </div>
+          </div>
 
-          {/* Quick Actions — above Revenue Breakdown */}
-          <Card className="border border-muted">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">Quick Actions</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <Button
-                variant="outline"
-                className="w-full justify-start"
-                onClick={() => setActiveItem('programs')}
-              >
-                <GraduationCap className="h-4 w-4 mr-2" />
-                View All Programs
-              </Button>
-              <Button
-                variant="outline"
-                className="w-full justify-start"
-                onClick={() => setActiveItem('users')}
-              >
-                <Users className="h-4 w-4 mr-2" />
-                Manage Users
-              </Button>
-              <Button
-                variant="outline"
-                className="w-full justify-start"
-                onClick={() => setActiveItem('wallet')}
-              >
-                <WalletIcon className="h-4 w-4 mr-2" />
-                View Wallets
-              </Button>
-            </CardContent>
-          </Card>
+          {/* Partner leaderboard */}
+          <div className="bg-card rounded-2xl border border-border p-5 flex-1">
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-[11px] text-muted-foreground uppercase tracking-widest font-medium">Top Partners</p>
+              <button onClick={() => setActiveItem("users")} className="text-[11px] text-primary hover:underline">
+                View all
+              </button>
+            </div>
 
-          {/* Revenue Breakdown Card */}
-          {primaryLoading ? (
-            <Skeleton className="h-48 w-full rounded-xl" />
-          ) : (
-            <Card className="border border-muted">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base">Revenue Breakdown</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs text-muted-foreground">Total Revenue</span>
-                      <span className="text-xs font-medium text-foreground">
-                        {formatCurrency(metrics.totalSystemRevenue)}
-                        <span className="ml-1 text-muted-foreground">100%</span>
-                      </span>
+            {topPartners === undefined ? (
+              <div className="space-y-3">
+                {[1, 2, 3, 4, 5].map((i) => <Skeleton key={i} className="h-14 w-full rounded-xl" />)}
+              </div>
+            ) : topPartners.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-10 text-muted-foreground">
+                <Users className="h-8 w-8 mb-2 opacity-30" />
+                <p className="text-xs">No partner data yet</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {topPartners.map((p, i) => {
+                  const maxEarnings = topPartners[0]?.total_earnings ?? 1;
+                  const barWidth    = maxEarnings > 0 ? (p.total_earnings / maxEarnings) * 100 : 0;
+                  return (
+                    <div key={p.partner_id} className="group relative overflow-hidden rounded-xl border border-border bg-muted/20 hover:border-primary/20 hover:bg-muted/40 transition-all p-3">
+                      <div className="absolute inset-y-0 left-0 bg-primary/5 rounded-xl transition-all duration-700" style={{ width: `${barWidth}%` }} />
+                      <div className="relative flex items-center gap-3">
+                        <RankBadge rank={i + 1} />
+                        <div className={`h-8 w-8 rounded-full flex items-center justify-center text-xs font-bold text-primary-foreground flex-shrink-0 ${getAvatarColor(p.partner_name)}`}>
+                          {getInitials(p.partner_name)}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[13px] font-semibold text-foreground truncate leading-none mb-0.5">{p.partner_name}</p>
+                          <p className="text-[10px] text-muted-foreground">{p.total_campaigns} campaigns · {p.total_enrollments} enrollments</p>
+                        </div>
+                        <p className="text-[13px] font-bold text-primary flex-shrink-0">{formatCurrency(p.total_earnings)}</p>
+                      </div>
                     </div>
-                    <div className="w-full bg-muted rounded-full h-2">
-                      <div className="bg-secondary h-2 rounded-full" style={{ width: '100%' }} />
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Secondary system stats */}
+          {!primaryLoading && (
+            <div className="bg-card rounded-2xl border border-border p-5">
+              <p className="text-[11px] text-muted-foreground uppercase tracking-widest font-medium mb-3">System Overview</p>
+              <div className="space-y-0">
+                {[
+                  { label: "Total Partners",  value: totalPartners,                icon: Building2,   color: "text-primary" },
+                  { label: "Active Wallets",  value: wallets?.length ?? 0,          icon: WalletIcon,  color: "text-secondary" },
+                  { label: "Transactions",    value: totalTxns,                     icon: DollarSign,  color: "text-chart-3" },
+                  { label: "Programs",        value: totalPrograms,                 icon: GraduationCap, color: "text-chart-4" },
+                ].map(({ label, value, icon: Icon, color }) => (
+                  <div key={label} className="flex items-center justify-between py-2 border-b border-border last:border-0">
+                    <div className="flex items-center gap-2">
+                      <Icon className={`h-3.5 w-3.5 ${color}`} />
+                      <span className="text-sm text-muted-foreground">{label}</span>
                     </div>
+                    <span className="text-sm font-bold text-foreground">{value}</span>
                   </div>
-
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs text-muted-foreground">Partner Share</span>
-                      <span className="text-xs font-medium text-foreground">
-                        {formatCurrency(metrics.totalPartnerEarnings)}
-                        <span className="ml-1 text-muted-foreground">{partnerSharePct}%</span>
-                      </span>
-                    </div>
-                    <div className="w-full bg-muted rounded-full h-2">
-                      <div
-                        className="bg-chart-3 h-2 rounded-full"
-                        style={{ width: `${partnerSharePct}%` }}
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs text-muted-foreground">Sqooli Share</span>
-                      <span className="text-xs font-medium text-foreground">
-                        {formatCurrency(metrics.totalSystemRevenue - metrics.totalPartnerEarnings)}
-                        <span className="ml-1 text-muted-foreground">{sqooliSharePct}%</span>
-                      </span>
-                    </div>
-                    <div className="w-full bg-muted rounded-full h-2">
-                      <div
-                        className="bg-primary h-2 rounded-full"
-                        style={{ width: `${sqooliSharePct}%` }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                ))}
+              </div>
+            </div>
           )}
         </div>
       </div>
 
-      {/* Create Program Dialog */}
-      <CreateProgramDialog
-        open={showCreateProgramDialog}
-        onOpenChange={setShowCreateProgramDialog}
-      />
+      <CreateProgramDialog open={showCreateProgramDialog} onOpenChange={setShowCreateProgramDialog} />
     </div>
   );
 }

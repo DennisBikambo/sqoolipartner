@@ -1,4 +1,5 @@
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, Loader2 } from 'lucide-react';
+import { useState } from 'react';
 import { Button } from '../ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import {
@@ -28,8 +29,10 @@ export function Header({ title = 'Dashboard' }: HeaderProps) {
   const { setTheme, theme } = useTheme();
   const navigate = useNavigate();
   const deleteSession = useMutation(api.session.deleteSession);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const onLogout = async () => {
+    setIsLoggingOut(true);
     try {
       const token = document.cookie
         .split("; ")
@@ -51,6 +54,8 @@ export function Header({ title = 'Dashboard' }: HeaderProps) {
     } catch (error) {
       console.error("Logout error:", error);
       toast.error("An unexpected error occurred during logout.");
+    } finally {
+      setIsLoggingOut(false);
     }
   };
 
@@ -91,7 +96,11 @@ export function Header({ title = 'Dashboard' }: HeaderProps) {
     <header className="fixed top-0 left-0 right-0 z-50 w-full bg-background border-b border-border">      
     <div className="flex h-14 sm:h-16 items-center justify-between px-4 sm:px-6 gap-2">
         <div className="flex items-center gap-2">
-          {/* Logo / Title can go here */}
+          <img
+            src="/sqooli-logo.svg"
+            alt="Sqooli"
+            className="h-8 w-auto"
+          />
         </div>
 
         <div className="flex items-center gap-3 lg:gap-4">
@@ -144,8 +153,13 @@ export function Header({ title = 'Dashboard' }: HeaderProps) {
               )}
               
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="text-destructive" onClick={onLogout}>
-                Log out
+              <DropdownMenuItem
+                className="text-destructive flex items-center gap-2"
+                onClick={onLogout}
+                disabled={isLoggingOut}
+              >
+                {isLoggingOut && <Loader2 className="h-3 w-3 animate-spin" />}
+                {isLoggingOut ? 'Logging out…' : 'Log out'}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

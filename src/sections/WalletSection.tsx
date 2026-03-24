@@ -3,7 +3,6 @@ import { useAuth } from "../hooks/useAuth";
 import { isConvexUser } from "../types/auth.types";
 import { useQuery } from "convex/react";
 import { usePermissions } from "../hooks/usePermission";
-import { Loading } from "../components/common/Loading";
 import { api } from "../../convex/_generated/api";
 import Wallet from "../components/common/Wallet";
 import { Card, CardContent } from "../components/ui/card";
@@ -23,19 +22,12 @@ import {
   TableRow,
 } from "../components/ui/table";
 import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "../components/ui/tabs";
-import {
   Sheet,
   SheetContent,
   SheetTrigger,
 } from "../components/ui/sheet";
 import {
   Search,
-  Filter,
   Eye,
   Wallet as WalletIcon,
   ArrowDownToLine,
@@ -44,6 +36,8 @@ import {
   XCircle,
   AlertCircle,
   Copy,
+  Coins,
+  CreditCard,
 } from "lucide-react";
 import type { Doc } from "../../convex/_generated/dataModel";
 import { toast } from "sonner";
@@ -60,7 +54,7 @@ export default function WalletSection({
   const { user, partner, loading: authLoading } = useAuth();
   const {userRole} = usePermissions()
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeTab, setActiveTab] = useState<"payments" | "withdrawals">("payments");
+  const [activeTab, setActiveTab] = useState<"earnings" | "withdrawals">("earnings");
   const [isWalletOpen, setIsWalletOpen] = useState(false);
 
   // Derive from user.role directly — avoids waiting for PermissionContext to hydrate
@@ -166,9 +160,38 @@ export default function WalletSection({
     return <SuperAdminWalletSection />;
   }
 
-  // For regular partners: wait for auth + partner to resolve
+  // For regular partners: show skeleton layout while auth resolves
   if (authLoading || !partner) {
-    return <Loading message="Loading your wallet..." size="lg" />;
+    return (
+      <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 p-4 lg:p-6">
+        {/* Wallet card skeleton */}
+        <div className="hidden lg:block lg:w-[260px] shrink-0">
+          <div style={{ borderRadius: "20px", overflow: "hidden", boxShadow: "0 4px 20px rgba(94,122,224,0.15)" }}>
+            <Skeleton className="h-[155px] w-full rounded-none" />
+            <div className="p-4 space-y-3" style={{ background: "#E1EEFA" }}>
+              <Skeleton className="h-3 w-24 rounded" />
+              <Skeleton className="h-3 w-40 rounded" />
+              <Skeleton className="h-9 w-full rounded-[10px]" />
+            </div>
+          </div>
+        </div>
+        {/* Right panel skeleton */}
+        <div className="flex-1 space-y-4 min-w-0">
+          <Skeleton className="h-10 w-full rounded-lg" />
+          <div className="rounded-xl border border-border overflow-hidden">
+            <div className="flex gap-6 px-6 py-3 border-b border-border">
+              <Skeleton className="h-4 w-16 rounded" />
+              <Skeleton className="h-4 w-20 rounded" />
+            </div>
+            <div className="p-6 space-y-3">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <Skeleton key={i} className="h-12 w-full rounded-lg" />
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -186,69 +209,69 @@ export default function WalletSection({
             </SheetTrigger>
             <SheetContent side="left" className="w-80 p-0">
               <div className="p-4">
-                <Wallet activeItem={activeItem} setActiveItem={setActiveItem} />
+                <Wallet activeItem={activeItem} setActiveItem={setActiveItem} variant="vertical" />
               </div>
             </SheetContent>
           </Sheet>
         </div>
 
         {/* Desktop Wallet - Left Column */}
-        <div className="hidden lg:block lg:w-64 shrink-0">
-          <Wallet activeItem={activeItem} setActiveItem={setActiveItem} />
+        <div className="hidden lg:block lg:w-[260px] shrink-0">
+          <Wallet activeItem={activeItem} setActiveItem={setActiveItem} variant="vertical" />
         </div>
 
-        {/* Right Column - Transaction Content */}
-        <div className="flex-1 space-y-4 lg:space-y-6 min-w-0">
-          {/* Search and Filter */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder={activeTab === "payments" ? "Search transactions..." : "Search withdrawals..."}
-                className="pl-10 bg-background border-border w-full"
-                value={searchQuery}
-                onChange={handleSearch}
-              />
-            </div>
-            <Button variant="outline" size="icon" className="shrink-0 w-full sm:w-auto">
-              <Filter className="h-4 w-4" />
-            </Button>
+        {/* Right Column - Earnings & Withdrawals Content */}
+        <div className="flex-1 space-y-4 lg:space-y-4 min-w-0">
+          {/* Search */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder={activeTab === "earnings" ? "Search earnings..." : "Search withdrawals..."}
+              className="pl-10 bg-background border-border w-full"
+              value={searchQuery}
+              onChange={handleSearch}
+            />
           </div>
 
-          {/* Tabs and Table */}
-          <Card className="border-border">
-            <CardContent className="p-4 lg:pt-6">
-              <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)}>
-                <TabsList className="mb-4 flex space-x-4 bg-transparent p-0">
-                  <TabsTrigger
-                    value="payments"
-                    className={`text-sm font-medium p-2 ${
-                      activeTab === "payments" ? "text-primary" : "text-muted-foreground"
-                    } hover:text-primary bg-transparent`}
-                  >
-                    Payments
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="withdrawals"
-                    className={`text-sm font-medium p-2 ${
-                      activeTab === "withdrawals" ? "text-primary" : "text-muted-foreground"
-                    } hover:text-primary bg-transparent`}
-                  >
-                    Withdrawals
-                  </TabsTrigger>
-                </TabsList>
+          {/* Tab panel — flat panel, underline tabs matching UserSection style */}
+          <div className="bg-background rounded-xl border border-border overflow-hidden">
+            {/* Tab strip */}
+            <div className="flex gap-5 border-b border-border px-4 lg:px-6">
+              {([
+                { value: "earnings", icon: <Coins className="h-3.5 w-3.5" />, label: "Earnings" },
+                { value: "withdrawals", icon: <CreditCard className="h-3.5 w-3.5" />, label: "Withdrawals" },
+              ] as const).map(({ value, icon, label }) => (
+                <button
+                  key={value}
+                  onClick={() => setActiveTab(value)}
+                  className={[
+                    "flex items-center gap-1.5 pb-2 pt-3 text-xs font-semibold border-b-2 -mb-px transition-colors",
+                    activeTab === value
+                      ? "text-primary border-primary"
+                      : "text-muted-foreground border-transparent hover:text-foreground",
+                  ].join(" ")}
+                >
+                  {icon}
+                  {label}
+                </button>
+              ))}
+            </div>
 
-                {/* PAYMENTS TAB */}
-                <TabsContent value="payments" className="mt-0">
-                  {transactionsLoading ? (
+            <div className="p-4 lg:p-6">
+              {/* EARNINGS TAB */}
+              {activeTab === "earnings" && (
+                <>{transactionsLoading ? (
                     <div className="space-y-2">
                       {Array.from({ length: 5 }).map((_, i) => (
                         <Skeleton key={i} className="h-10 w-full rounded-lg" />
                       ))}
                     </div>
                   ) : transactionsError ? (
-                    <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
-                      <p className="text-sm">Something went wrong. Please refresh.</p>
+                    <div className="flex flex-col items-center justify-center py-10 gap-3">
+                      <AlertCircle className="h-8 w-8 text-destructive/50" />
+                      <p className="text-sm font-medium text-foreground">Failed to load earnings</p>
+                      <p className="text-xs text-muted-foreground">Check your connection and try again.</p>
+                      <Button variant="outline" size="sm" onClick={() => window.location.reload()}>Retry</Button>
                     </div>
                   ) : filteredTransactions === undefined || filteredTransactions.length === 0 ? (
                     <div className="text-center py-8 lg:py-12">
@@ -270,7 +293,7 @@ export default function WalletSection({
                         </div>
                         <div className="space-y-1 text-center px-4">
                           <div className="text-sm lg:text-base text-muted-foreground font-medium">
-                            Your completed payments will display here
+                            Your completed earnings will display here
                           </div>
                         </div>
                       </div>
@@ -426,35 +449,30 @@ export default function WalletSection({
                         </Table>
                       </div>
 
-                      {/* Pagination */}
-                      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-4 lg:mt-6 pt-4 border-t border-border">
-                        <div className="text-xs sm:text-sm text-muted-foreground">
-                          Showing {filteredTransactions?.length ?? 0} of {transactions?.length || 0} payments
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Button variant="outline" size="sm" disabled>
-                            Previous
-                          </Button>
-                          <Button variant="outline" size="sm" disabled>
-                            Next
-                          </Button>
-                        </div>
+                      {/* Record count */}
+                      <div className="mt-4 lg:mt-6 pt-4 border-t border-border">
+                        <p className="text-xs text-muted-foreground">
+                          {filteredTransactions?.length ?? 0} of {transactions?.length || 0} earnings
+                        </p>
                       </div>
                     </>
-                  )}
-                </TabsContent>
+                  )}</>
+              )}
 
-                {/* WITHDRAWALS TAB */}
-                <TabsContent value="withdrawals" className="mt-0">
-                  {withdrawalsLoading ? (
+              {/* WITHDRAWALS TAB */}
+              {activeTab === "withdrawals" && (
+                <>{withdrawalsLoading ? (
                     <div className="space-y-2">
                       {Array.from({ length: 5 }).map((_, i) => (
                         <Skeleton key={i} className="h-10 w-full rounded-lg" />
                       ))}
                     </div>
                   ) : withdrawalsError ? (
-                    <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
-                      <p className="text-sm">Something went wrong. Please refresh.</p>
+                    <div className="flex flex-col items-center justify-center py-10 gap-3">
+                      <AlertCircle className="h-8 w-8 text-destructive/50" />
+                      <p className="text-sm font-medium text-foreground">Failed to load withdrawals</p>
+                      <p className="text-xs text-muted-foreground">Check your connection and try again.</p>
+                      <Button variant="outline" size="sm" onClick={() => window.location.reload()}>Retry</Button>
                     </div>
                   ) : filteredWithdrawals === undefined || filteredWithdrawals.length === 0 ? (
                     <div className="text-center py-8 lg:py-12">
@@ -660,26 +678,17 @@ export default function WalletSection({
                         </Table>
                       </div>
 
-                      {/* Pagination - Withdrawals */}
-                      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-4 lg:mt-6 pt-4 border-t border-border">
-                        <div className="text-xs sm:text-sm text-muted-foreground">
-                          Showing {filteredWithdrawals?.length ?? 0} of {withdrawals?.length || 0} withdrawals
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Button variant="outline" size="sm" disabled>
-                            Previous
-                          </Button>
-                          <Button variant="outline" size="sm" disabled>
-                            Next
-                          </Button>
-                        </div>
+                      {/* Record count */}
+                      <div className="mt-4 lg:mt-6 pt-4 border-t border-border">
+                        <p className="text-xs text-muted-foreground">
+                          {filteredWithdrawals?.length ?? 0} of {withdrawals?.length || 0} withdrawals
+                        </p>
                       </div>
                     </>
-                  )}
-                </TabsContent>
-              </Tabs>
-            </CardContent>
-          </Card>
+                  )}</>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </div>

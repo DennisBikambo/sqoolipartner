@@ -103,7 +103,7 @@ export default function DashboardSection({
   activeItem?: string;
   setActiveItem: (item: string) => void;
 }) {
-  const { user, partner } = useAuth();
+  const { user, partner, loading: authLoading } = useAuth();
   const { hasPermission, userRole } = usePermissions();
 
   const [chartTab, setChartTab] = useState<"earnings" | "withdrawals" | "engagements">("earnings");
@@ -155,7 +155,7 @@ export default function DashboardSection({
     `dashboard_withdrawal_stats_${partnerId}`,
     rawWithdrawalStats
   );
-  const { data: earningsTimeline } = useConvexQuery(
+  const { data: earningsTimeline, isLoading: timelineLoading } = useConvexQuery(
     `dashboard_earnings_timeline_${partnerId}`,
     rawEarningsTimeline
   );
@@ -163,6 +163,22 @@ export default function DashboardSection({
     `dashboard_audit_logs_${partnerId}`,
     rawAuditLogs
   );
+
+  // Wait for auth to settle before deciding which dashboard to render.
+  // Without this guard, the partner dashboard flashes briefly while the
+  // session is being validated and isSuperAdmin is still false.
+  if (authLoading) {
+    return (
+      <div className="p-6 space-y-4">
+        <Skeleton className="h-8 w-56 rounded-lg" />
+        <Skeleton className="h-[140px] w-full rounded-xl" />
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-28 w-full rounded-xl" />)}
+        </div>
+        <Skeleton className="h-[200px] w-full rounded-xl" />
+      </div>
+    );
+  }
 
   if (isSuperAdmin) {
     return <SuperAdminDashboard setActiveItem={setActiveItem} />;
@@ -346,7 +362,11 @@ export default function DashboardSection({
               </div>
               {/* Chart area */}
               <div className="bg-card rounded-b-xl px-[18px] pt-[14px] pb-4">
-                {chartData.length > 0 ? (
+                {timelineLoading && chartTab === "earnings" ? (
+                  <div className="h-[155px] flex flex-col justify-end gap-1 pb-2">
+                    <Skeleton className="h-full w-full rounded-lg opacity-50" />
+                  </div>
+                ) : chartData.length > 0 ? (
                   <ResponsiveContainer width="100%" height={155}>
                     <LineChart data={chartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
                       <XAxis dataKey="formatted_date" tick={{ fontSize: 10, fill: "#9ca3af" }} axisLine={false} tickLine={false}/>

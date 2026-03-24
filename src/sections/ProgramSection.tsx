@@ -116,13 +116,21 @@ function ProgramRow({ program, onEdit }: { program: Program; onEdit: (program: P
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem disabled={!isSuperAdmin} onClick={() => onEdit(program)}>
-              <Edit className="h-4 w-4 mr-2" />
-              {isSuperAdmin ? 'Edit' : 'Not Allowed'}
-            </DropdownMenuItem>
-            <DropdownMenuItem disabled={!isSuperAdmin} onClick={handleDelete} className="text-destructive">
-              {isSuperAdmin ? "Delete" : "Not Allowed"}
-            </DropdownMenuItem>
+            {isSuperAdmin ? (
+              <>
+                <DropdownMenuItem onClick={() => onEdit(program)}>
+                  <Edit className="h-4 w-4 mr-2" />
+                  Edit
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleDelete} className="text-destructive">
+                  Delete
+                </DropdownMenuItem>
+              </>
+            ) : (
+              <DropdownMenuItem disabled className="text-muted-foreground text-xs">
+                No actions available
+              </DropdownMenuItem>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       </TableCell>
@@ -302,8 +310,14 @@ export default function ProgramsSection() {
               ))
             ) : programsError ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-8">
-                  <p className="text-sm text-muted-foreground">Something went wrong. Please refresh.</p>
+                <TableCell colSpan={5} className="text-center py-10">
+                  <div className="flex flex-col items-center gap-2">
+                    <p className="text-sm font-medium text-foreground">Failed to load programs</p>
+                    <p className="text-xs text-muted-foreground">Check your connection and try again.</p>
+                    <Button variant="outline" size="sm" className="mt-1" onClick={() => window.location.reload()}>
+                      Retry
+                    </Button>
+                  </div>
                 </TableCell>
               </TableRow>
             ) : paginatedPrograms && paginatedPrograms.length > 0 ? (
