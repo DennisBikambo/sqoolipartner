@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogClose } from '../ui/dialog';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
-import { Eye, EyeOff, Shield, User, Mail, Smartphone, XIcon } from 'lucide-react';
+import { Eye, EyeOff, Mail, Phone, Shield, XIcon } from 'lucide-react';
 import type { Id } from '../../../convex/_generated/dataModel';
 import { getAvatarColor, getInitials } from '../../utils/formatters';
 
@@ -43,56 +43,61 @@ export default function ViewUserDialog({ open, onOpenChange, user }: ViewUserDia
     ? user.phone.startsWith('+') ? user.phone : `+254 ${user.phone}`
     : null;
 
-  const infoItems = [
-    { icon: User, label: 'Full Name', value: user.name },
-    { icon: Mail, label: 'Email', value: user.email },
-    { icon: Smartphone, label: 'Phone', value: displayPhone ?? '—' },
-    { icon: Shield, label: 'Role', value: user.role.replace(/_/g, ' ') },
-  ];
+  const isActive = user.is_account_activated;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[400px] p-0 overflow-hidden gap-0" showCloseButton={false}>
+
         {/* Gradient hero */}
-        <div className="relative bg-gradient-to-br from-primary to-primary/80 px-6 pt-10 pb-6">
+        <div className="relative px-6 pt-10 pb-6 bg-gradient-to-br from-primary to-primary/80">
           <DialogClose className="absolute top-4 right-4 p-1.5 rounded-md opacity-70 hover:opacity-100 transition-opacity text-primary-foreground [&_svg]:size-4">
             <XIcon />
             <span className="sr-only">Close</span>
           </DialogClose>
 
           {/* Avatar */}
-          <div className={`h-16 w-16 rounded-2xl flex items-center justify-center mb-3 text-lg font-bold text-white ${getAvatarColor(user.name)}`}>
+          <div className={`h-16 w-16 rounded-2xl flex items-center justify-center text-xl font-bold text-primary-foreground mb-3 ${getAvatarColor(user.name)}`}>
             {getInitials(user.name)}
           </div>
 
-          {/* Name */}
-          <h2 className="text-xl font-bold text-primary-foreground leading-tight mb-2">{user.name}</h2>
+          <h2 className="text-xl font-bold text-primary-foreground leading-tight">{user.name}</h2>
 
-          {/* Pills */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="bg-primary-foreground/20 text-primary-foreground text-xs font-semibold px-2.5 py-1 rounded-full capitalize">
+          {/* Role + status pills */}
+          <div className="flex items-center gap-2 mt-2 flex-wrap">
+            <span className="text-[11px] bg-primary-foreground/20 text-primary-foreground px-2.5 py-0.5 rounded-full font-medium capitalize">
               {user.role.replace(/_/g, ' ')}
             </span>
-            <span className={`text-primary-foreground text-xs font-semibold px-2.5 py-1 rounded-full ${user.is_account_activated ? 'bg-secondary/30' : 'bg-destructive/30'}`}>
-              {user.is_account_activated ? 'Active' : 'Inactive'}
+            <span className={`text-[11px] px-2.5 py-0.5 rounded-full font-medium ${
+              isActive
+                ? 'bg-secondary/40 text-primary-foreground'
+                : 'bg-destructive/40 text-primary-foreground'
+            }`}>
+              {isActive ? '● Active' : '● Inactive'}
             </span>
           </div>
         </div>
 
         {/* Info rows */}
-        <div className="px-6 py-4 space-y-0">
-          {infoItems.map(({ icon: Icon, label, value }) => (
-            <div key={label} className="flex items-center justify-between py-2 border-b border-border last:border-0">
-              <div className="flex items-center gap-2.5 text-muted-foreground min-w-0">
+        <div className="px-6 py-4">
+          {[
+            { icon: Mail,   label: 'Email', value: user.email },
+            { icon: Phone,  label: 'Phone', value: displayPhone ?? '—' },
+            { icon: Shield, label: 'Role',  value: user.role.replace(/_/g, ' ') },
+          ].map(({ icon: Icon, label, value }) => (
+            <div key={label} className="flex items-center justify-between py-2.5 border-b border-border last:border-0">
+              <div className="flex items-center gap-2.5 text-muted-foreground">
                 <Icon className="h-3.5 w-3.5 shrink-0" />
                 <span className="text-xs font-medium">{label}</span>
               </div>
-              <span className="text-sm text-foreground font-medium capitalize ml-4 text-right truncate max-w-[180px]">{value}</span>
+              <span className="text-sm text-foreground font-medium capitalize max-w-[220px] truncate text-right">
+                {value}
+              </span>
             </div>
           ))}
         </div>
 
-        {/* Password section */}
+        {/* Password */}
         <div className="px-6 pb-4">
           <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1.5">Password (hashed)</p>
           <div className="relative">
@@ -100,7 +105,7 @@ export default function ViewUserDialog({ open, onOpenChange, user }: ViewUserDia
               type={showPassword ? 'text' : 'password'}
               value={user.password_hash || '************'}
               readOnly
-              className="pr-10 text-xs font-mono"
+              className="pr-10 text-xs font-mono bg-muted/40"
             />
             <Button
               type="button"
@@ -119,7 +124,7 @@ export default function ViewUserDialog({ open, onOpenChange, user }: ViewUserDia
 
         {/* Footer */}
         <div className="flex justify-end px-6 py-3 border-t border-border bg-muted/20">
-          <Button variant="secondary" size="sm" onClick={() => onOpenChange(false)}>
+          <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>
             Close
           </Button>
         </div>

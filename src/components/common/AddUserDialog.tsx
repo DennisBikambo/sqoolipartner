@@ -55,13 +55,11 @@ export default function AddUserDialog({ open, onOpenChange, partnerIdOverride }:
   const [phone, setPhone] = useState('');
   const [role, setRole] = useState<Role>('viewer');
 
-  // Image
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // After creation
   const [showCredDialog, setShowCredDialog] = useState(false);
   const [newUserCreds, setNewUserCreds] = useState<{
     email: string; password: string; name: string;
@@ -74,7 +72,6 @@ export default function AddUserDialog({ open, onOpenChange, partnerIdOverride }:
   const roles = useQuery(api.role.getRoles, { is_active: true });
   const createUser = useMutation(api.user.createUser);
 
-  // Auto-resolve role template by matching system role name
   const matchedRole = roles?.find(r => r.name === role);
   const permsByCategory = (matchedRole?.permissions ?? []).reduce((acc, p) => {
     if (!p) return acc;
@@ -159,18 +156,18 @@ export default function AddUserDialog({ open, onOpenChange, partnerIdOverride }:
         onClick={handleClose}
       >
         <div
-          className="bg-card rounded-2xl w-full max-w-[520px] shadow-2xl overflow-hidden"
+          className="bg-card rounded-2xl w-full max-w-[540px] mx-3 shadow-2xl overflow-hidden"
           onClick={e => e.stopPropagation()}
         >
-          {/* Card header */}
+          {/* Gradient header */}
           <div className="relative bg-gradient-to-br from-primary to-primary/80 px-6 pt-5 pb-5">
             <div className="flex items-center gap-3">
               <div className="h-9 w-9 rounded-xl bg-primary-foreground/20 flex items-center justify-center shrink-0">
-                <Users className="h-5 w-5 text-primary-foreground" />
+                <Users className="h-4.5 w-4.5 text-primary-foreground" />
               </div>
               <div>
                 <h2 className="text-base font-bold text-primary-foreground leading-none">Add User</h2>
-                <p className="text-xs text-primary-foreground/70 mt-0.5">Add user and assign role</p>
+                <p className="text-xs text-primary-foreground/70 mt-0.5">Assign role and permissions</p>
               </div>
             </div>
             <button
@@ -181,35 +178,36 @@ export default function AddUserDialog({ open, onOpenChange, partnerIdOverride }:
             </button>
           </div>
 
-          {/* Card body */}
+          {/* Body */}
           <div className="px-6 py-5">
             <div className="flex gap-5">
-              {/* ── Left: Image upload (circular) ── */}
-              <div className="shrink-0 flex flex-col items-center">
-                <label className="text-xs font-medium text-foreground block mb-2 self-start">Profile Photo</label>
+              {/* ── Left: Circular avatar upload ── */}
+              <div className="shrink-0 flex flex-col items-center gap-2">
                 <div
-                  className="relative h-[100px] w-[100px] rounded-full border-2 border-dashed border-border bg-muted flex items-center justify-center cursor-pointer overflow-hidden transition-colors hover:border-primary/50 group"
+                  className="h-24 w-24 rounded-full overflow-hidden border-2 border-dashed border-border relative cursor-pointer group bg-muted"
                   onClick={() => fileInputRef.current?.click()}
                 >
                   {imagePreview ? (
                     <img src={imagePreview} className="w-full h-full object-cover" alt="preview" />
                   ) : (
-                    <Camera className="h-6 w-6 text-muted-foreground group-hover:text-primary transition-colors" />
-                  )}
-                  {/* Camera overlay on hover */}
-                  {imagePreview && (
-                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Camera className="h-5 w-5 text-white" />
+                    <div className="w-full h-full flex items-center justify-center">
+                      <Users className="h-8 w-8 text-muted-foreground/40" />
                     </div>
                   )}
+                  {/* Camera overlay */}
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-full">
+                    <Camera className="h-5 w-5 text-white" />
+                  </div>
                 </div>
-                {imagePreview && (
+                {imagePreview ? (
                   <button
                     onClick={handleRemoveImage}
-                    className="mt-1.5 text-destructive text-[11px] font-semibold bg-transparent border-none cursor-pointer"
+                    className="text-[11px] font-semibold text-destructive hover:underline"
                   >
                     Remove
                   </button>
+                ) : (
+                  <p className="text-[10px] text-muted-foreground text-center">Click to upload</p>
                 )}
                 <input
                   ref={fileInputRef}
@@ -221,39 +219,38 @@ export default function AddUserDialog({ open, onOpenChange, partnerIdOverride }:
               </div>
 
               {/* ── Right: Form fields ── */}
-              <div className="flex-1 min-w-0">
-                {/* Name */}
-                <div className="mb-3">
+              <div className="flex-1 min-w-0 space-y-3.5">
+                <div>
                   <label className="text-xs font-medium text-foreground block mb-1.5">Full Name</label>
                   <input
                     value={name}
                     onChange={e => setName(e.target.value)}
                     placeholder="John Doe"
-                    className="w-full border border-border rounded-lg px-3.5 py-2.5 text-sm bg-muted outline-none text-foreground placeholder:text-muted-foreground focus:border-primary/50 transition-colors"
+                    className="w-full border border-border rounded-lg px-3.5 py-2.5 text-sm bg-background outline-none text-foreground placeholder:text-muted-foreground focus:border-primary/50 transition-colors"
                   />
                 </div>
 
-                {/* Email */}
-                <div className="mb-3">
+                <div>
                   <label className="text-xs font-medium text-foreground block mb-1.5">Email Address</label>
                   <input
                     type="email"
                     value={email}
                     onChange={e => setEmail(e.target.value)}
                     placeholder="john@example.com"
-                    className="w-full border border-border rounded-lg px-3.5 py-2.5 text-sm bg-muted outline-none text-foreground placeholder:text-muted-foreground focus:border-primary/50 transition-colors"
+                    className="w-full border border-border rounded-lg px-3.5 py-2.5 text-sm bg-background outline-none text-foreground placeholder:text-muted-foreground focus:border-primary/50 transition-colors"
                   />
                 </div>
 
-                {/* Phone with Kenya flag */}
-                <div className="mb-3">
-                  <label className="text-xs font-medium text-foreground block mb-1.5">Phone <span className="text-muted-foreground font-normal">(optional)</span></label>
-                  <div className="flex items-center border border-border rounded-lg bg-muted overflow-hidden px-3 focus-within:border-primary/50 transition-colors">
+                <div>
+                  <label className="text-xs font-medium text-foreground block mb-1.5">
+                    Phone <span className="text-muted-foreground font-normal">(optional)</span>
+                  </label>
+                  <div className="flex items-center border border-border rounded-lg bg-background overflow-hidden px-3 focus-within:border-primary/50 transition-colors">
                     <div className="flex items-center gap-1.5 pr-3 border-r border-border mr-3 cursor-pointer py-2.5">
                       <KenyaFlag />
                       <ChevronDown className="h-3 w-3 text-muted-foreground" />
                     </div>
-                    <span className="text-xs text-muted-foreground mr-1.5">+254</span>
+                    <span className="text-sm text-muted-foreground mr-1.5">+254</span>
                     <input
                       value={phone}
                       onChange={e => setPhone(e.target.value)}
@@ -263,11 +260,10 @@ export default function AddUserDialog({ open, onOpenChange, partnerIdOverride }:
                   </div>
                 </div>
 
-                {/* Role */}
                 <div>
                   <label className="text-xs font-medium text-foreground block mb-1.5">Role</label>
                   <Select value={role} onValueChange={val => setRole(val as Role)}>
-                    <SelectTrigger className="text-sm h-9 bg-muted border-border">
+                    <SelectTrigger className="text-sm h-10 bg-background border-border">
                       <SelectValue placeholder="Select role..." />
                     </SelectTrigger>
                     <SelectContent>
@@ -287,7 +283,7 @@ export default function AddUserDialog({ open, onOpenChange, partnerIdOverride }:
             {/* Permissions preview */}
             {matchedRole && Object.keys(permsByCategory).length > 0 ? (
               <div className="mt-4 rounded-xl border border-border bg-muted/30 p-3 space-y-2">
-                <p className="text-[10px] font-semibold text-foreground uppercase tracking-wide">Permissions</p>
+                <p className="text-[10px] font-bold text-foreground uppercase tracking-wide">Permissions</p>
                 {Object.entries(permsByCategory).map(([cat, perms]) => (
                   <div key={cat}>
                     <p className="text-[10px] text-muted-foreground mb-1.5">{CATEGORY_LABELS[cat] ?? cat}</p>
@@ -304,26 +300,26 @@ export default function AddUserDialog({ open, onOpenChange, partnerIdOverride }:
             ) : matchedRole ? (
               <p className="text-[11px] text-muted-foreground italic mt-3">No permissions configured for this role.</p>
             ) : roles && roles.length > 0 ? (
-              <p className="text-[11px] text-muted-foreground italic mt-3">No role template found for "{role}" — user will be created with no permissions.</p>
+              <p className="text-[11px] text-muted-foreground italic mt-3">No role template found for "{role}"</p>
             ) : null}
           </div>
 
-          {/* Card footer */}
-          <div className="px-6 py-4 border-t border-border bg-muted/20 flex justify-between items-center">
-            <p className="text-xs text-muted-foreground">Credentials shown after creation</p>
+          {/* Footer */}
+          <div className="flex items-center justify-between px-6 py-4 border-t border-border bg-muted/20">
+            <p className="text-xs text-muted-foreground">Password auto-generated after creation</p>
             <div className="flex items-center gap-2">
               <button
                 onClick={handleClose}
-                className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors px-3 py-2"
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors px-3 py-1.5"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSubmit}
                 disabled={saving || uploading}
-                className="bg-primary text-primary-foreground border-none rounded-full px-5 py-2 text-xs font-semibold cursor-pointer hover:bg-primary/90 transition-colors disabled:opacity-60"
+                className="bg-primary text-primary-foreground rounded-lg px-4 py-2 text-sm font-semibold hover:bg-primary/90 transition-colors disabled:opacity-60"
               >
-                {uploading ? 'Uploading photo...' : saving ? 'Creating...' : 'Save Changes'}
+                {uploading ? 'Uploading...' : saving ? 'Creating...' : 'Create User'}
               </button>
             </div>
           </div>

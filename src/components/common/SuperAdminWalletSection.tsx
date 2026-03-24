@@ -6,69 +6,28 @@ import { Skeleton } from "../ui/skeleton";
 import { useConvexQuery } from "../../hooks/useConvexQuery";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
-import { Badge } from "../ui/badge";
 import { Textarea } from "../ui/textarea";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
+  DialogClose,
 } from "../ui/dialog";
 import {
   Search,
   Eye,
   Wallet as WalletIcon,
   ArrowDownToLine,
-  Clock,
   CheckCircle2,
   XCircle,
-  AlertCircle,
   Copy,
   DollarSign,
-  TrendingUp,
   AlertTriangle,
+  XIcon,
 } from "lucide-react";
 import type { Doc, Id } from "../../../convex/_generated/dataModel";
 import { toast } from "sonner";
-import { formatCurrency, formatDate, getStatusBadgeVariant } from "../../utils/formatters";
+import { formatCurrency, formatDate } from "../../utils/formatters";
 
-// ── Stat Pill ─────────────────────────────────────────────────────────────────
-function StatPill({
-  icon: Icon,
-  label,
-  value,
-  sub,
-  accent,
-  loading,
-}: {
-  icon: React.ElementType;
-  label: string;
-  value: string | number;
-  sub?: string;
-  accent?: string;
-  loading?: boolean;
-}) {
-  return (
-    <div className="flex items-center gap-3 px-4 py-3 bg-card border border-border rounded-2xl">
-      <div className={`h-9 w-9 rounded-xl flex items-center justify-center flex-shrink-0 ${accent ?? 'bg-primary/10'}`}>
-        <Icon className="h-4 w-4" />
-      </div>
-      <div>
-        <p className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium">{label}</p>
-        {loading ? (
-          <Skeleton className="h-5 w-16 rounded mt-0.5" />
-        ) : (
-          <p className="text-[15px] font-bold text-foreground leading-tight">{value}</p>
-        )}
-        {sub && !loading && (
-          <p className="text-[10px] text-muted-foreground">{sub}</p>
-        )}
-      </div>
-    </div>
-  );
-}
 
 // ── Status dot ────────────────────────────────────────────────────────────────
 function StatusDot({ status }: { status: string }) {
@@ -506,35 +465,39 @@ export default function SuperAdminWalletSection() {
 
       {/* ── WALLET DETAILS DIALOG ─────────────────────────────────────────────── */}
       <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
-        <DialogContent className="max-w-md">
-          {/* Header block */}
-          <div className="flex items-center gap-3 p-4 bg-muted/40 rounded-xl mb-1">
-            <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-              <WalletIcon className="h-5 w-5 text-primary" />
+        <DialogContent className="max-w-[440px] p-0 overflow-hidden gap-0" showCloseButton={false}>
+          {/* Gradient hero */}
+          <div className="relative bg-gradient-to-br from-primary to-primary/80 px-6 pt-10 pb-6">
+            <DialogClose className="absolute top-4 right-4 p-1.5 rounded-md opacity-70 hover:opacity-100 transition-opacity text-primary-foreground [&_svg]:size-4">
+              <XIcon /><span className="sr-only">Close</span>
+            </DialogClose>
+            <div className="h-12 w-12 rounded-2xl bg-primary-foreground/20 flex items-center justify-center mb-3">
+              <WalletIcon className="h-6 w-6 text-primary-foreground" />
             </div>
-            <div>
-              <DialogHeader>
-                <DialogTitle className="text-[15px] leading-tight">Wallet Details</DialogTitle>
-                <DialogDescription className="text-xs mt-0.5">
-                  {selectedWallet && getPartnerName(selectedWallet.partner_id)}
-                </DialogDescription>
-              </DialogHeader>
-            </div>
+            <p className="text-xl font-bold text-primary-foreground leading-tight">
+              {selectedWallet ? getPartnerName(selectedWallet.partner_id) : '—'}
+            </p>
+            {selectedWallet && (
+              <p className="font-mono text-xs text-primary-foreground/60 mt-1">
+                {selectedWallet.account_number}
+              </p>
+            )}
           </div>
+          {/* Stats grid */}
           {selectedWallet && (
-            <div className="grid grid-cols-2 gap-3 text-sm">
+            <div className="px-6 py-5 grid grid-cols-3 gap-3 text-sm">
               {[
-                { label: "Account Number",    value: selectedWallet.account_number,                          mono: true },
-                { label: "Balance",           value: formatCurrency(selectedWallet.balance),                 accent: "text-secondary font-bold" },
-                { label: "Pending Balance",   value: formatCurrency(selectedWallet.pending_balance),         accent: "text-chart-3" },
-                { label: "Lifetime Earnings", value: formatCurrency(selectedWallet.lifetime_earnings) },
-                { label: "Method",            value: selectedWallet.withdrawal_method,                       capitalize: true },
-                { label: "Setup",             value: selectedWallet.is_setup_complete ? "Complete" : "Incomplete",
+                { label: "Balance",          value: formatCurrency(selectedWallet.balance),          accent: "text-secondary font-bold text-base" },
+                { label: "Pending",          value: formatCurrency(selectedWallet.pending_balance),  accent: "text-chart-3" },
+                { label: "Lifetime",         value: formatCurrency(selectedWallet.lifetime_earnings) },
+                { label: "Method",           value: selectedWallet.withdrawal_method,                capitalize: true },
+                { label: "Setup",            value: selectedWallet.is_setup_complete ? "Complete" : "Incomplete",
                   accent: selectedWallet.is_setup_complete ? "text-secondary" : "text-muted-foreground" },
-              ].map(({ label, value, mono, accent, capitalize }) => (
-                <div key={label} className="bg-muted/30 rounded-xl p-3">
+                { label: "Withdrawal",       value: selectedWallet.withdrawal_method === 'mpesa' ? 'M-Pesa' : selectedWallet.withdrawal_method, capitalize: true },
+              ].map(({ label, value, accent, capitalize }) => (
+                <div key={label} className="bg-muted/40 rounded-xl p-3">
                   <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1">{label}</p>
-                  <p className={`font-semibold text-foreground ${mono ? 'font-mono text-xs' : ''} ${accent ?? ''} ${capitalize ? 'capitalize' : ''}`}>
+                  <p className={`font-semibold text-foreground text-sm ${accent ?? ''} ${capitalize ? 'capitalize' : ''}`}>
                     {value}
                   </p>
                 </div>
@@ -546,107 +509,120 @@ export default function SuperAdminWalletSection() {
 
       {/* ── APPROVAL DIALOG ───────────────────────────────────────────────────── */}
       <Dialog open={isApprovalOpen} onOpenChange={setIsApprovalOpen}>
-        <DialogContent>
-          {/* Header block */}
-          <div className="flex items-center gap-3 p-4 bg-secondary/10 rounded-xl mb-1">
-            <div className="h-10 w-10 rounded-xl bg-secondary/15 flex items-center justify-center flex-shrink-0">
+        <DialogContent className="max-w-lg p-0 overflow-hidden gap-0" showCloseButton={false}>
+          {/* Accent header */}
+          <div className="relative flex items-center gap-3 px-6 py-5 bg-secondary/10 border-b border-secondary/20">
+            <div className="h-10 w-10 rounded-xl bg-secondary/15 flex items-center justify-center shrink-0">
               <CheckCircle2 className="h-5 w-5 text-secondary" />
             </div>
             <div>
-              <DialogHeader>
-                <DialogTitle className="text-[15px] leading-tight">Approve Withdrawal</DialogTitle>
-                <DialogDescription className="text-xs mt-0.5">
-                  Enter the M-Pesa receipt number to confirm this payment.
-                </DialogDescription>
-              </DialogHeader>
+              <p className="text-[15px] font-bold text-foreground leading-tight">Approve Withdrawal</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Enter the M-Pesa receipt number to confirm this payment.</p>
             </div>
+            <DialogClose className="absolute top-4 right-4 p-1.5 rounded-md opacity-70 hover:opacity-100 transition-opacity text-foreground [&_svg]:size-4">
+              <XIcon /><span className="sr-only">Close</span>
+            </DialogClose>
           </div>
+
           {selectedWithdrawal && (
-            <div className="space-y-4">
+            <div className="px-6 py-5 space-y-5">
+              {/* Summary tiles */}
               <div className="grid grid-cols-2 gap-3 text-sm">
-                {[
-                  { label: "Partner", value: getPartnerName(selectedWithdrawal.partner_id) },
-                  { label: "Amount",  value: formatCurrency(selectedWithdrawal.amount), accent: "text-secondary font-bold" },
-                  { label: "Method",  value: selectedWithdrawal.withdrawal_method, capitalize: true },
-                  { label: "Account", value: selectedWithdrawal.destination_details.account_number, mono: true },
-                ].map(({ label, value, accent, capitalize, mono }) => (
-                  <div key={label} className="bg-muted/30 rounded-xl p-3">
-                    <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1">{label}</p>
-                    <p className={`font-medium text-foreground ${accent ?? ''} ${capitalize ? 'capitalize' : ''} ${mono ? 'font-mono text-xs' : ''}`}>
-                      {value}
-                    </p>
-                  </div>
-                ))}
+                <div className="bg-muted/40 rounded-xl p-3">
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1">Partner</p>
+                  <p className="font-semibold text-foreground">{getPartnerName(selectedWithdrawal.partner_id)}</p>
+                </div>
+                <div className="bg-secondary/10 border border-secondary/20 rounded-xl p-3">
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1">Amount</p>
+                  <p className="text-lg font-bold text-secondary">{formatCurrency(selectedWithdrawal.amount)}</p>
+                </div>
+                <div className="bg-muted/40 rounded-xl p-3">
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1">Method</p>
+                  <p className="font-medium text-foreground capitalize">{selectedWithdrawal.withdrawal_method}</p>
+                </div>
+                <div className="bg-muted/40 rounded-xl p-3">
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1">Account</p>
+                  <p className="font-mono text-xs text-foreground">{selectedWithdrawal.destination_details.account_number}</p>
+                </div>
               </div>
+
+              {/* Receipt input */}
               <div className="space-y-1.5">
-                <label className="text-sm font-semibold">
+                <label className="text-sm font-bold text-foreground">
                   M-Pesa Receipt <span className="text-destructive">*</span>
                 </label>
                 <Input
                   placeholder="e.g. QFG7X8J9K2"
                   value={mpesaReceipt}
                   onChange={(e) => setMpesaReceipt(e.target.value)}
-                  className="font-mono"
+                  className="font-mono text-base h-11"
                 />
-                <p className="text-xs text-muted-foreground">Exact receipt from M-Pesa confirmation SMS</p>
+                <p className="text-xs text-muted-foreground">Exact code from M-Pesa confirmation SMS</p>
               </div>
             </div>
           )}
-          <DialogFooter>
+
+          <div className="flex gap-2 justify-end px-6 pb-5">
             <Button variant="outline" onClick={() => setIsApprovalOpen(false)} disabled={isProcessing}>Cancel</Button>
             <Button onClick={handleApprove} disabled={isProcessing || !mpesaReceipt.trim()}>
               {isProcessing ? "Processing…" : "Approve & Confirm"}
             </Button>
-          </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
 
       {/* ── REJECT DIALOG ─────────────────────────────────────────────────────── */}
       <Dialog open={isRejectOpen} onOpenChange={setIsRejectOpen}>
-        <DialogContent>
-          {/* Header block */}
-          <div className="flex items-center gap-3 p-4 bg-destructive/10 rounded-xl mb-1">
-            <div className="h-10 w-10 rounded-xl bg-destructive/15 flex items-center justify-center flex-shrink-0">
+        <DialogContent className="max-w-[440px] p-0 overflow-hidden gap-0" showCloseButton={false}>
+          {/* Destructive accent header */}
+          <div className="relative flex items-center gap-3 px-6 py-5 bg-destructive/10 border-b border-destructive/20">
+            <div className="h-10 w-10 rounded-xl bg-destructive/15 flex items-center justify-center shrink-0">
               <XCircle className="h-5 w-5 text-destructive" />
             </div>
             <div>
-              <DialogHeader>
-                <DialogTitle className="text-[15px] leading-tight">Reject Withdrawal</DialogTitle>
-                <DialogDescription className="text-xs mt-0.5">
-                  Provide a reason — the partner will see this message.
-                </DialogDescription>
-              </DialogHeader>
+              <p className="text-[15px] font-bold text-foreground leading-tight">Reject Withdrawal</p>
+              <p className="text-xs text-muted-foreground mt-0.5">The partner will be notified with your reason.</p>
             </div>
+            <DialogClose className="absolute top-4 right-4 p-1.5 rounded-md opacity-70 hover:opacity-100 transition-opacity text-foreground [&_svg]:size-4">
+              <XIcon /><span className="sr-only">Close</span>
+            </DialogClose>
           </div>
+
           {selectedWithdrawal && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div className="bg-muted/30 rounded-xl p-3">
+            <div className="px-6 py-5 space-y-4">
+              {/* Summary row */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-muted/40 rounded-xl p-3">
                   <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1">Partner</p>
-                  <p className="font-medium text-foreground">{getPartnerName(selectedWithdrawal.partner_id)}</p>
+                  <p className="font-semibold text-foreground text-sm">{getPartnerName(selectedWithdrawal.partner_id)}</p>
                 </div>
                 <div className="bg-destructive/5 border border-destructive/15 rounded-xl p-3">
                   <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1">Amount</p>
-                  <p className="font-bold text-destructive">{formatCurrency(selectedWithdrawal.amount)}</p>
+                  <p className="text-lg font-bold text-destructive">{formatCurrency(selectedWithdrawal.amount)}</p>
                 </div>
               </div>
+
+              {/* Reason */}
               <div className="space-y-1.5">
-                <label className="text-sm font-semibold">Rejection Reason</label>
+                <label className="text-sm font-bold text-foreground">Rejection Reason</label>
                 <Textarea
                   placeholder="e.g. Account details could not be verified. Please update your withdrawal account and try again."
                   value={rejectReason}
                   onChange={(e) => setRejectReason(e.target.value)}
                   rows={3}
+                  className="resize-none"
                 />
+                <p className="text-xs text-muted-foreground">Optional — leave blank to use a default message</p>
               </div>
             </div>
           )}
-          <DialogFooter>
+
+          <div className="flex gap-2 justify-end px-6 pb-5">
             <Button variant="outline" onClick={() => setIsRejectOpen(false)} disabled={isProcessing}>Cancel</Button>
             <Button variant="destructive" onClick={handleReject} disabled={isProcessing}>
               {isProcessing ? "Processing…" : "Confirm Reject"}
             </Button>
-          </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

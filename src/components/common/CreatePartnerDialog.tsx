@@ -60,6 +60,24 @@ const validateForm = (data: PartnerFormData): FormErrors => {
   return errors;
 };
 
+function Field({
+  label,
+  error,
+  children,
+}: {
+  label: string;
+  error?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div>
+      <Label className="text-xs font-medium text-foreground block mb-1.5">{label}</Label>
+      {children}
+      {error && <p className="text-xs text-destructive mt-1">{error}</p>}
+    </div>
+  );
+}
+
 export default function CreatePartnerDialog({ open, onOpenChange }: CreatePartnerDialogProps) {
   const [formData, setFormData] = useState<PartnerFormData>({
     organizationName: '',
@@ -99,24 +117,18 @@ export default function CreatePartnerDialog({ open, onOpenChange }: CreatePartne
     }
   };
 
-  const isFormValid = () => {
-    return Object.keys(validateForm(formData)).length === 0;
-  };
+  const isFormValid = () => Object.keys(validateForm(formData)).length === 0;
 
   const handleSubmit = async () => {
     const allFields = new Set(Object.keys(formData) as (keyof PartnerFormData)[]);
     setTouchedFields(allFields);
-
     const newErrors = validateForm(formData);
     setErrors(newErrors);
-
     if (Object.keys(newErrors).length > 0) {
       toast.error('Please fill in all required fields correctly.');
       return;
     }
-
     setLoading(true);
-
     try {
       const result = await createPartnerOrg({
         partner_name: formData.organizationName,
@@ -127,8 +139,6 @@ export default function CreatePartnerDialog({ open, onOpenChange }: CreatePartne
         admin_email: formData.adminEmail,
         admin_phone: formData.adminPhone || undefined,
       });
-
-      // Success! Show credentials dialog
       setNewPartnerCreds({
         partner_name: result.credentials.partner_name,
         admin_email: result.credentials.admin_email,
@@ -136,25 +146,15 @@ export default function CreatePartnerDialog({ open, onOpenChange }: CreatePartne
         admin_name: formData.adminName,
       });
       setShowCredDialog(true);
-
       toast.success(result.message || 'Partner organization created successfully!');
-
-      // Reset form
       setFormData({
-        organizationName: '',
-        partnerEmail: '',
-        partnerPhone: '',
-        partnerUsername: '',
-        adminName: '',
-        adminEmail: '',
-        adminPhone: '',
+        organizationName: '', partnerEmail: '', partnerPhone: '',
+        partnerUsername: '', adminName: '', adminEmail: '', adminPhone: '',
       });
       setTouchedFields(new Set());
       setErrors({});
       onOpenChange(false);
-
     } catch (error) {
-      console.error('Partner creation error:', error);
       const message = error instanceof Error ? error.message : 'An unexpected error occurred. Please try again.';
       toast.error(message);
     } finally {
@@ -162,22 +162,30 @@ export default function CreatePartnerDialog({ open, onOpenChange }: CreatePartne
     }
   };
 
-  const fieldError = (field: keyof PartnerFormData) =>
-    errors[field] && touchedFields.has(field) ? errors[field] : undefined;
+  const fieldError = (f: keyof PartnerFormData) =>
+    touchedFields.has(f) ? errors[f] : undefined;
+
+  const inputClass = (f: keyof PartnerFormData) =>
+    touchedFields.has(f) && errors[f] ? 'border-destructive' : '';
 
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-2xl p-0 overflow-hidden gap-0" showCloseButton={false}>
+
           {/* Gradient header */}
           <div className="relative bg-gradient-to-br from-primary to-primary/80 px-6 pt-5 pb-5">
             <div className="flex items-center gap-3">
-              <div className="h-9 w-9 rounded-xl bg-primary-foreground/20 flex items-center justify-center shrink-0">
+              <div className="h-10 w-10 rounded-xl bg-primary-foreground/20 flex items-center justify-center shrink-0">
                 <Building2 className="h-5 w-5 text-primary-foreground" />
               </div>
               <div>
-                <h2 className="text-base font-bold text-primary-foreground leading-none">Register Partner Organization</h2>
-                <p className="text-xs text-primary-foreground/70 mt-0.5">Creates a complete partner account with login credentials</p>
+                <h2 className="text-base font-bold text-primary-foreground leading-none">
+                  Register Partner Organization
+                </h2>
+                <p className="text-xs text-primary-foreground/70 mt-0.5">
+                  Creates a complete partner account with login credentials
+                </p>
               </div>
             </div>
             <DialogClose className="absolute top-4 right-4 p-1.5 rounded-md opacity-70 hover:opacity-100 transition-opacity text-primary-foreground [&_svg]:size-4">
@@ -188,29 +196,27 @@ export default function CreatePartnerDialog({ open, onOpenChange }: CreatePartne
 
           {/* Two-column body */}
           <div className="grid grid-cols-2 divide-x divide-border">
+
             {/* Left: Organization */}
-            <div className="px-6 py-5 space-y-3.5">
-              <div className="flex items-center gap-2 mb-1">
-                <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
-                <span className="text-xs font-semibold text-foreground uppercase tracking-wide">Organization</span>
+            <div className="px-6 py-5 space-y-4">
+              <div className="flex items-center gap-2 pb-2 border-b border-border">
+                <div className="h-6 w-6 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <Building2 className="h-3.5 w-3.5 text-primary" />
+                </div>
+                <p className="text-xs font-bold text-foreground uppercase tracking-wide">Organization</p>
               </div>
 
-              <div>
-                <Label className="text-xs mb-1.5 block">Organization Name <span className="text-destructive">*</span></Label>
+              <Field label="Organization Name *" error={fieldError('organizationName')}>
                 <Input
                   value={formData.organizationName}
                   onChange={(e) => handleChange('organizationName', e.target.value)}
                   onBlur={() => handleBlur('organizationName')}
                   placeholder="Acme Corporation"
-                  className={fieldError('organizationName') ? 'border-destructive' : ''}
+                  className={inputClass('organizationName')}
                 />
-                {fieldError('organizationName') && (
-                  <p className="text-xs text-destructive mt-1">{fieldError('organizationName')}</p>
-                )}
-              </div>
+              </Field>
 
-              <div>
-                <Label className="text-xs mb-1.5 block">Partner Email <span className="text-destructive">*</span></Label>
+              <Field label="Partner Email *" error={fieldError('partnerEmail')}>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                   <Input
@@ -219,16 +225,12 @@ export default function CreatePartnerDialog({ open, onOpenChange }: CreatePartne
                     onChange={(e) => handleChange('partnerEmail', e.target.value)}
                     onBlur={() => handleBlur('partnerEmail')}
                     placeholder="partner@acme.com"
-                    className={`pl-9 ${fieldError('partnerEmail') ? 'border-destructive' : ''}`}
+                    className={`pl-9 ${inputClass('partnerEmail')}`}
                   />
                 </div>
-                {fieldError('partnerEmail') && (
-                  <p className="text-xs text-destructive mt-1">{fieldError('partnerEmail')}</p>
-                )}
-              </div>
+              </Field>
 
-              <div>
-                <Label className="text-xs mb-1.5 block">Partner Phone <span className="text-destructive">*</span></Label>
+              <Field label="Partner Phone *" error={fieldError('partnerPhone')}>
                 <div className="relative">
                   <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                   <Input
@@ -237,16 +239,12 @@ export default function CreatePartnerDialog({ open, onOpenChange }: CreatePartne
                     onChange={(e) => handleChange('partnerPhone', e.target.value)}
                     onBlur={() => handleBlur('partnerPhone')}
                     placeholder="+254 700 000000"
-                    className={`pl-9 ${fieldError('partnerPhone') ? 'border-destructive' : ''}`}
+                    className={`pl-9 ${inputClass('partnerPhone')}`}
                   />
                 </div>
-                {fieldError('partnerPhone') && (
-                  <p className="text-xs text-destructive mt-1">{fieldError('partnerPhone')}</p>
-                )}
-              </div>
+              </Field>
 
-              <div>
-                <Label className="text-xs mb-1.5 block">Partner Username <span className="text-destructive">*</span></Label>
+              <Field label="Partner Username *" error={fieldError('partnerUsername')}>
                 <div className="relative">
                   <UserCircle className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                   <Input
@@ -254,38 +252,32 @@ export default function CreatePartnerDialog({ open, onOpenChange }: CreatePartne
                     onChange={(e) => handleChange('partnerUsername', e.target.value)}
                     onBlur={() => handleBlur('partnerUsername')}
                     placeholder="acmecorp"
-                    className={`pl-9 ${fieldError('partnerUsername') ? 'border-destructive' : ''}`}
+                    className={`pl-9 ${inputClass('partnerUsername')}`}
                   />
                 </div>
-                {fieldError('partnerUsername') && (
-                  <p className="text-xs text-destructive mt-1">{fieldError('partnerUsername')}</p>
-                )}
-              </div>
+              </Field>
             </div>
 
             {/* Right: Admin User */}
-            <div className="px-6 py-5 space-y-3.5">
-              <div className="flex items-center gap-2 mb-1">
-                <User className="h-3.5 w-3.5 text-muted-foreground" />
-                <span className="text-xs font-semibold text-foreground uppercase tracking-wide">Admin User</span>
+            <div className="px-6 py-5 space-y-4 flex flex-col">
+              <div className="flex items-center gap-2 pb-2 border-b border-border">
+                <div className="h-6 w-6 rounded-lg bg-secondary/10 flex items-center justify-center">
+                  <User className="h-3.5 w-3.5 text-secondary" />
+                </div>
+                <p className="text-xs font-bold text-foreground uppercase tracking-wide">Admin User</p>
               </div>
 
-              <div>
-                <Label className="text-xs mb-1.5 block">Admin Full Name <span className="text-destructive">*</span></Label>
+              <Field label="Admin Full Name *" error={fieldError('adminName')}>
                 <Input
                   value={formData.adminName}
                   onChange={(e) => handleChange('adminName', e.target.value)}
                   onBlur={() => handleBlur('adminName')}
                   placeholder="John Doe"
-                  className={fieldError('adminName') ? 'border-destructive' : ''}
+                  className={inputClass('adminName')}
                 />
-                {fieldError('adminName') && (
-                  <p className="text-xs text-destructive mt-1">{fieldError('adminName')}</p>
-                )}
-              </div>
+              </Field>
 
-              <div>
-                <Label className="text-xs mb-1.5 block">Admin Email <span className="text-destructive">*</span></Label>
+              <Field label="Admin Email *" error={fieldError('adminEmail')}>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                   <Input
@@ -294,16 +286,12 @@ export default function CreatePartnerDialog({ open, onOpenChange }: CreatePartne
                     onChange={(e) => handleChange('adminEmail', e.target.value)}
                     onBlur={() => handleBlur('adminEmail')}
                     placeholder="admin@acme.com"
-                    className={`pl-9 ${fieldError('adminEmail') ? 'border-destructive' : ''}`}
+                    className={`pl-9 ${inputClass('adminEmail')}`}
                   />
                 </div>
-                {fieldError('adminEmail') && (
-                  <p className="text-xs text-destructive mt-1">{fieldError('adminEmail')}</p>
-                )}
-              </div>
+              </Field>
 
-              <div>
-                <Label className="text-xs mb-1.5 block">Admin Phone <span className="text-muted-foreground font-normal">(optional)</span></Label>
+              <Field label="Admin Phone">
                 <div className="relative">
                   <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                   <Input
@@ -311,41 +299,39 @@ export default function CreatePartnerDialog({ open, onOpenChange }: CreatePartne
                     value={formData.adminPhone}
                     onChange={(e) => handleChange('adminPhone', e.target.value)}
                     onBlur={() => handleBlur('adminPhone')}
-                    placeholder="+254 700 000000"
+                    placeholder="+254 700 000000 (optional)"
                     className="pl-9"
                   />
                 </div>
-              </div>
+              </Field>
 
-              <div className="bg-muted/40 border border-border rounded-xl p-3 mt-2">
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                  A password and extension will be auto-generated for the admin user. Save the credentials shown after creation.
-                </p>
+              <div className="mt-auto pt-2">
+                <div className="bg-muted/40 rounded-xl p-3.5">
+                  <p className="text-[11px] text-muted-foreground leading-relaxed">
+                    A password and login extension are auto-generated. Credentials are shown once after creation — save them securely.
+                  </p>
+                </div>
               </div>
             </div>
           </div>
 
           {/* Footer */}
           <div className="flex items-center justify-between px-6 py-4 border-t border-border bg-muted/20">
-            <p className="text-xs text-muted-foreground">Credentials auto-generated after creation</p>
-            <Button
-              onClick={handleSubmit}
-              disabled={!isFormValid() || loading}
-            >
+            <p className="text-xs text-muted-foreground">Credentials shown once after creation</p>
+            <Button onClick={handleSubmit} disabled={!isFormValid() || loading}>
               {loading ? (
                 <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" />
                   Registering...
                 </>
               ) : (
-                'Register Partner Organization'
+                'Register Partner'
               )}
             </Button>
           </div>
         </DialogContent>
       </Dialog>
 
-      {/* Show Credentials Dialog */}
       {newPartnerCreds && (
         <UserCredentialsDialog
           open={showCredDialog}

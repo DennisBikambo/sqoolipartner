@@ -205,7 +205,7 @@ function UserRow({
     email: string;
     role: string;
     is_active: boolean;
-    is_account_activated: boolean;
+    is_account_activated?: boolean;
   };
   onView: () => void;
   onToggle: () => void;

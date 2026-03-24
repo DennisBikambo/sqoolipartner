@@ -32,36 +32,6 @@ interface SuperAdminDashboardProps {
   setActiveItem: (item: string) => void;
 }
 
-function KpiCard({
-  label,
-  value,
-  sub,
-  icon: Icon,
-  loading,
-}: {
-  label: string;
-  value: string | number;
-  sub?: string;
-  icon: React.ElementType;
-  loading?: boolean;
-}) {
-  return (
-    <div className="bg-primary/10 rounded-2xl px-4 py-3.5 flex items-center gap-3">
-      <div className="h-9 w-9 rounded-xl bg-primary/20 flex items-center justify-center flex-shrink-0">
-        <Icon className="h-4 w-4 text-primary" />
-      </div>
-      <div>
-        <p className="text-[10px] text-primary/70 uppercase tracking-widest font-medium">{label}</p>
-        {loading ? (
-          <Skeleton className="h-5 w-20 rounded mt-0.5 bg-primary/20" />
-        ) : (
-          <p className="text-[15px] font-bold text-primary-foreground leading-tight">{value}</p>
-        )}
-        {sub && !loading && <p className="text-[10px] text-primary/60">{sub}</p>}
-      </div>
-    </div>
-  );
-}
 
 function RankBadge({ rank }: { rank: number }) {
   const styles = [
