@@ -137,8 +137,9 @@ export default defineSchema({
     duration_start: v.string(),
     duration_end: v.string(),
     status: v.union(
-      v.literal("draft"),
+      v.literal("pending"),
       v.literal("active"),
+      v.literal("inactive"),
       v.literal("expired")
     ),
   })

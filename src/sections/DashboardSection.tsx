@@ -104,7 +104,7 @@ export default function DashboardSection({
   setActiveItem: (item: string) => void;
 }) {
   const { user, partner, loading: authLoading } = useAuth();
-  const { hasPermission, userRole } = usePermissions();
+  const { hasPermission, userRole, loading: permissionsLoading } = usePermissions();
 
   const [chartTab, setChartTab] = useState<"earnings" | "withdrawals" | "engagements">("earnings");
   const [showCreateWizard, setShowCreateWizard] = useState(false);
@@ -167,7 +167,7 @@ export default function DashboardSection({
   // Wait for auth to settle before deciding which dashboard to render.
   // Without this guard, the partner dashboard flashes briefly while the
   // session is being validated and isSuperAdmin is still false.
-  if (authLoading) {
+  if (authLoading || permissionsLoading) {
     return (
       <div className="p-6 space-y-4">
         <Skeleton className="h-8 w-56 rounded-lg" />

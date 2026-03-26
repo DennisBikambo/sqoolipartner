@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
-import { useActivityTracker } from "../../hooks/useActivityTracker";
 import { Button } from "../ui/button";
 import { Card, CardHeader, CardContent, CardFooter } from "../ui/card";
 import { Label } from "../ui/label";
@@ -12,14 +11,29 @@ import { Alert, AlertDescription } from "../ui/alert";
 import { X, Loader2 } from "lucide-react";
 import { Skeleton } from "../ui/skeleton";
 import { useConvexQuery } from "../../hooks/useConvexQuery";
+import { generateQRCode } from "../../services/qrCodeService";
+import { generateCampaignPosterDataUrl } from "../../utils/posterUtils";
+import type { CampaignSuccessData } from "./CampaignSuccessModal";
 
 interface WizardState {
   program_id: Id<"programs"> | "";
   channel_id: Id<"channels"> | "";
-  subchannel: string;
+  subchannel_id: Id<"subchannels"> | "";
   name: string;
   description: string;
   target_signups: number;
+}
+
+export interface CreationSuccessPayload extends CampaignSuccessData {
+  posterDataUrl: string | null;
+}
+
+interface CreateCampaignWizardProps {
+  partnerId: Id<"partners">;
+  user_id?: Id<"users">;
+  open: boolean;
+  onClose?: () => void;
+  onSuccess?: (data: CreationSuccessPayload) => void;
 }
 
 export default function CreateCampaignWizard({
@@ -27,14 +41,10 @@ export default function CreateCampaignWizard({
   user_id,
   open,
   onClose,
-}: {
-  partnerId: Id<"partners">;
-  user_id?: Id<"users">;
-  open: boolean;
-  onClose?: () => void;
-}) {
+  onSuccess,
+}: CreateCampaignWizardProps) {
   const createCampaign = useMutation(api.campaign.createCampaign);
-  const { track } = useActivityTracker(partnerId);
+
   const rawPrograms = useQuery(api.program.listPrograms);
   const rawChannels = useQuery(api.channel.getChannelsByPartner, { partnerId });
   const { data: programs, isLoading: programsLoading } = useConvexQuery(
@@ -46,21 +56,26 @@ export default function CreateCampaignWizard({
     rawChannels
   );
 
-  const [step, setStep] = useState<number>(0);
-  const [isSaving, setIsSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
-
   const [state, setState] = useState<WizardState>({
     program_id: "",
     channel_id: "",
-    subchannel: "",
+    subchannel_id: "",
     name: "",
     description: "",
     target_signups: 10000,
   });
 
-  // Set initial program and channel when data loads
+  const [isSaving, setIsSaving] = useState(false);
+  const [phase, setPhase] = useState<"idle" | "creating" | "poster">("idle");
+  const [error, setError] = useState<string | null>(null);
+
+  // Load subchannels for selected channel
+  const rawSubchannels = useQuery(
+    api.channel.getSubchannelsByChannel,
+    state.channel_id ? { channel_id: state.channel_id as Id<"channels"> } : "skip"
+  );
+
+  // Set defaults when data loads
   useEffect(() => {
     if (programs && programs.length > 0 && !state.program_id) {
       setState((s) => ({ ...s, program_id: programs[0]._id }));
@@ -73,29 +88,23 @@ export default function CreateCampaignWizard({
     }
   }, [channels, state.channel_id]);
 
-  // Auto-calculations based on selected program
   const calculations = useMemo(() => {
     if (!state.program_id || !state.target_signups) return null;
-
-    const selectedProgram = programs?.find(p => p._id === state.program_id);
+    const selectedProgram = programs?.find((p) => p._id === state.program_id);
     if (!selectedProgram) return null;
 
     const start = new Date(selectedProgram.start_date);
     const end = new Date(selectedProgram.end_date);
     const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
-    const dailyTarget = Math.ceil(state.target_signups / days);
-    const pricePerLesson = selectedProgram.pricing;
-    const bundlePrice = pricePerLesson * 5;
+    const bundlePrice = selectedProgram.pricing * 5;
     const revenueProjection = state.target_signups * bundlePrice;
-    const partnerShare = revenueProjection * 0.2;
 
     return {
       days,
-      dailyTarget,
-      pricePerLesson,
+      dailyTarget: Math.ceil(state.target_signups / days),
       bundlePrice,
       revenueProjection,
-      partnerShare,
+      partnerShare: revenueProjection * 0.2,
       duration_start: selectedProgram.start_date,
       duration_end: selectedProgram.end_date,
     };
@@ -105,61 +114,40 @@ export default function CreateCampaignWizard({
     setState({
       program_id: programs?.[0]?._id ?? "",
       channel_id: channels?.[0]?._id ?? "",
-      subchannel: "",
+      subchannel_id: "",
       name: "",
       description: "",
       target_signups: 10000,
     });
-    setStep(0);
+    setPhase("idle");
     setError(null);
-    setSuccess(null);
   };
 
-  const canNext = () => {
-    if (step === 0) {
-      return Boolean(
-        state.name && 
-        state.program_id && 
-        state.channel_id &&
-        state.description
-      );
-    }
-    return true;
-  };
-
-  const next = () => {
-    if (!canNext()) return;
-    setError(null);
-    setStep((s) => Math.min(s + 1, 1));
-  };
-
-  const prev = () => {
-    setError(null);
-    setStep((s) => Math.max(s - 1, 0));
-  };
+  const canSubmit = Boolean(
+    state.name &&
+    state.program_id &&
+    state.channel_id &&
+    state.description &&
+    !isSaving
+  );
 
   const handleCreate = async () => {
+    if (!canSubmit || !calculations) return;
     setError(null);
     setIsSaving(true);
+    setPhase("creating");
+
     try {
-      if (!state.program_id || !state.channel_id) {
-        setError("Please select a program and channel");
-        setIsSaving(false);
-        return;
-      }
+      const selectedProgram = programs?.find((p) => p._id === state.program_id);
 
-      if (!calculations) {
-        setError("Unable to calculate campaign details");
-        setIsSaving(false);
-        return;
-      }
-
-      const insertedId = await createCampaign({
+      const result = await createCampaign({
         partner_id: partnerId,
         ...(user_id && { user_id }),
         program_id: state.program_id as Id<"programs">,
         channel_id: state.channel_id as Id<"channels">,
-        subchannel: state.subchannel || undefined,
+        subchannel: state.subchannel_id
+          ? rawSubchannels?.find((s) => s._id === state.subchannel_id)?.name
+          : undefined,
         name: state.name,
         description: state.description,
         target_signups: state.target_signups,
@@ -167,20 +155,34 @@ export default function CreateCampaignWizard({
         duration_end: calculations.duration_end,
       });
 
-      track({ 
-        type: "campaign_created", 
-        payload: { campaignId: String(insertedId), name: state.name } 
+      const { promoCode } = result as { campaignId: string; promoCode: string };
+
+      // Generate poster client-side
+      setPhase("poster");
+      let posterDataUrl: string | null = null;
+      try {
+        const qrDataUrl = await generateQRCode("https://sqooli.com", { width: 300, errorCorrectionLevel: "H" });
+        posterDataUrl = await generateCampaignPosterDataUrl({
+          campaignName: state.name,
+          programName: selectedProgram?.name ?? "",
+          promoCode,
+          qrCodeDataUrl: qrDataUrl,
+        });
+      } catch {
+        // Poster generation failed — non-fatal, continue without poster
+      }
+
+      onClose?.();
+      resetWizard();
+      onSuccess?.({
+        name: state.name,
+        promoCode,
+        programName: selectedProgram?.name ?? "",
+        posterDataUrl,
       });
-
-      setSuccess("Campaign created successfully!");
-
-      setTimeout(() => {
-        setSuccess(null);
-        onClose?.();
-        resetWizard();
-      }, 2000);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : String(err));
+      setPhase("idle");
     } finally {
       setIsSaving(false);
     }
@@ -188,15 +190,12 @@ export default function CreateCampaignWizard({
 
   if (!open) return null;
 
-  const selectedProgram = programs?.find(p => p._id === state.program_id);
-  const selectedChannel = channels?.find(c => c._id === state.channel_id);
-
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-2 sm:p-4">
       <Card className="w-full max-w-xl max-h-[95vh] sm:max-h-[90vh] overflow-hidden flex flex-col">
         <CardHeader className="border-b border-border px-4 sm:px-6 py-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg sm:text-xl font-semibold text-card-foreground">Create Campaign Link</h2>
+            <h2 className="text-lg font-semibold text-card-foreground">Create Campaign Link</h2>
             <Button
               variant="ghost"
               size="icon"
@@ -208,276 +207,168 @@ export default function CreateCampaignWizard({
           </div>
         </CardHeader>
 
-        <CardContent className="flex-1 overflow-y-auto p-4 sm:p-6">
-          {/* Step 0: Campaign Details */}
-          {step === 0 && (
-            <div className="space-y-4 sm:space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="campaign-name" className="text-sm font-medium text-muted-foreground">
-                  Campaign Name
-                </Label>
-                <Input
-                  id="campaign-name"
-                  value={state.name}
-                  onChange={(e) => setState((s) => ({ ...s, name: e.target.value }))}
-                  placeholder="Enter campaign name"
-                  className="h-10 sm:h-11"
-                />
-              </div>
+        <CardContent className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
+          {/* Campaign Name */}
+          <div className="space-y-2">
+            <Label htmlFor="campaign-name" className="text-sm font-medium text-muted-foreground">
+              Campaign Name
+            </Label>
+            <Input
+              id="campaign-name"
+              value={state.name}
+              onChange={(e) => setState((s) => ({ ...s, name: e.target.value }))}
+              placeholder="Enter campaign name"
+              className="h-10"
+            />
+          </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="program" className="text-sm font-medium text-muted-foreground">
-                  Program
-                </Label>
-                {programsLoading ? (
-                  <Skeleton className="h-10 w-full rounded-lg" />
-                ) : (
-                  <select
-                    id="program"
-                    value={state.program_id}
-                    onChange={(e) => setState((s) => ({
-                      ...s,
-                      program_id: e.target.value as Id<"programs">
-                    }))}
-                    className="w-full h-10 sm:h-11 px-3 rounded-md border border-input bg-background"
-                  >
-                    <option value="">Select...</option>
-                    {(programs ?? []).map((p) => (
-                      <option key={p._id} value={p._id}>
-                        {p.name} ({p.start_date} → {p.end_date})
-                      </option>
-                    ))}
-                  </select>
-                )}
-              </div>
+          {/* Program */}
+          <div className="space-y-2">
+            <Label htmlFor="program" className="text-sm font-medium text-muted-foreground">
+              Program
+            </Label>
+            {programsLoading ? (
+              <Skeleton className="h-10 w-full rounded-lg" />
+            ) : (
+              <select
+                id="program"
+                value={state.program_id}
+                onChange={(e) => setState((s) => ({ ...s, program_id: e.target.value as Id<"programs"> }))}
+                className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm"
+              >
+                <option value="">Select program...</option>
+                {(programs ?? []).map((p) => (
+                  <option key={p._id} value={p._id}>
+                    {p.name} ({p.start_date} → {p.end_date})
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="channel" className="text-sm font-medium text-muted-foreground">
-                    Channel
-                  </Label>
-                  {channelsLoading ? (
-                    <Skeleton className="h-10 w-full rounded-lg" />
-                  ) : (
-                    <select
-                      id="channel"
-                      value={state.channel_id}
-                      onChange={(e) => {
-                        const newChannelId = e.target.value as Id<"channels">;
-                        setState((s) => ({
-                          ...s,
-                          channel_id: newChannelId,
-                          subchannel: "", // Reset subchannel when channel changes
-                        }));
-                      }}
-                      className="w-full h-10 sm:h-11 px-3 rounded-md border border-input bg-background"
-                    >
-                      <option value="">Select...</option>
-                      {(channels ?? []).map((c) => (
-                        <option key={c._id} value={c._id}>
-                          {c.name}
-                        </option>
-                      ))}
-                    </select>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="subchannel" className="text-sm font-medium text-muted-foreground">
-                    Sub-channel (optional)
-                  </Label>
-                  <select
-                    id="subchannel"
-                    value={state.subchannel}
-                    onChange={(e) => setState((s) => ({ ...s, subchannel: e.target.value }))}
-                    className="w-full h-10 sm:h-11 px-3 rounded-md border border-input bg-background"
-                    disabled={!state.channel_id || !selectedChannel?.subchanells?.length}
-                  >
-                    <option value="">Select...</option>
-                    {selectedChannel?.subchanells?.map((sub) => (
-                      <option key={sub} value={sub}>
-                        {sub}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="description" className="text-sm font-medium text-muted-foreground">
-                  About Campaign
-                </Label>
-                <Textarea
-                  id="description"
-                  value={state.description}
-                  onChange={(e) => setState((s) => ({ ...s, description: e.target.value }))}
-                  placeholder="Enter a description..."
-                  className="min-h-[120px] resize-none"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="target" className="text-sm font-medium text-muted-foreground">
-                  Target Signups
-                </Label>
-                <Input
-                  id="target"
-                  type="number"
-                  min={1}
-                  value={state.target_signups}
-                  onChange={(e) => setState((s) => ({ 
-                    ...s, 
-                    target_signups: Number(e.target.value) 
+          {/* Channel + Sub-channel */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="channel" className="text-sm font-medium text-muted-foreground">
+                Channel
+              </Label>
+              {channelsLoading ? (
+                <Skeleton className="h-10 w-full rounded-lg" />
+              ) : (
+                <select
+                  id="channel"
+                  value={state.channel_id}
+                  onChange={(e) => setState((s) => ({
+                    ...s,
+                    channel_id: e.target.value as Id<"channels">,
+                    subchannel_id: "",
                   }))}
-                  className="h-10 sm:h-11"
-                />
-              </div>
-
-              {calculations && (
-                <Alert className="bg-accent/10 border-accent/20">
-                  <AlertDescription>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Campaign Duration:</span>
-                        <strong>{calculations.days} days</strong>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Daily Target:</span>
-                        <strong>{calculations.dailyTarget} signups/day</strong>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Bundle Price:</span>
-                        <strong>KES {calculations.bundlePrice.toLocaleString()}</strong>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Revenue Projection:</span>
-                        <strong>KES {calculations.revenueProjection.toLocaleString()}</strong>
-                      </div>
-                      <div className="flex justify-between text-primary">
-                        <span>Your Share (20%):</span>
-                        <strong>KES {calculations.partnerShare.toLocaleString()}</strong>
-                      </div>
-                    </div>
-                  </AlertDescription>
-                </Alert>
+                  className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm"
+                >
+                  <option value="">Select channel...</option>
+                  {(channels ?? []).map((c) => (
+                    <option key={c._id} value={c._id}>{c.name}</option>
+                  ))}
+                </select>
               )}
             </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="subchannel" className="text-sm font-medium text-muted-foreground">
+                Sub-channel <span className="text-xs font-normal">(optional)</span>
+              </Label>
+              <select
+                id="subchannel"
+                value={state.subchannel_id}
+                onChange={(e) => setState((s) => ({ ...s, subchannel_id: e.target.value as Id<"subchannels"> }))}
+                className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm"
+                disabled={!state.channel_id || !rawSubchannels?.length}
+              >
+                <option value="">Select...</option>
+                {(rawSubchannels ?? []).map((sub) => (
+                  <option key={sub._id} value={sub._id}>{sub.name}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Target Signups */}
+          <div className="space-y-2">
+            <Label htmlFor="target" className="text-sm font-medium text-muted-foreground">
+              Target Signups
+            </Label>
+            <Input
+              id="target"
+              type="number"
+              min={1}
+              value={state.target_signups}
+              onChange={(e) => setState((s) => ({ ...s, target_signups: Number(e.target.value) }))}
+              className="h-10"
+            />
+          </div>
+
+          {/* About Campaign */}
+          <div className="space-y-2">
+            <Label htmlFor="description" className="text-sm font-medium text-muted-foreground">
+              About Campaign
+            </Label>
+            <Textarea
+              id="description"
+              value={state.description}
+              onChange={(e) => setState((s) => ({ ...s, description: e.target.value }))}
+              placeholder="Enter a description..."
+              className="min-h-[100px] resize-none bg-accent/5"
+            />
+          </div>
+
+          {/* Live calculations */}
+          {calculations && (
+            <Alert className="bg-primary/5 border-primary/20">
+              <AlertDescription>
+                <div className="space-y-1.5 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Duration:</span>
+                    <strong>{calculations.days} days</strong>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Daily Target:</span>
+                    <strong>{calculations.dailyTarget} signups/day</strong>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Bundle (5 lessons):</span>
+                    <strong>KES {calculations.bundlePrice.toLocaleString()}</strong>
+                  </div>
+                  <div className="flex justify-between text-primary font-medium">
+                    <span>Your Share (20%):</span>
+                    <strong>KES {calculations.partnerShare.toLocaleString()}</strong>
+                  </div>
+                </div>
+              </AlertDescription>
+            </Alert>
           )}
 
-          {/* Step 1: Review */}
-          {step === 1 && (
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold mb-4">Review Campaign Details</h3>
-              
-              <div className="space-y-3">
-                <div className="flex justify-between py-2 border-b border-border">
-                  <span className="text-muted-foreground">Campaign Name:</span>
-                  <span className="font-semibold">{state.name}</span>
-                </div>
-                
-                <div className="flex justify-between py-2 border-b border-border">
-                  <span className="text-muted-foreground">Program:</span>
-                  <span className="font-semibold">{selectedProgram?.name}</span>
-                </div>
-                
-                <div className="flex justify-between py-2 border-b border-border">
-                  <span className="text-muted-foreground">Channel:</span>
-                  <span className="font-semibold">
-                    {selectedChannel?.name}
-                    {state.subchannel && ` > ${state.subchannel}`}
-                  </span>
-                </div>
-                
-                {calculations && (
-                  <>
-                    <div className="flex justify-between py-2 border-b border-border">
-                      <span className="text-muted-foreground">Duration:</span>
-                      <span className="font-semibold">
-                        {calculations.duration_start} → {calculations.duration_end}
-                      </span>
-                    </div>
-                    
-                    <div className="flex justify-between py-2 border-b border-border">
-                      <span className="text-muted-foreground">Target Signups:</span>
-                      <span className="font-semibold">{state.target_signups.toLocaleString()}</span>
-                    </div>
-                    
-                    <div className="flex justify-between py-2 border-b border-border">
-                      <span className="text-muted-foreground">Daily Target:</span>
-                      <span className="font-semibold">{calculations.dailyTarget} signups/day</span>
-                    </div>
-                    
-                    <div className="flex justify-between py-2 border-b border-border">
-                      <span className="text-muted-foreground">Price per Lesson:</span>
-                      <span className="font-semibold">KES {calculations.pricePerLesson}</span>
-                    </div>
-                    
-                    <div className="flex justify-between py-2 border-b border-border">
-                      <span className="text-muted-foreground">Bundle (5 lessons):</span>
-                      <span className="font-semibold">KES {calculations.bundlePrice}</span>
-                    </div>
-                    
-                    <div className="flex justify-between py-2 border-b border-border bg-muted px-3 rounded">
-                      <span className="font-medium">Your Expected Earnings:</span>
-                      <span className="font-bold text-primary">
-                        KES {calculations.partnerShare.toLocaleString()}
-                      </span>
-                    </div>
-                  </>
-                )}
-                
-                <div className="py-2">
-                  <span className="text-muted-foreground">Description:</span>
-                  <p className="mt-1 text-sm">{state.description}</p>
-                </div>
-              </div>
-
-              {error && (
-                <Alert variant="destructive">
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              )}
-
-              {success && (
-                <Alert className="border-secondary bg-secondary/10">
-                  <AlertDescription className="text-secondary">{success}</AlertDescription>
-                </Alert>
-              )}
-            </div>
+          {error && (
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
           )}
         </CardContent>
 
-        <CardFooter className="bg-muted flex justify-between border-t border-border px-4 sm:px-6 py-3 sm:py-4">
-          {step > 0 && (
-            <Button variant="outline" onClick={prev} className="h-9 sm:h-10">
-              Back
-            </Button>
-          )}
-          
-          {step === 0 && (
-            <div className="w-full flex justify-end">
-              <Button
-                onClick={next}
-                disabled={!canNext() || programsLoading || channelsLoading}
-                className="h-9 sm:h-10"
-              >
-                Continue
-              </Button>
-            </div>
-          )}
-
-          {step === 1 && (
-            <Button onClick={handleCreate} disabled={isSaving} className="ml-auto h-9 sm:h-10">
-              {isSaving ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Creating...
-                </>
-              ) : (
-                "Create Campaign"
-              )}
-            </Button>
-          )}
+        <CardFooter className="bg-muted flex justify-end border-t border-border px-4 sm:px-6 py-3">
+          <Button
+            onClick={handleCreate}
+            disabled={!canSubmit || programsLoading || channelsLoading}
+            className="h-9 sm:h-10 min-w-[140px]"
+          >
+            {isSaving ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                {phase === "poster" ? "Generating poster..." : "Creating..."}
+              </>
+            ) : (
+              "Create Campaign"
+            )}
+          </Button>
         </CardFooter>
       </Card>
     </div>

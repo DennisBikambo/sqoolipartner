@@ -65,7 +65,7 @@ export default function UserSection() {
   const [detailUser, setDetailUser] = useState<ConvexUser | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
 
-  const { canRead, canWrite } = usePermissions();
+  const { canRead, canWrite, loading: permissionsLoading } = usePermissions();
   const partnerId = partner?._id;
   const canViewUsers = canRead('users');
   const canManageUsers = canWrite('users');
@@ -154,6 +154,23 @@ export default function UserSection() {
   );
 
   // ── Guards ─────────────────────────────────────────────────────────────────
+  if (permissionsLoading) {
+    return (
+      <div className="p-6 space-y-4">
+        <Skeleton className="h-7 w-40 rounded-lg" />
+        <div className="flex gap-2">
+          <Skeleton className="h-9 w-full rounded-lg" />
+          <Skeleton className="h-9 w-32 rounded-lg" />
+        </div>
+        <div className="space-y-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Skeleton key={i} className="h-14 w-full rounded-lg" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   if (!canViewUsers) {
     return (
       <div className="flex items-center justify-center min-h-[60vh] p-6">

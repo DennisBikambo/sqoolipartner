@@ -2,7 +2,6 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { api } from "./_generated/api";
-import { generateWhatsAppQRCode, generatePaymentQRCode } from "../src/services/qrCodeService";
 
 function generatePromoCode(base: string): string {
   const random = Math.floor(100 + Math.random() * 900);
@@ -89,7 +88,7 @@ export const createCampaign = mutation({
       whatsapp_number: whatsapp_number,
       duration_start: duration_start,
       duration_end: duration_end,
-      status: "active",
+      status: "pending",
     });
 
     await ctx.runMutation(api.notifications.createNotification, {
@@ -99,35 +98,19 @@ export const createCampaign = mutation({
       message: `Your campaign "${args.name}" has been created and is pending approval.`,
     });
 
-    // Generate only WhatsApp and Payment QR codes
-    const whatsappQRUrl = await generateWhatsAppQRCode(whatsapp_number, promoCode, args.name);
-    const paymentQRUrl = await generatePaymentQRCode("4092033", bundledOffers.total_price, promoCode);
-
-    const now = Date.now();
-    const assetTemplates = [
-      { 
-        type: "qr_code" as const, 
-        content: "WhatsApp QR Code", 
-        url: whatsappQRUrl 
-      },
-      { 
-        type: "how_to_pay" as const, 
-        content: `Paybill: 4092033\nAccount: [Transaction ID]\nAmount: KES ${bundledOffers.total_price}\nPromo Code: ${promoCode}`, 
-        url: paymentQRUrl 
-      },
-    ];
-
-    for (const asset of assetTemplates) {
-      await ctx.db.insert("assets", {
-        campaign_id: campaignId,
-        type: asset.type,
-        url: asset.url,
-        content: asset.content,
-        generated_at: now,
+    // Audit log — record which user created this campaign
+    if (args.user_id) {
+      await ctx.runMutation(api.audit.createAuditLog, {
+        user_id: args.user_id,
+        partner_id: args.partner_id,
+        action: "campaign_created",
+        entity_type: "campaign",
+        entity_id: campaignId,
+        details: JSON.stringify({ name: args.name, promo_code: promoCode, status: "pending" }),
       });
     }
 
-    return campaignId;
+    return { campaignId, promoCode };
   },
 });
 
@@ -190,11 +173,68 @@ export const getCampaignsByUser = query({
 export const updateCampaignStatus = mutation({
   args: {
     id: v.id("campaigns"),
-    status: v.union(v.literal("draft"), v.literal("active"), v.literal("expired")),
+    status: v.union(
+      v.literal("pending"),
+      v.literal("active"),
+      v.literal("inactive"),
+      v.literal("expired")
+    ),
   },
   handler: async (ctx, args) => {
     await ctx.db.patch(args.id, { status: args.status });
     return { success: true };
+  },
+});
+
+export const activateCampaign = mutation({
+  args: {
+    id: v.id("campaigns"),
+    user_id: v.id("users"),
+    partner_id: v.id("partners"),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.id, { status: "active" });
+    await ctx.runMutation(api.audit.createAuditLog, {
+      user_id: args.user_id,
+      partner_id: args.partner_id,
+      action: "campaign_activated",
+      entity_type: "campaign",
+      entity_id: args.id,
+    });
+    return { success: true };
+  },
+});
+
+export const deactivateCampaign = mutation({
+  args: {
+    id: v.id("campaigns"),
+    user_id: v.id("users"),
+    partner_id: v.id("partners"),
+    reason: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.id, { status: "inactive" });
+    await ctx.runMutation(api.audit.createAuditLog, {
+      user_id: args.user_id,
+      partner_id: args.partner_id,
+      action: "campaign_deactivated",
+      entity_type: "campaign",
+      entity_id: args.id,
+      details: args.reason ? JSON.stringify({ reason: args.reason }) : undefined,
+    });
+    return { success: true };
+  },
+});
+
+export const migrateDraftToPending = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const drafts = await ctx.db.query("campaigns").collect();
+    const draftCampaigns = drafts.filter((c) => (c.status as string) === "draft");
+    for (const campaign of draftCampaigns) {
+      await ctx.db.patch(campaign._id, { status: "pending" });
+    }
+    return { updated: draftCampaigns.length };
   },
 });
 
@@ -281,5 +321,32 @@ export const getCampaignEarnings = query({
     );
 
     return campaignEarnings.sort((a, b) => b.partner_earnings - a.partner_earnings);
+  },
+});
+
+export const getCampaignEnrollmentCounts = query({
+  args: { partner_id: v.id("partners") },
+  handler: async (ctx, args) => {
+    const campaigns = await ctx.db
+      .query("campaigns")
+      .withIndex("by_partner_id", (q) => q.eq("partner_id", args.partner_id))
+      .collect();
+
+    const counts = await Promise.all(
+      campaigns.map(async (campaign) => {
+        const allEnrollments = await ctx.db
+          .query("program_enrollments")
+          .withIndex("by_campaign_id", (q) => q.eq("campaign_id", campaign._id))
+          .collect();
+        const purchases = allEnrollments.filter((e) => e.status === "redeemed").length;
+        return {
+          campaign_id: campaign._id as string,
+          enrollments: allEnrollments.length,
+          purchases,
+        };
+      })
+    );
+
+    return counts;
   },
 });
