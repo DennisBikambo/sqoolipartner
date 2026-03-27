@@ -80,7 +80,7 @@ export const createUser = action({
       userName: args.name,
       partnerName: partner?.name ?? "Sqooli",
       password: generatedPassword,
-      loginUrl: process.env.SITE_URL ?? "https://app.sqooli.com",
+      loginUrl: process.env.SITE_URL ?? "https://sqooli.org",
     });
 
     return {

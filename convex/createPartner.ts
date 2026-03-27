@@ -7,7 +7,7 @@
 
 import { mutation, query, action } from "./_generated/server";
 import { v } from "convex/values";
-import { internal as _internal } from "./_generated/api";
+import { api, internal as _internal } from "./_generated/api";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const internal = _internal as any;
 import { createAuth } from "./auth";
@@ -85,6 +85,15 @@ export const createPartnerOrganization = action({
         permission_ids: result.adminPermissions,
       }
     );
+
+    // Fire-and-forget: send welcome email to the new partner admin
+    await ctx.scheduler.runAfter(0, api.email.sendWelcomeEmail, {
+      to: args.admin_email,
+      userName: args.admin_name,
+      partnerName: args.partner_name,
+      password: adminPassword,
+      loginUrl: process.env.SITE_URL ?? "https://sqooli.org",
+    });
 
     return {
       success: true,

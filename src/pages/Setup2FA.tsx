@@ -107,6 +107,7 @@ export default function Setup2FA() {
       setIsLoading(false);
     }
   };
+  
 
   const handleCopyBackupCodes = () => {
     navigator.clipboard.writeText(backupCodes.join('\n'));

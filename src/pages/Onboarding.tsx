@@ -46,14 +46,14 @@ const STEPS: StepDef[] = [
     description: "Invite other users with different roles to your account",
   },
   {
-    id: "2fa",
-    title: "Two Factor Authentication Setup",
-    description: "Setup your contact details for two factor authentication",
-  },
-  {
     id: "social",
     title: "Social Media Links (optional)",
     description: "Setup your social media links to grow your audience",
+  },
+  {
+    id: "2fa",
+    title: "Two Factor Authentication Setup",
+    description: "Setup your contact details for two factor authentication",
   },
 ];
 
@@ -142,11 +142,11 @@ export default function OnboardingPage() {
     }
   }, [campaigns]);
 
-  // Auto-complete 2FA step (index 3) when user enables 2FA via /setup-2fa
+  // Auto-complete 2FA step (index 4) when user enables 2FA via /setup-2fa
   useEffect(() => {
     const twoFactorEnabled = (session?.user as { twoFactorEnabled?: boolean })?.twoFactorEnabled;
-    if (twoFactorEnabled && !state.completed[3]) {
-      dispatch({ type: "COMPLETE_STEP", index: 3 });
+    if (twoFactorEnabled && !state.completed[4]) {
+      dispatch({ type: "COMPLETE_STEP", index: 4 });
     }
   }, [session, state.completed]);
 
@@ -184,7 +184,7 @@ export default function OnboardingPage() {
   const handleSkip = (index: number) => dispatch({ type: "COMPLETE_STEP", index });
   const handleCloseModal = () => dispatch({ type: "CLOSE_MODAL" });
 
-  const handleStep5Complete = () => dispatch({ type: "COMPLETE_STEP", index: 4 });
+  const handleStep5Complete = () => dispatch({ type: "COMPLETE_STEP", index: 3 });
 
   return (
     <DashboardLayout activeItem="dashboard" title="Dashboard">

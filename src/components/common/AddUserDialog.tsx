@@ -134,12 +134,10 @@ export default function AddUserDialog({ open, onOpenChange, partnerIdOverride }:
     }
   };
 
-  if (!open) return null;
-
   return (
     <>
       {/* Overlay */}
-      <div
+      {open && <div
         className="fixed top-14 sm:top-16 lg:left-[110px] left-0 right-0 bottom-0 z-50 flex items-center justify-center backdrop-blur-sm bg-black/40"
         onClick={handleClose}
       >
@@ -290,12 +288,15 @@ export default function AddUserDialog({ open, onOpenChange, partnerIdOverride }:
             </div>
           </div>
         </div>
-      </div>
+      </div>}
 
       {newUserCreds && (
         <UserCredentialsDialog
           open={showCredDialog}
-          onOpenChange={setShowCredDialog}
+          onOpenChange={(o) => {
+            setShowCredDialog(o);
+            if (!o) setNewUserCreds(null);
+          }}
           email={newUserCreds.email}
           userName={newUserCreds.name}
           partnerName={partner?.name || 'Your Organization'}
