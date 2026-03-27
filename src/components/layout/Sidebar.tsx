@@ -86,11 +86,12 @@ export function AppSidebar({
   };
 
   const checkAccess = (item: NavItem): boolean => {
-    // If still loading permissions, deny access temporarily
-    if (loading || !permissions) return false;
+    if (loading) return false;
 
     // Super admin always has access (for items they can see)
     if (isSuperAdmin()) return true;
+
+    if (!permissions) return false;
 
     if (item.requiredPermission && hasPermission(item.requiredPermission)) return true;
     if (item.requiredCategory && hasCategory(item.requiredCategory)) return true;

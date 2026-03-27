@@ -17,8 +17,7 @@ import { NotificationDropdown } from '../common/NotificationDropDown';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { getDisplayName, getUserEmail, getUserInitials, isConvexUser } from '../../types/auth.types';
-import { useMutation } from 'convex/react';
-import { api } from '../../../convex/_generated/api';
+import { authClient } from '../../lib/auth-client';
 
 interface HeaderProps {
   title?: string;
@@ -28,31 +27,15 @@ export function Header({ title = 'Dashboard' }: HeaderProps) {
   const { user, loading, partner } = useAuth();
   const { setTheme, theme } = useTheme();
   const navigate = useNavigate();
-  const deleteSession = useMutation(api.session.deleteSession);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const onLogout = async () => {
     setIsLoggingOut(true);
     try {
-      const token = document.cookie
-        .split("; ")
-        .find((row) => row.startsWith("convex_session="))
-        ?.split("=")[1];
-
-      if (token) {
-        try {
-          await deleteSession({ token });
-        } catch (err) {
-          console.error("Failed to delete session from DB:", err);
-        }
-      }
-
-      document.cookie = "convex_session=; path=/; max-age=0";
-
+      await authClient.signOut();
       toast.success("Logged out successfully");
       navigate("/signIn");
-    } catch (error) {
-      console.error("Logout error:", error);
+    } catch {
       toast.error("An unexpected error occurred during logout.");
     } finally {
       setIsLoggingOut(false);

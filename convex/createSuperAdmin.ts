@@ -166,6 +166,33 @@ export const resetSuperAdminPassword = mutation({
   },
 });
 
+/**
+ * Assign all permissions to every user in the database.
+ * Safe to re-run — idempotent.
+ * Run via CLI:
+ *   npx convex run createSuperAdmin:assignAllPermissionsToAllUsers --prod
+ */
+export const assignAllPermissionsToAllUsers = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const allPermissions = await ctx.db.query("permissions").collect();
+    if (allPermissions.length === 0) {
+      return { success: false, message: "No permissions found — run seedPermissions first." };
+    }
+    const allPermissionIds = allPermissions.map((p) => p._id);
+
+    const allUsers = await ctx.db.query("users").collect();
+    await Promise.all(
+      allUsers.map((user) => ctx.db.patch(user._id, { permission_ids: allPermissionIds }))
+    );
+
+    return {
+      success: true,
+      message: `Assigned ${allPermissionIds.length} permissions to ${allUsers.length} users.`,
+    };
+  },
+});
+
 // ── Internal helpers for migration ────────────────────────────────────────────
 
 export const getSuperAdminByEmail = internalQuery({
