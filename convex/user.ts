@@ -1,8 +1,11 @@
 // server/user.ts
-import { mutation, query } from "./_generated/server";
+import { mutation, query, action } from "./_generated/server";
 import { v } from "convex/values";
-import { api } from "./_generated/api";
+import { api, internal as _internal } from "./_generated/api";
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const internal = _internal as any;
 import bcrypt from "bcryptjs";
+import { createAuth } from "./auth";
 
 /**
  * Utility to generate random passwords
@@ -10,17 +13,16 @@ import bcrypt from "bcryptjs";
 function generateRandomPassword(length = 10): string {
   const chars =
     "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()";
-  let password = "";
-  for (let i = 0; i < length; i++) {
-    password += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return password;
+  const bytes = new Uint8Array(length);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes).map((b) => chars[b % chars.length]).join("");
 }
 
 /**
- * ➕ Create a new user (password + extension generated automatically)
+ * ➕ Create a new user via Better Auth (password auto-generated)
+ * Uses Better Auth admin API to create the account, then inserts the app user record.
  */
-export const createUser = mutation({
+export const createUser = action({
   args: {
     partner_id: v.id("partners"),
     email: v.string(),
@@ -40,46 +42,39 @@ export const createUser = mutation({
     permission_ids: v.array(v.id("permissions")),
   },
   handler: async (ctx, args) => {
-    const existingUser = await ctx.db
-      .query("users")
-      .withIndex("by_email", (q) => q.eq("email", args.email))
-      .unique();
-
+    // Check email uniqueness before creating the Better Auth account
+    const existingUser = await ctx.runQuery(internal.userHelpers.getUserByEmailInternal, {
+      email: args.email,
+    });
     if (existingUser) {
       throw new Error("User with this email already exists");
     }
 
     const generatedPassword = generateRandomPassword(10);
 
-    // ✅ Use synchronous hash to avoid Convex setTimeout error
-    const password_hash = bcrypt.hashSync(generatedPassword, 10);
+    // Create the user in Better Auth (handles password hashing internally)
+    const auth = createAuth(ctx as any);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const baResult = await (auth.api.signUpEmail as any)({
+      body: { email: args.email, password: generatedPassword, name: args.name },
+    });
 
-    const partner = await ctx.db.get(args.partner_id);
+    const better_auth_id: string = baResult?.user?.id ?? "";
 
-    const userId = await ctx.db.insert("users", {
+    // Insert the app-level user record linked to the Better Auth account
+    const result = await ctx.runMutation(internal.userHelpers.insertUserRecord, {
       partner_id: args.partner_id,
       email: args.email,
-      password_hash,
+      better_auth_id,
       name: args.name,
       phone: args.phone,
       avatar_url: args.avatar_url,
       role: args.role,
       permission_ids: args.permission_ids,
-      is_active: true,
-      is_first_login: true,
-      last_login: undefined,
-      updated_at: undefined,
-      is_account_activated: true,
     });
 
-    await ctx.runMutation(api.notifications.createNotification, {
-      partnerId: args.partner_id,
-      type: "success",
-      title: "User created successfully",
-      message: `User with email ${args.email} has been created successfully`,
-    });
-
-    // Send welcome email with credentials (fire-and-forget via scheduler)
+    // Fire-and-forget: send welcome email
+    const partner = await ctx.runQuery(api.partner.getById, { partner_id: args.partner_id });
     await ctx.scheduler.runAfter(0, api.email.sendWelcomeEmail, {
       to: args.email,
       userName: args.name,
@@ -90,8 +85,7 @@ export const createUser = mutation({
 
     return {
       message: "User created successfully",
-      userId,
-      generatedPassword,
+      userId: result.userId,
     };
   },
 });
@@ -200,46 +194,8 @@ export const deleteUser = mutation({
   },
 });
 
-/**
- * 🔐 Login user
- */
-export const login = mutation({
-  args: { email: v.string(), password: v.string() },
-  handler: async (ctx, args) => {
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_email", (q) => q.eq("email", args.email))
-      .unique();
-
-    if (!user) throw new Error("Invalid email or password");
-
-    const isMatch = bcrypt.compareSync(args.password, user.password_hash);
-    if (!isMatch) throw new Error("Invalid email or password");
-
-    await ctx.db.patch(user._id, {
-      last_login: new Date().toISOString(),
-    });
-
-    
-    const permissions = await Promise.all(
-      (user.permission_ids || []).map((id) => ctx.db.get(id))
-    );
-
-    return {
-      message: "Login successful",
-      user: {
-        _id: user._id,
-        email: user.email,
-        name: user.name,
-        role: user.role,
-        partner_id: user.partner_id,
-        is_account_activated: user.is_account_activated,
-        extension: user.extension,
-        permissions: permissions.filter(Boolean),
-      },
-    };
-  },
-});
+// Login is now handled by Better Auth (authComponent.registerRoutes in http.ts)
+// The old login mutation has been removed.
 
 
 export const getUserByCampaign = query({

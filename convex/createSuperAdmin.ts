@@ -9,9 +9,13 @@
  *     '{"email":"admin@sqooli.com","name":"Super Admin","password":"YourSecurePassword123!"}'
  */
 
-import { mutation, query } from "./_generated/server";
+import { mutation, query, action, internalMutation, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
 import bcrypt from "bcryptjs";
+import { internal as _internal } from "./_generated/api";
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const internal = _internal as any;
+import { createAuth } from "./auth";
 
 /**
  * Create a Super Admin User
@@ -158,6 +162,73 @@ export const resetSuperAdminPassword = mutation({
         email: args.email,
         extension: user.extension,
       },
+    };
+  },
+});
+
+// ── Internal helpers for migration ────────────────────────────────────────────
+
+export const getSuperAdminByEmail = internalQuery({
+  args: { email: v.string() },
+  handler: async (ctx, args) => {
+    return ctx.db
+      .query("users")
+      .withIndex("by_email", (q) => q.eq("email", args.email))
+      .unique();
+  },
+});
+
+export const linkBetterAuthId = internalMutation({
+  args: { userId: v.id("users"), better_auth_id: v.string() },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.userId, { better_auth_id: args.better_auth_id });
+  },
+});
+
+/**
+ * Migrate an existing user to Better Auth.
+ * Run via CLI:
+ *   npx convex run createSuperAdmin:migrateToBetterAuth \
+ *     '{"email":"admin@example.com","password":"NewPassword123!"}'
+ */
+export const migrateToBetterAuth = action({
+  args: {
+    email: v.string(),
+    password: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const existingUser = await ctx.runQuery(
+      internal.createSuperAdmin.getSuperAdminByEmail,
+      { email: args.email }
+    );
+
+    if (!existingUser) {
+      throw new Error(`No user found with email: ${args.email}`);
+    }
+
+    if (existingUser.better_auth_id) {
+      return { success: true, message: "User already has a Better Auth account — no migration needed." };
+    }
+
+    const auth = createAuth(ctx as any);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const baResult = await (auth.api.signUpEmail as any)({
+      body: { email: args.email, password: args.password, name: existingUser.name },
+    });
+
+    const better_auth_id: string = baResult?.user?.id ?? "";
+    if (!better_auth_id) {
+      throw new Error("Better Auth did not return a user ID. Check BETTER_AUTH_SECRET is set.");
+    }
+
+    await ctx.runMutation(internal.createSuperAdmin.linkBetterAuthId, {
+      userId: existingUser._id,
+      better_auth_id,
+    });
+
+    return {
+      success: true,
+      message: `${existingUser.name} (${args.email}) is now registered in Better Auth. Use the new password to sign in.`,
     };
   },
 });

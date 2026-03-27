@@ -15,7 +15,7 @@ interface UserCredentialsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   email: string;
-  password: string;
+  password?: string;
   userName: string;
   partnerName: string;
   extension?: string;
@@ -48,7 +48,7 @@ export function UserCredentialsDialog({
       `Email: ${email}`,
       username ? `Username: ${username}` : null,
       extension ? `Extension: ${extension}` : null,
-      `Password: ${password}`,
+      password ? `Password: ${password}` : null,
     ].filter(Boolean).join('\n');
 
     navigator.clipboard.writeText(credentials);
@@ -160,34 +160,43 @@ export function UserCredentialsDialog({
             </div>
           )}
 
-          {/* Password */}
-          <div className="flex items-center gap-4">
-            <Lock className="h-5 w-5 text-muted-foreground flex-shrink-0" />
-            <div className="flex-1 space-y-1">
-              <p className="text-sm font-medium text-muted-foreground">Password</p>
-              <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg group">
-                <span className="font-mono text-sm text-foreground">{password}</span>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
-                  onClick={() => copyToClipboard(password, 'Password')}
-                >
-                  {copiedField === 'Password' ? (
-                    <Check className="h-4 w-4 text-secondary" />
-                  ) : (
-                    <Copy className="h-4 w-4" />
-                  )}
-                </Button>
+          {/* Password or email notice */}
+          {password ? (
+            <div className="flex items-center gap-4">
+              <Lock className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+              <div className="flex-1 space-y-1">
+                <p className="text-sm font-medium text-muted-foreground">Password</p>
+                <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg group">
+                  <span className="font-mono text-sm text-foreground">{password}</span>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={() => copyToClipboard(password, 'Password')}
+                  >
+                    {copiedField === 'Password' ? (
+                      <Check className="h-4 w-4 text-secondary" />
+                    ) : (
+                      <Copy className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
               </div>
             </div>
-          </div>
+          ) : (
+            <div className="flex items-start gap-3 bg-secondary/10 border border-secondary/20 rounded-lg p-4">
+              <Mail className="h-4 w-4 text-secondary mt-0.5 flex-shrink-0" />
+              <p className="text-xs text-secondary font-medium leading-tight">
+                Login credentials have been sent to {email}. The user should check their inbox to set their password.
+              </p>
+            </div>
+          )}
 
-          {/* Warning - using your exact destructive colors */}
+          {/* Warning */}
           <div className="flex items-start gap-3 bg-destructive/10 border border-destructive/20 rounded-lg p-4">
-            <div className="mt-0.5 text-destructive">Warning:</div>
+            <div className="mt-0.5 text-destructive">Note:</div>
             <p className="text-xs text-destructive font-medium leading-tight">
-              Important: Save these credentials now. This is the only time you'll see the password.
+              Ensure the user updates their password after first login.
             </p>
           </div>
         </div>

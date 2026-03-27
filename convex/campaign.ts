@@ -1,10 +1,12 @@
 // convex/campaign.ts
-import { mutation, query } from "./_generated/server";
+import { mutation, query, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 import { api } from "./_generated/api";
 
 function generatePromoCode(base: string): string {
-  const random = Math.floor(100 + Math.random() * 900);
+  const bytes = new Uint8Array(2);
+  crypto.getRandomValues(bytes);
+  const random = 100 + (((bytes[0] << 8) | bytes[1]) % 900);
   return `${base.replace(/\s+/g, "").toUpperCase().slice(0, 8)}${random}`;
 }
 
@@ -48,7 +50,7 @@ export const createCampaign = mutation({
     
     const start = new Date(duration_start);
     const end = new Date(duration_end);
-    const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+    const days = Math.max(Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)), 1);
     const dailyTarget = Math.ceil(args.target_signups / days);
     
     // Pricing from program
@@ -239,7 +241,7 @@ export const deactivateCampaign = mutation({
   },
 });
 
-export const migrateDraftToPending = mutation({
+export const migrateDraftToPending = internalMutation({
   args: {},
   handler: async (ctx) => {
     const drafts = await ctx.db.query("campaigns").collect();

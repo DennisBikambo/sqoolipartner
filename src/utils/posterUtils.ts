@@ -282,6 +282,16 @@ async function ensureFontsLoaded(): Promise<void> {
   ]);
 }
 
+// ── HTML escaping ──────────────────────────────────────────────────────────────
+
+function escHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
 // ── Main generator ────────────────────────────────────────────────────────────
 
 export async function generateCampaignPosterDataUrl(params: PosterParams): Promise<string> {
@@ -290,8 +300,13 @@ export async function generateCampaignPosterDataUrl(params: PosterParams): Promi
   const palette = getPalette(promoCode);
   const { block1, block2, accent, hi } = palette;
 
-  const [headLine1, headLine2] = splitHeadline(campaignName);
-  const [subLine1, subLine2] = splitSubHeadline(programName);
+  const [headLine1Raw, headLine2Raw] = splitHeadline(campaignName);
+  const [subLine1Raw, subLine2Raw] = splitSubHeadline(programName);
+  const headLine1 = escHtml(headLine1Raw);
+  const headLine2 = headLine2Raw ? escHtml(headLine2Raw) : headLine2Raw;
+  const subLine1 = escHtml(subLine1Raw);
+  const subLine2 = subLine2Raw ? escHtml(subLine2Raw) : subLine2Raw;
+  const safePromoCode = escHtml(promoCode);
 
   const photoId = getPhotoId(promoCode);
 
@@ -375,7 +390,7 @@ export async function generateCampaignPosterDataUrl(params: PosterParams): Promi
   <div style="position:absolute;bottom:0;left:0;right:0;height:88px;background:#1a1a1a;display:flex;align-items:center;padding:0 52px;z-index:4;">
     <div style="display:flex;flex-direction:column;justify-content:center;flex:1;min-width:0;">
       <div style="color:#888888;font-size:10px;font-weight:700;letter-spacing:2.2px;text-transform:uppercase;margin-bottom:5px;font-family:'Montserrat',Arial,sans-serif;">Promo Code</div>
-      <div style="color:${hi};font-size:22px;font-weight:800;letter-spacing:2.5px;font-family:'Montserrat',Arial,sans-serif;white-space:nowrap;">${promoCode}</div>
+      <div style="color:${hi};font-size:22px;font-weight:800;letter-spacing:2.5px;font-family:'Montserrat',Arial,sans-serif;white-space:nowrap;">${safePromoCode}</div>
     </div>
     <div style="width:1px;height:50px;background:rgba(255,255,255,0.16);margin:0 34px;flex-shrink:0;"></div>
     <div style="display:flex;flex-direction:column;justify-content:center;flex:2;min-width:0;">
@@ -384,7 +399,7 @@ export async function generateCampaignPosterDataUrl(params: PosterParams): Promi
         <span style="color:#888888;font-size:11px;font-family:'Poppins',Arial,sans-serif;">Pay via M-Pesa</span>
       </div>
       <div style="color:white;font-size:14px;font-family:'Poppins',Arial,sans-serif;white-space:nowrap;">
-        Paybill <strong style="color:${hi};">247247</strong>&nbsp;&nbsp;·&nbsp;&nbsp;Account <strong style="color:${hi};">${promoCode}</strong>
+        Paybill <strong style="color:${hi};">247247</strong>&nbsp;&nbsp;·&nbsp;&nbsp;Account <strong style="color:${hi};">${safePromoCode}</strong>
       </div>
     </div>
     <div style="width:1px;height:50px;background:rgba(255,255,255,0.16);margin:0 34px;flex-shrink:0;"></div>

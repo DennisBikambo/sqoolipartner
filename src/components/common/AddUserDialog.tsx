@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { useMutation, useQuery } from 'convex/react';
+import { useAction, useQuery } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import { X, Camera, Users, ChevronDown } from 'lucide-react';
 import {
@@ -56,7 +56,7 @@ export default function AddUserDialog({ open, onOpenChange, partnerIdOverride }:
 
   const [showCredDialog, setShowCredDialog] = useState(false);
   const [newUserCreds, setNewUserCreds] = useState<{
-    email: string; password: string; name: string;
+    email: string; name: string;
   } | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -64,7 +64,7 @@ export default function AddUserDialog({ open, onOpenChange, partnerIdOverride }:
   const partnerId = partnerIdOverride || partner?._id;
 
   const roles = useQuery(api.role.getRoles, { is_active: true });
-  const createUser = useMutation(api.user.createUser);
+  const createUser = useAction(api.user.createUser);
 
   const matchedRole = roles?.find(r => r.name === role);
 
@@ -112,7 +112,7 @@ export default function AddUserDialog({ open, onOpenChange, partnerIdOverride }:
         }
       }
 
-      const res = await createUser({
+      await createUser({
         partner_id: partnerId,
         email,
         name,
@@ -122,7 +122,7 @@ export default function AddUserDialog({ open, onOpenChange, partnerIdOverride }:
         permission_ids: matchedRole?.permission_ids ?? [],
       });
 
-      setNewUserCreds({ email, password: res.generatedPassword, name });
+      setNewUserCreds({ email, name });
       setShowCredDialog(true);
       toast.success('User created successfully!');
       resetForm();
@@ -297,7 +297,6 @@ export default function AddUserDialog({ open, onOpenChange, partnerIdOverride }:
           open={showCredDialog}
           onOpenChange={setShowCredDialog}
           email={newUserCreds.email}
-          password={newUserCreds.password}
           userName={newUserCreds.name}
           partnerName={partner?.name || 'Your Organization'}
         />

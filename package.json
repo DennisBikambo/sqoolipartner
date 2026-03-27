@@ -10,6 +10,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@convex-dev/better-auth": "^0.11.3",
+    "@opentelemetry/api": "^1.9.1",
     "@radix-ui/react-avatar": "^1.1.10",
     "@radix-ui/react-checkbox": "^1.3.3",
     "@radix-ui/react-dialog": "^1.1.15",
@@ -27,6 +29,7 @@
     "@tailwindcss/vite": "^4.1.14",
     "axios": "^1.13.1",
     "bcryptjs": "^3.0.3",
+    "better-auth": "^1.5.6",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "convex": "^1.29.1",

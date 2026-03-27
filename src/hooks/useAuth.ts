@@ -1,89 +1,57 @@
-import { useEffect, useState } from "react";
-import { useQuery, useMutation } from "convex/react";
+import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
-import type {
-  ConvexPartner,
-  ConvexUser,
-  UseAuthReturn
-} from "../types/auth.types";
+import { authClient } from "../lib/auth-client";
+import type { ConvexPartner, ConvexUser, UseAuthReturn } from "../types/auth.types";
 
-function getSessionCookie(name: string): string | null {
-  const value = `; ${document.cookie}`;
-  const parts = value.split(`; ${name}=`);
-  if (parts.length === 2) return parts.pop()?.split(';').shift() || null;
-  return null;
-}
-
+/**
+ * useAuth — primary auth hook.
+ *
+ * Uses Better Auth's useSession() for the authenticated session, then
+ * fetches the app-level user + partner from the Convex `users` table
+ * via getCurrentUser (bridged by better_auth_id).
+ *
+ * Returns the same shape as before so all existing consumers work unchanged.
+ */
 export function useAuth(): UseAuthReturn {
-  const [convexSessionToken, setConvexSessionToken] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [convexUser, setConvexUser] = useState<ConvexUser | null>(null);
-  const [sessionValidated, setSessionValidated] = useState(false);
+  const { data: session, isPending } = authClient.useSession();
 
-  const validateSessionMutation = useMutation(api.session.validateSession);
+  // Only run the Convex query when Better Auth has confirmed a session
+  const appData = useQuery(
+    api.auth.getCurrentUser,
+    session ? undefined : "skip"
+  );
 
-  useEffect(() => {
-    const token = getSessionCookie('convex_session');
-    if (token) {
-      setConvexSessionToken(token);
-    } else {
-      setError("Not authenticated");
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    const validateConvexSession = async () => {
-      if (!convexSessionToken || sessionValidated) return;
-
-      try {
-        const sessionData = await validateSessionMutation({ token: convexSessionToken });
-        if (!sessionData || !sessionData.user) {
-          document.cookie = 'convex_session=; path=/; max-age=0';
-          setConvexSessionToken(null);
-          setConvexUser(null);
-          setError("Session expired");
-        } else {
-          setConvexUser(sessionData.user as ConvexUser);
-        }
-      } catch {
-        document.cookie = 'convex_session=; path=/; max-age=0';
-        setConvexSessionToken(null);
-        setConvexUser(null);
-        setError("Session validation failed");
-      } finally {
-        setSessionValidated(true);
-        setLoading(false);
-      }
-    };
-
-    validateConvexSession();
-  }, [convexSessionToken, sessionValidated, validateSessionMutation]);
-
-  const convexPartner = useQuery(
-    api.partner.getById,
-    convexUser?.partner_id ? { partner_id: convexUser.partner_id } : "skip"
-  ) as ConvexPartner | undefined | null;
+  // Loading: Better Auth is resolving, or session exists but Convex query is in-flight
+  const loading = isPending || (!!session && appData === undefined);
 
   if (loading) {
-    return { user: null, partner: null, loading: true, error: null, isFirstLogin: false, loginMethod: null };
-  }
-
-  if (convexUser && convexPartner === undefined) {
-    return { user: null, partner: null, loading: true, error: null, isFirstLogin: false, loginMethod: 'convex' };
-  }
-
-  if (convexUser) {
     return {
-      user: convexUser,
-      partner: convexPartner || null,
-      loading: false,
+      user: null,
+      partner: null,
+      loading: true,
       error: null,
-      isFirstLogin: convexUser.is_first_login ?? false,
-      loginMethod: 'convex',
+      isFirstLogin: false,
+      loginMethod: null,
     };
   }
 
-  return { user: null, partner: null, loading: false, error: error || "Not authenticated", isFirstLogin: false, loginMethod: null };
+  if (!session || !appData?.user) {
+    return {
+      user: null,
+      partner: null,
+      loading: false,
+      error: "Not authenticated",
+      isFirstLogin: false,
+      loginMethod: null,
+    };
+  }
+
+  return {
+    user: appData.user as ConvexUser,
+    partner: (appData.partner as ConvexPartner) ?? null,
+    loading: false,
+    error: null,
+    isFirstLogin: appData.user.is_first_login ?? false,
+    loginMethod: "convex",
+  };
 }

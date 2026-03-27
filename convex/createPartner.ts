@@ -5,9 +5,12 @@
  * Each partner is independent and can manage their own users
  */
 
-import { mutation, query } from "./_generated/server";
+import { mutation, query, action } from "./_generated/server";
 import { v } from "convex/values";
-import bcrypt from "bcryptjs";
+import { internal as _internal } from "./_generated/api";
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const internal = _internal as any;
+import { createAuth } from "./auth";
 
 /**
  * Utility to generate random passwords
@@ -15,18 +18,16 @@ import bcrypt from "bcryptjs";
 function generateRandomPassword(length = 12): string {
   const chars =
     "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()";
-  let password = "";
-  for (let i = 0; i < length; i++) {
-    password += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return password;
+  const bytes = new Uint8Array(length);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes).map((b) => chars[b % chars.length]).join("");
 }
 
 /**
  * Create a new partner organization (Super Admin only)
- * Creates both a partner record and an initial partner admin user
+ * Creates both a partner record and an initial partner admin user via Better Auth.
  */
-export const createPartnerOrganization = mutation({
+export const createPartnerOrganization = action({
   args: {
     // Partner details
     partner_name: v.string(),
@@ -44,77 +45,52 @@ export const createPartnerOrganization = mutation({
     admin_permission_ids: v.optional(v.array(v.id("permissions"))),
   },
   handler: async (ctx, args) => {
-    // Check if partner email already exists
-    const existingPartner = await ctx.db
-      .query("partners")
-      .filter((q) => q.eq(q.field("email"), args.partner_email))
-      .first();
+    // Check uniqueness and get permissions
+    const result = await ctx.runMutation(
+      internal.createPartnerHelpers.createPartnerAndGetPermissions,
+      {
+        partner_name: args.partner_name,
+        partner_email: args.partner_email,
+        partner_phone: args.partner_phone,
+        partner_username: args.partner_username,
+        admin_email: args.admin_email,
+        partner_permission_ids: args.partner_permission_ids,
+        admin_permission_ids: args.admin_permission_ids,
+      }
+    );
 
-    if (existingPartner) {
-      throw new Error(`Partner with email ${args.partner_email} already exists`);
-    }
-
-    // Check if admin user email already exists
-    const existingUser = await ctx.db
-      .query("users")
-      .withIndex("by_email", (q) => q.eq("email", args.admin_email))
-      .unique();
-
-    if (existingUser) {
-      throw new Error(`User with email ${args.admin_email} already exists`);
-    }
-
-    // Get default permissions if not specified
-    let partnerPermissions = args.partner_permission_ids;
-    let adminPermissions = args.admin_permission_ids;
-
-    if (!partnerPermissions || partnerPermissions.length === 0) {
-      // Get all permissions for partners
-      const allPermissions = await ctx.db.query("permissions").collect();
-      partnerPermissions = allPermissions.map((p) => p._id);
-    }
-
-    if (!adminPermissions || adminPermissions.length === 0) {
-      // Get all permissions for the admin user
-      const allPermissions = await ctx.db.query("permissions").collect();
-      adminPermissions = allPermissions.map((p) => p._id);
-    }
-
-    // Create the partner record
-    const partnerId = await ctx.db.insert("partners", {
-      name: args.partner_name,
-      email: args.partner_email,
-      phone: args.partner_phone,
-      username: args.partner_username,
-      is_first_login: true,
-      permission_ids: partnerPermissions,
-    });
-
-    // Generate credentials for the partner admin user
+    // Generate password and create Better Auth account for the admin user
     const adminPassword = generateRandomPassword(12);
-    const password_hash = bcrypt.hashSync(adminPassword, 10);
-
-    // Create the partner admin user
-    const userId = await ctx.db.insert("users", {
-      partner_id: partnerId,
-      email: args.admin_email,
-      password_hash,
-      name: args.admin_name,
-      phone: args.admin_phone,
-      role: "partner_admin",
-      permission_ids: adminPermissions,
-      is_active: true,
-      is_first_login: true,
-      is_account_activated: true,
-      last_login: undefined,
-      updated_at: undefined,
+    const auth = createAuth(ctx as any);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const baResult = await (auth.api.signUpEmail as any)({
+      body: {
+        email: args.admin_email,
+        password: adminPassword,
+        name: args.admin_name,
+      },
     });
+
+    const better_auth_id: string = baResult?.user?.id ?? "";
+
+    // Insert the admin user record linked to Better Auth
+    const userId = await ctx.runMutation(
+      internal.createPartnerHelpers.insertPartnerAdminUser,
+      {
+        partner_id: result.partnerId,
+        email: args.admin_email,
+        better_auth_id,
+        name: args.admin_name,
+        phone: args.admin_phone,
+        permission_ids: result.adminPermissions,
+      }
+    );
 
     return {
       success: true,
       message: "Partner organization created successfully",
       partner: {
-        id: partnerId,
+        id: result.partnerId,
         name: args.partner_name,
         email: args.partner_email,
         phone: args.partner_phone,
@@ -129,11 +105,11 @@ export const createPartnerOrganization = mutation({
       credentials: {
         partner_name: args.partner_name,
         admin_email: args.admin_email,
-        admin_password: adminPassword,
       },
     };
   },
 });
+
 
 /**
  * List all partner organizations (Super Admin only)

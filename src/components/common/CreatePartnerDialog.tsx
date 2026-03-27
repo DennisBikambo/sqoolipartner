@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { useMutation } from 'convex/react';
+import { useAction } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import {
   Dialog,
@@ -97,11 +97,10 @@ export default function CreatePartnerDialog({ open, onOpenChange }: CreatePartne
   const [newPartnerCreds, setNewPartnerCreds] = useState<{
     partner_name: string;
     admin_email: string;
-    admin_password: string;
     admin_name: string;
   } | null>(null);
 
-  const createPartnerOrg = useMutation(api.createPartner.createPartnerOrganization);
+  const createPartnerOrg = useAction(api.createPartner.createPartnerOrganization);
 
   const handleBlur = (field: keyof PartnerFormData) => {
     setTouchedFields(prev => new Set(prev).add(field));
@@ -142,7 +141,6 @@ export default function CreatePartnerDialog({ open, onOpenChange }: CreatePartne
       setNewPartnerCreds({
         partner_name: result.credentials.partner_name,
         admin_email: result.credentials.admin_email,
-        admin_password: result.credentials.admin_password,
         admin_name: formData.adminName,
       });
       setShowCredDialog(true);
@@ -337,7 +335,6 @@ export default function CreatePartnerDialog({ open, onOpenChange }: CreatePartne
           open={showCredDialog}
           onOpenChange={setShowCredDialog}
           email={newPartnerCreds.admin_email}
-          password={newPartnerCreds.admin_password}
           userName={newPartnerCreds.admin_name}
           partnerName={newPartnerCreds.partner_name}
         />

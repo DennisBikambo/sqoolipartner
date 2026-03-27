@@ -321,43 +321,46 @@ export default function PartnerManagement() {
   // ── USER MANAGEMENT VIEW ─────────────────────────────────────────────────
   if (viewingUsers && selectedPartner) {
     return (
-      <div className="min-h-full bg-muted/30">
+      <div className="min-h-full bg-muted/20">
         {/* Header */}
-        <div className="bg-gradient-to-br from-primary to-primary/80 px-6 pt-6 pb-5">
-          <div className="flex items-start justify-between">
+        <div className="bg-card border-b border-border px-6 py-4">
+          <div className="flex items-center justify-between gap-4">
             <div>
               <button
                 onClick={() => { setViewingUsers(false); setSelectedPartnerId(null); }}
-                className="flex items-center gap-1.5 text-primary-foreground/50 hover:text-primary-foreground/80 text-xs mb-3 transition-colors"
+                className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground text-xs mb-2 transition-colors"
               >
                 <ArrowLeft className="h-3.5 w-3.5" />
-                Partners
+                Back to Partners
               </button>
-              <h2 className="text-[22px] font-bold text-primary-foreground leading-none">
-                {selectedPartner.partner.name}
-              </h2>
-              <p className="text-primary-foreground/40 text-xs mt-1">@{selectedPartner.partner.username} · User Management</p>
+              <div className="flex items-center gap-3">
+                <div className={`h-9 w-9 rounded-xl flex items-center justify-center text-xs font-bold text-primary-foreground shrink-0 ${getAvatarColor(selectedPartner.partner.name)}`}>
+                  {getInitials(selectedPartner.partner.name)}
+                </div>
+                <div>
+                  <h2 className="text-[18px] font-bold text-foreground leading-tight">
+                    {selectedPartner.partner.name}
+                  </h2>
+                  <p className="text-xs text-muted-foreground">@{selectedPartner.partner.username} · User Management</p>
+                </div>
+              </div>
             </div>
-            <Button
-              size="sm"
-              onClick={() => setShowAddUserDialog(true)}
-              className="bg-primary-foreground/10 hover:bg-primary-foreground/20 text-primary-foreground border border-primary-foreground/15"
-            >
+            <Button size="sm" onClick={() => setShowAddUserDialog(true)}>
               <Plus className="h-3.5 w-3.5 mr-1.5" />
               Add User
             </Button>
           </div>
 
           {/* Stats strip */}
-          <div className="flex gap-6 mt-5">
+          <div className="flex gap-5 mt-4">
             {[
-              { label: 'Active',   value: activeUsers.length,   color: 'text-secondary' },
-              { label: 'Inactive', value: inactiveUsers.length, color: 'text-destructive' },
-              { label: 'Total',    value: (selectedPartner.users || []).length, color: 'text-primary-foreground' },
-            ].map(({ label, value, color }) => (
-              <div key={label}>
-                <p className={`text-xl font-bold ${color}`}>{value}</p>
-                <p className="text-[11px] text-primary-foreground/40">{label}</p>
+              { label: 'Active users',   value: activeUsers.length,   className: 'text-secondary' },
+              { label: 'Inactive',       value: inactiveUsers.length, className: 'text-destructive' },
+              { label: 'Total',          value: (selectedPartner.users || []).length, className: 'text-foreground' },
+            ].map(({ label, value, className }) => (
+              <div key={label} className="flex items-center gap-2">
+                <span className={`text-base font-bold tabular-nums ${className}`}>{value}</span>
+                <span className="text-xs text-muted-foreground">{label}</span>
               </div>
             ))}
           </div>
@@ -365,7 +368,7 @@ export default function PartnerManagement() {
 
         {/* Tabs + list */}
         <div className="p-6">
-          <div className="bg-card rounded-2xl border border-border overflow-hidden">
+          <div className="bg-card rounded-2xl border border-border overflow-hidden" style={{minHeight: 200}}>
             {/* Underline tabs */}
             <div className="flex gap-6 px-5 border-b border-border">
               {(['active', 'inactive'] as const).map((tab) => (
@@ -433,33 +436,34 @@ export default function PartnerManagement() {
 
   // ── PARTNER LIST VIEW ────────────────────────────────────────────────────
   return (
-    <div className="min-h-full bg-muted/30">
+    <div className="min-h-full bg-muted/20">
       {/* Header */}
-      <div className="bg-gradient-to-br from-primary to-primary/80 px-6 pt-6 pb-5">
-        <div className="flex items-start justify-between mb-5">
+      <div className="bg-card border-b border-border px-6 py-5">
+        <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="text-[11px] font-bold tracking-[0.2em] text-primary-foreground/70 uppercase mb-1">
-              Organization Management
-            </p>
-            <h2 className="text-[22px] font-bold text-primary-foreground leading-none">Partners</h2>
+            <div className="flex items-center gap-2 mb-1">
+              <div className="h-5 w-5 rounded-md bg-primary/10 flex items-center justify-center">
+                <Building2 className="h-3 w-3 text-primary" />
+              </div>
+              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">
+                Organization Management
+              </span>
+            </div>
+            <h2 className="text-[22px] font-bold text-foreground tracking-tight">Partners</h2>
           </div>
-          <Button
-            size="sm"
-            onClick={() => setShowCreateDialog(true)}
-            className="bg-primary-foreground/10 hover:bg-primary-foreground/20 text-primary-foreground border border-primary-foreground/15"
-          >
+          <Button size="sm" onClick={() => setShowCreateDialog(true)} className="shrink-0">
             <Plus className="h-3.5 w-3.5 mr-1.5" />
             Create Partner
           </Button>
         </div>
 
         {/* Aggregate stats */}
-        <div className="flex gap-7">
+        <div className="flex gap-5 mt-4">
           {partners === undefined ? (
             <>
-              <Skeleton className="h-10 w-20 rounded-lg bg-primary-foreground/10" />
-              <Skeleton className="h-10 w-20 rounded-lg bg-primary-foreground/10" />
-              <Skeleton className="h-10 w-20 rounded-lg bg-primary-foreground/10" />
+              <Skeleton className="h-8 w-20 rounded-lg" />
+              <Skeleton className="h-8 w-20 rounded-lg" />
+              <Skeleton className="h-8 w-20 rounded-lg" />
             </>
           ) : (
             [
@@ -467,9 +471,9 @@ export default function PartnerManagement() {
               { label: 'Users',     value: partners.reduce((s, p) => s + p.user_count, 0) },
               { label: 'Campaigns', value: partners.reduce((s, p) => s + p.campaign_count, 0) },
             ].map(({ label, value }) => (
-              <div key={label}>
-                <p className="text-xl font-bold text-primary-foreground">{value}</p>
-                <p className="text-[11px] text-primary-foreground/40">{label}</p>
+              <div key={label} className="flex items-center gap-2">
+                <span className="text-base font-bold text-foreground tabular-nums">{value}</span>
+                <span className="text-xs text-muted-foreground">{label}</span>
               </div>
             ))
           )}
@@ -593,25 +597,29 @@ export default function PartnerManagement() {
             ) : (
               <>
                 {/* Org hero */}
-                <div className="bg-gradient-to-br from-primary to-primary/80 px-6 py-6">
+                <div className="px-6 py-5 border-b border-border">
                   <div className="flex items-center gap-3 mb-4">
-                    <div className={`h-12 w-12 rounded-2xl flex items-center justify-center text-sm font-bold text-primary-foreground ${getAvatarColor(selectedPartner.partner.name)}`}>
+                    <div className={`h-11 w-11 rounded-2xl flex items-center justify-center text-sm font-bold text-primary-foreground shrink-0 ${getAvatarColor(selectedPartner.partner.name)}`}>
                       {getInitials(selectedPartner.partner.name)}
                     </div>
                     <div>
-                      <p className="font-bold text-primary-foreground">{selectedPartner.partner.name}</p>
-                      <p className="text-xs text-primary-foreground/50">@{selectedPartner.partner.username}</p>
+                      <p className="font-bold text-foreground leading-tight">{selectedPartner.partner.name}</p>
+                      <p className="text-xs text-muted-foreground">@{selectedPartner.partner.username}</p>
                     </div>
+                    <span className={`ml-auto text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
+                      selectedPartner.partner.is_first_login ? 'bg-chart-3/10 text-chart-3' : 'bg-secondary/10 text-secondary'
+                    }`}>
+                      {selectedPartner.partner.is_first_login ? 'Pending' : 'Active'}
+                    </span>
                   </div>
-                  <div className="grid grid-cols-3 gap-3">
+                  <div className="grid grid-cols-2 gap-2">
                     {[
                       { label: 'Users',     value: selectedPartner.users.length },
                       { label: 'Campaigns', value: selectedPartner.campaign_count },
-                      { label: 'Status',    value: selectedPartner.partner.is_first_login ? 'Pending' : 'Active' },
                     ].map(({ label, value }) => (
-                      <div key={label} className="bg-primary-foreground/10 rounded-xl p-3 text-center">
-                        <p className="text-base font-bold text-primary-foreground">{value}</p>
-                        <p className="text-[10px] text-primary-foreground/40">{label}</p>
+                      <div key={label} className="bg-muted/50 rounded-xl p-3 text-center">
+                        <p className="text-base font-bold text-foreground tabular-nums">{value}</p>
+                        <p className="text-[10px] text-muted-foreground font-medium">{label}</p>
                       </div>
                     ))}
                   </div>

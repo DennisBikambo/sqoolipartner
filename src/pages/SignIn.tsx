@@ -24,8 +24,7 @@ import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { HeroHeader } from '../components/layout/HeroHeader';
 import { useAuth } from '../hooks/useAuth';
-import { useMutation as useConvexMutation } from 'convex/react';
-import { api } from '../../convex/_generated/api';
+import { authClient } from '../lib/auth-client';
 
 export default function SignIn() {
   const { user } = useAuth();
@@ -34,10 +33,6 @@ export default function SignIn() {
   const [touchedFields, setTouchedFields] = React.useState<Set<keyof LoginFormData>>(new Set());
   const [errors, setErrors] = React.useState<LoginValidationErrors>({});
   const navigate = useNavigate();
-
-  // Convex mutations
-  const loginMutation = useConvexMutation(api.user.login);
-  const createSessionMutation = useConvexMutation(api.session.createSession);
 
   const [loginData, setLoginData] = React.useState<LoginFormData>({
     email: '',
@@ -74,100 +69,49 @@ export default function SignIn() {
   };
 
   const handleSubmit = async () => {
-      const allFields = new Set(Object.keys(loginData) as (keyof LoginFormData)[]);
-      setTouchedFields(allFields);
+    const allFields = new Set(Object.keys(loginData) as (keyof LoginFormData)[]);
+    setTouchedFields(allFields);
 
-      const newErrors = validateLoginData(loginData);
-      setErrors(newErrors);
+    const newErrors = validateLoginData(loginData);
+    setErrors(newErrors);
 
-      if (Object.keys(newErrors).length > 0) {
-        toast.error('Please correct the errors above to continue');
+    if (Object.keys(newErrors).length > 0) {
+      toast.error('Please correct the errors above to continue');
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const { data, error } = await authClient.signIn.email({
+        email: loginData.email,
+        password: loginData.password,
+      });
+
+      if (error) {
+        const msg = error.message || 'The email or password you entered is incorrect';
+        if (msg.toLowerCase().includes('password') || msg.toLowerCase().includes('incorrect')) {
+          setLoginData(prev => ({ ...prev, password: '' }));
+        }
+        toast.error(msg);
         return;
       }
 
-      setIsLoading(true);
-
-      try {
-        let result;
-        let sessionToken: string | undefined;
-        // Convex user login using hooks
-        try {
-          const loginResponse = await loginMutation({
-            email: loginData.email,
-            password: loginData.password,
-          });
-
-          if (!loginResponse.user) {
-            throw new Error('Invalid email or password');
-          }
-
-          if (!loginResponse.user.is_account_activated) {
-            throw new Error('Your account needs activation. Please contact your administrator');
-          }
-
-          const sessionResponse = await createSessionMutation({
-            user_id: loginResponse.user._id,
-          });
-
-          sessionToken = sessionResponse.token;
-
-          result = {
-            success: true,
-            message: 'Login successful',
-          };
-        } catch (error: unknown) {
-          let message = 'An unexpected error occurred. Please try again';
-
-          if (
-            error &&
-            typeof error === 'object' &&
-            'message' in error &&
-            typeof (error as { message?: unknown }).message === 'string'
-          ) {
-            const errorMsg = (error as { message: string }).message;
-
-            // Transform backend error messages to user-friendly ones
-            if (errorMsg.includes('Invalid email or password')) {
-              message = 'The email or password you entered is incorrect';
-            } else if (errorMsg.includes('Account not activated') || errorMsg.includes('not activated')) {
-              message = 'Your account needs activation. Please contact your administrator';
-            } else {
-              message = errorMsg;
-            }
-
-            // Clear password field for password-related errors
-            if (message.includes('password') || message.includes('incorrect')) {
-              setLoginData(prev => ({ ...prev, password: '' }));
-            }
-          }
-
-          result = {
-            success: false,
-            message,
-          };
-        }
-
-        if (!result?.success) {
-          toast.error(result?.message || 'The email or password you entered is incorrect');
-          return;
-        }
-
-        toast.success('Login successful! 🎉');
-
-        // Store the Convex session token in cookies if using Convex login
-        if (typeof sessionToken === 'string') {
-          document.cookie = `convex_session=${sessionToken}; path=/; max-age=${2 * 60 * 60}; SameSite=Lax`;
-        }
-        
-        navigate('/dashboard');
-        window.location.reload(); 
-      } catch (error) {
-        console.error('Login error:', error);
-        toast.error('An unexpected error occurred. Please try again');
-      } finally {
-        setIsLoading(false);
+      // 2FA required — redirect to verification page
+      if ((data as { twoFactorRedirect?: boolean })?.twoFactorRedirect) {
+        navigate('/verify-2fa');
+        return;
       }
-    };
+
+      toast.success('Login successful!');
+      navigate('/dashboard');
+    } catch (err) {
+      console.error('Login error:', err);
+      toast.error('An unexpected error occurred. Please try again');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && isFormValid() && !isLoading) {

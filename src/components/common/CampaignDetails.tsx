@@ -168,16 +168,20 @@ export function CampaignDetailDialog({
   const chartData = useMemo(() => {
     if (!revenueLogs || revenueLogs.length === 0) return [];
     const byDate: Record<string, number> = {};
+    const dateTimestamps: Record<string, number> = {};
     revenueLogs.forEach((log) => {
       const d = new Date(log.split_timestamp).toLocaleDateString("en-US", {
         month: "short",
         day: "numeric",
       });
       byDate[d] = (byDate[d] || 0) + log.amount;
+      if (!dateTimestamps[d] || log.split_timestamp < dateTimestamps[d]) {
+        dateTimestamps[d] = log.split_timestamp;
+      }
     });
     return Object.entries(byDate)
       .map(([date, amount]) => ({ date, amount }))
-      .sort((a, b) => new Date(a.date + " 2024").getTime() - new Date(b.date + " 2024").getTime());
+      .sort((a, b) => dateTimestamps[a.date] - dateTimestamps[b.date]);
   }, [revenueLogs]);
 
   const cumulativeEarnings = useMemo(

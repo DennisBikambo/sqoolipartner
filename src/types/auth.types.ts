@@ -52,6 +52,7 @@ export interface ConvexUser {
   permission_ids: Id<"permissions">[];
   extension?: string;
   avatar_url?: string;
+  better_auth_id?: string;
   is_active: boolean;
   is_first_login: boolean;
   is_account_activated: boolean;

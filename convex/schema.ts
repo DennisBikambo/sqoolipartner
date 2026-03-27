@@ -26,7 +26,8 @@ export default defineSchema({
   users: defineTable({
     partner_id: v.id("partners"),
     email: v.string(),
-    password_hash: v.string(),
+    password_hash: v.optional(v.string()), // kept for backward compat during migration; new users use Better Auth
+    better_auth_id: v.optional(v.string()), // Better Auth user ID (links to BA's user table)
     name: v.string(),
     phone: v.optional(v.string()),
     avatar_url: v.optional(v.string()),
@@ -40,7 +41,7 @@ export default defineSchema({
       v.literal("super_agent"),
       v.literal("master_agent"),
       v.literal("merchant_admin")
-    ), 
+    ),
     permission_ids: v.array(v.id("permissions")),
     is_active: v.boolean(),
     is_account_activated: v.boolean(),
@@ -51,7 +52,8 @@ export default defineSchema({
     .index("by_email", ["email"])
     .index("by_partner_id", ["partner_id"])
     .index("by_permission_ids", ["permission_ids"])
-    .index("by_role", ["role"]),
+    .index("by_role", ["role"])
+    .index("by_better_auth_id", ["better_auth_id"]),
   
   /**
    * PERMISSIONS TABLE

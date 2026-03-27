@@ -317,10 +317,12 @@ export default function Wallet({
   const isActive = displayWallet != null && displayWallet.is_setup_complete === true;
 
   // ── Skeleton ──────────────────────────────────────────────────────────────
-  // Show skeleton only while the query is still in-flight (wallet === undefined).
-  // wallet === null means "loaded, no wallet exists" → fall through to show the activate card.
+  // Show skeleton only while auth/partner is resolving.
+  // wallet === undefined (query in-flight) or wallet === null (no wallet) both
+  // fall through to render the card — this avoids a skeleton flash when no
+  // wallet is set up (e.g. after skipping wallet setup in onboarding).
 
-  if (authLoading || !partner || wallet === undefined) {
+  if (authLoading || !partner) {
     if (variant === "vertical") {
       return (
         <div style={{ borderRadius: "20px", overflow: "hidden", boxShadow: "0 4px 20px rgba(94,122,224,0.25)" }}>

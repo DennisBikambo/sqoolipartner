@@ -4,11 +4,9 @@ import { v } from "convex/values";
 
 function generateSessionToken(length = 64): string {
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-  let token = "";
-  for (let i = 0; i < length; i++) {
-    token += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return token;
+  const bytes = new Uint8Array(length);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes).map((b) => chars[b % chars.length]).join("");
 }
 
 /**
@@ -67,12 +65,10 @@ export const deleteSession = mutation(async (ctx, { token }: { token: string }) 
     .unique();
 
   if (!session) {
-    console.log("⚠️ No session found for token:", token);
     return { success: false, message: "Session not found" };
   }
 
   await ctx.db.delete(session._id);
-  console.log("✅ Session deleted:", session._id);
 
   return { success: true };
 });

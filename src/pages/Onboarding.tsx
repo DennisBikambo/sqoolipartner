@@ -1,4 +1,6 @@
 import { useReducer, useEffect, useCallback, useRef } from "react";
+import { useNavigate } from 'react-router-dom';
+import { authClient } from '../lib/auth-client';
 import { motion } from "framer-motion";
 import { Check, ChevronRight } from "lucide-react";
 import { Button } from "../components/ui/button";
@@ -7,13 +9,11 @@ import { isConvexUser } from "../types/auth.types";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
-import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { DashboardLayout } from "../components/layout/DashboardLayout";
 import { WalletSetupDialog } from "../components/common/WalletSetUp";
 import CreateCampaignWizard from "../components/common/CreateCampaign";
 import AddUserDialog from "../components/common/AddUserDialog";
-import { TwoFactorModal } from "../components/common/TwoFactorModal";
 import { SocialMediaModal } from "../components/common/SocialMediaModal";
 
 // ─── Step config ─────────────────────────────────────────────────────────────
@@ -103,8 +103,9 @@ function reducer(state: OnboardingState, action: OnboardingAction): OnboardingSt
 
 export default function OnboardingPage() {
   const { partner, user } = useAuth();
-  const navigate = useNavigate();
   const completeOnboarding = useMutation(api.partner.completeOnboarding);
+  const navigate = useNavigate();
+  const { data: session } = authClient.useSession();
 
   const wallet = useQuery(
     api.wallet.getWalletByPartner,
@@ -141,20 +142,29 @@ export default function OnboardingPage() {
     }
   }, [campaigns]);
 
-  // When all done → call mutation + navigate (guarded to fire exactly once)
+  // Auto-complete 2FA step (index 3) when user enables 2FA via /setup-2fa
+  useEffect(() => {
+    const twoFactorEnabled = (session?.user as { twoFactorEnabled?: boolean })?.twoFactorEnabled;
+    if (twoFactorEnabled && !state.completed[3]) {
+      dispatch({ type: "COMPLETE_STEP", index: 3 });
+    }
+  }, [session, state.completed]);
+
+  // When all done → call mutation (guarded to fire exactly once).
+  // After the mutation sets is_first_login = false, ProtectedRoute detects
+  // !isFirstLogin && pathname === '/onboarding' and redirects to /dashboard
+  // automatically — no manual navigate or page reload needed.
   const handleAllDone = useCallback(async () => {
     if (completionFired.current) return;
     if (!partner?._id || !user || !isConvexUser(user)) return;
     completionFired.current = true;
     try {
       await completeOnboarding({ partnerId: partner._id, userId: user._id });
-      navigate("/dashboard");
-      window.location.reload();
     } catch {
       completionFired.current = false; // allow retry
       toast.error("Failed to complete onboarding. Please try again.");
     }
-  }, [partner, user, completeOnboarding, navigate]);
+  }, [partner, user, completeOnboarding]);
 
   useEffect(() => {
     if (state.completed.every(Boolean)) {
@@ -164,11 +174,16 @@ export default function OnboardingPage() {
 
   const statuses = computeStatuses(state.completed);
 
-  const handleGo = (id: StepId) => dispatch({ type: "OPEN_MODAL", id });
+  const handleGo = (id: StepId) => {
+    if (id === '2fa') {
+      navigate('/setup-2fa?from=onboarding');
+      return;
+    }
+    dispatch({ type: "OPEN_MODAL", id });
+  };
   const handleSkip = (index: number) => dispatch({ type: "COMPLETE_STEP", index });
   const handleCloseModal = () => dispatch({ type: "CLOSE_MODAL" });
 
-  const handleStep4Complete = () => dispatch({ type: "COMPLETE_STEP", index: 3 });
   const handleStep5Complete = () => dispatch({ type: "COMPLETE_STEP", index: 4 });
 
   return (
@@ -316,15 +331,6 @@ export default function OnboardingPage() {
           partnerIdOverride={partner._id as Id<"partners">}
         />
       )}
-
-      {/* Step 4: 2FA */}
-      <TwoFactorModal
-        open={state.openModal === "2fa"}
-        onClose={handleCloseModal}
-        onComplete={handleStep4Complete}
-        defaultEmail={user?.email ?? ""}
-        defaultPhone={user?.phone ?? ""}
-      />
 
       {/* Step 5: Social Media */}
       <SocialMediaModal

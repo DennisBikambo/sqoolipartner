@@ -7,6 +7,8 @@ import SignIn from './pages/SignIn'
 import NotFound from './components/common/PageNotFound'
 import { ProtectedRoute } from './components/Protected'
 import OnboardingPage from './pages/Onboarding'
+import Verify2FA from './pages/Verify2FA'
+import Setup2FA from './pages/Setup2FA'
 
 
 
@@ -15,6 +17,8 @@ function App() {
     {path:"/", element:<Hero />},
     {path:'signIn', element:<SignIn />},
     // {path:'signUp',element:<SignUp />},
+    {path:'verify-2fa', element:<Verify2FA />},
+    {path:'setup-2fa', element:<ProtectedRoute><Setup2FA /></ProtectedRoute>},
     {path:'onboarding', element:<ProtectedRoute><OnboardingPage /></ProtectedRoute>},
     {path:'dashboard', element:<ProtectedRoute><DashboardPage /></ProtectedRoute>},
     {path: '*', element: <NotFound />}
