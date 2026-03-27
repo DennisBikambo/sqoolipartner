@@ -3,6 +3,7 @@ import { useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
+import { isConvexUser } from '../types/auth.types';
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -21,13 +22,21 @@ export function ProtectedRoute({ children }: ProtectedRouteProps): ReactElement 
         return;
       }
 
-      // 2️⃣ First-time users should *always* be on onboarding
-      if (isFirstLogin && location.pathname !== '/onboarding') {
+      const isPartnerAdmin = user && isConvexUser(user) && user.role === 'partner_admin';
+
+      // 2️⃣ Partner admins on first login go through onboarding
+      if (isFirstLogin && isPartnerAdmin && location.pathname !== '/onboarding') {
         navigate('/onboarding');
         return;
       }
 
-      // 3️⃣ Completed onboarding should not revisit onboarding
+      // 3️⃣ Non-partner-admin first-logins skip onboarding entirely
+      if (isFirstLogin && !isPartnerAdmin && location.pathname === '/onboarding') {
+        navigate('/dashboard');
+        return;
+      }
+
+      // 4️⃣ Completed onboarding should not revisit onboarding
       if (!isFirstLogin && location.pathname === '/onboarding') {
         navigate('/dashboard');
         return;

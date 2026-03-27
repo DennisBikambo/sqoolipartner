@@ -1,9 +1,7 @@
 import { Dialog, DialogContent } from "../ui/dialog";
-import { Button } from "../ui/button";
 import {
   Copy,
   Trash2,
-  MessageCircle,
   TrendingUp,
   X,
   Eye,
@@ -24,7 +22,7 @@ import { useQuery, useMutation } from "convex/react";
 import { useAuth } from "../../hooks/useAuth";
 import { ConfirmDialog } from "./ConfirmationDialog";
 import { CampaignAssets } from "./CampaignAssets";
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import {
   Line,
   LineChart as RechartsLineChart,
@@ -44,6 +42,7 @@ import {
   downloadPosterAsPdf,
 } from "../../utils/posterUtils";
 import { generateQRCode } from "../../services/qrCodeService";
+import { uploadToCloudinary } from "../../services/cloudinaryUpload";
 
 // ── Interfaces ────────────────────────────────────────────────────────────────
 
@@ -143,6 +142,12 @@ export function CampaignDetailDialog({
   const updateCampaignStatus = useMutation(api.campaign.updateCampaignStatus);
   const activateCampaign     = useMutation(api.campaign.activateCampaign);
   const deactivateCampaign   = useMutation(api.campaign.deactivateCampaign);
+  const saveAsset            = useMutation(api.assets.saveAsset);
+
+  const existingAssets = useQuery(
+    api.assets.getAssetsByCampaign,
+    campaign ? { campaign_id: campaign._id } : "skip"
+  );
 
   // ── Local state ────────────────────────────────────────────────────────────
 
@@ -153,6 +158,10 @@ export function CampaignDetailDialog({
   const [qrDataUrl, setQrDataUrl]           = useState<string | null>(null);
   const [posterGenerating, setPosterGenerating] = useState(false);
   const [copied, setCopied]                 = useState(false);
+
+  // Tracks which campaign we've started (or completed) asset generation for,
+  // so we never re-generate when Convex reactively updates existingAssets.
+  const generationRef = useRef<string | null>(null);
 
   // ── Chart data ─────────────────────────────────────────────────────────────
 
@@ -178,28 +187,81 @@ export function CampaignDetailDialog({
 
   // ── Effects ────────────────────────────────────────────────────────────────
 
+  // Reset when switching campaigns
+  useEffect(() => {
+    generationRef.current = null;
+    setPosterDataUrl(null);
+    setQrDataUrl(null);
+    setPosterGenerating(false);
+  }, [campaign?._id]);
+
+  // Cache-first asset loading: use DB assets when available, generate only what's missing
   useEffect(() => {
     if (!open || !campaign || !program) return;
-    if (posterDataUrl) return;
+    if (existingAssets === undefined) return; // still loading from DB
+
+    // Already started (or completed) for this campaign — don't re-trigger
+    if (generationRef.current === campaign._id) return;
+
+    const cachedFlyer = existingAssets.find((a) => a.type === "flyer" && a.url);
+    const cachedQr    = existingAssets.find((a) => a.type === "qr_code" && a.content);
+
+    // Apply cached values immediately (no generation needed)
+    if (cachedFlyer?.url)    setPosterDataUrl(cachedFlyer.url);
+    if (cachedQr?.content)   setQrDataUrl(cachedQr.content);
+
+    const needFlyer = !cachedFlyer;
+    const needQr    = !cachedQr;
+
+    if (!needFlyer && !needQr) return; // both cached — done
+
+    // Mark as started so reactive DB updates don't re-trigger this
+    generationRef.current = campaign._id;
 
     let cancelled = false;
-    setPosterGenerating(true);
+    if (needFlyer) setPosterGenerating(true);
 
     (async () => {
       try {
-        const qr = await generateQRCode("https://sqooli.com", {
-          width: 200,
-          errorCorrectionLevel: "H",
-        });
-        if (!cancelled) setQrDataUrl(qr);
+        // ── QR code ──────────────────────────────────────────────────────────
+        let qr = cachedQr?.content ?? null;
+        if (needQr) {
+          qr = await generateQRCode("https://sqooli.com", { width: 200, errorCorrectionLevel: "H" });
+          if (!cancelled && qr) {
+            setQrDataUrl(qr);
+            // Persist QR as content (small data URL — fits comfortably in Convex)
+            saveAsset({ campaign_id: campaign._id, type: "qr_code", content: qr }).catch(() => {});
+          }
+        }
 
-        const url = await generateCampaignPosterDataUrl({
-          campaignName: campaign.name,
-          programName:  program.name,
-          promoCode:    campaign.promo_code ?? "",
-          qrCodeDataUrl: qr,
-        });
-        if (!cancelled) setPosterDataUrl(url);
+        // ── Poster ───────────────────────────────────────────────────────────
+        if (needFlyer) {
+          const dataUrl = await generateCampaignPosterDataUrl({
+            campaignName:  campaign.name,
+            programName:   program.name,
+            promoCode:     campaign.promo_code ?? "",
+            qrCodeDataUrl: qr ?? undefined,
+          });
+
+          if (!cancelled) {
+            // Show the data URL immediately while uploading
+            setPosterDataUrl(dataUrl);
+
+            // Upload to Cloudinary and save the CDN URL
+            uploadToCloudinary(dataUrl, {
+              folder:   "sqooli/campaign-posters",
+              publicId: `poster_${campaign._id}`,
+            })
+              .then((cloudUrl) => {
+                if (!cancelled) setPosterDataUrl(cloudUrl);
+                return saveAsset({ campaign_id: campaign._id, type: "flyer", url: cloudUrl });
+              })
+              .catch(() => {
+                // Upload failed — poster is already visible in memory this session.
+                // Next session will regenerate (nothing persisted).
+              });
+          }
+        }
       } catch {
         // non-fatal
       } finally {
@@ -208,12 +270,7 @@ export function CampaignDetailDialog({
     })();
 
     return () => { cancelled = true; };
-  }, [open, campaign?._id, program?._id]);
-
-  useEffect(() => {
-    setPosterDataUrl(null);
-    setQrDataUrl(null);
-  }, [campaign?._id]);
+  }, [open, campaign?._id, program?._id, existingAssets]);
 
   // ── Guard ──────────────────────────────────────────────────────────────────
 
@@ -347,14 +404,12 @@ export function CampaignDetailDialog({
                 {campaign.name}
               </span>
             </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-6 w-6 rounded-full flex-shrink-0"
+            <button
               onClick={onClose}
+              className="h-6 w-6 rounded-full flex items-center justify-center text-muted-foreground hover:bg-foreground hover:text-background transition-all duration-150 active:scale-95 flex-shrink-0"
             >
               <X className="h-3.5 w-3.5" />
-            </Button>
+            </button>
           </div>
 
           {/* ── Two-panel body ── */}
@@ -422,149 +477,157 @@ export function CampaignDetailDialog({
 
               {/* ── Action buttons ── */}
 
-              {/* Share + Copy row (active / inactive) */}
+              {/* Share via WhatsApp — solid WhatsApp green */}
               {(campaign.status === "active" || campaign.status === "inactive") && (
                 <button
                   onClick={handleShareWhatsApp}
-                  className="w-full flex items-center justify-center gap-2 bg-primary text-primary-foreground rounded-lg py-2 text-xs font-semibold mb-2 hover:bg-primary/90 transition-colors"
+                  className="w-full flex items-center justify-center gap-2 rounded-lg py-2 text-xs font-semibold mb-2 transition-all duration-150 shadow-sm active:scale-[0.98]"
+                  style={{ background: "#25D366", color: "#fff" }}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = "#1aad54")}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = "#25D366")}
                 >
-                  <MessageCircle className="h-3.5 w-3.5" />
-                  Share via WhatsApp
-                  <svg className="h-3.5 w-3.5 fill-current" viewBox="0 0 24 24">
+                  <svg className="h-3.5 w-3.5 fill-white flex-shrink-0" viewBox="0 0 24 24">
                     <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
                     <path d="M11.99 0C5.373 0 0 5.373 0 12c0 2.123.553 4.112 1.522 5.843L.057 23.997l6.304-1.654A11.94 11.94 0 0011.99 24C18.607 24 24 18.627 24 12S18.607 0 11.99 0zm.01 21.818a9.818 9.818 0 01-5.007-1.37l-.36-.213-3.72.976.994-3.633-.233-.372A9.799 9.799 0 012.18 12c0-5.42 4.41-9.818 9.82-9.818 5.41 0 9.82 4.398 9.82 9.818S17.41 21.818 12 21.818z"/>
                   </svg>
+                  Share via WhatsApp
                 </button>
               )}
 
+              {/* Copy code + Deactivate row */}
               {(campaign.status === "active" || campaign.status === "inactive") && (
                 <div className="flex gap-2 mb-2">
+                  {/* Copy — outlined, turns solid primary on hover */}
                   <button
                     onClick={handleCopy}
-                    className="flex-1 flex items-center justify-center gap-1.5 bg-muted text-foreground rounded-lg py-1.5 text-xs font-medium hover:bg-muted/80 transition-colors border border-border"
+                    className={`flex-1 flex items-center justify-center gap-1.5 rounded-lg py-1.5 text-xs font-medium border transition-all duration-150 active:scale-[0.98] ${
+                      copied
+                        ? "bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-700"
+                        : "bg-background text-foreground border-border hover:bg-primary hover:text-primary-foreground hover:border-primary"
+                    }`}
                   >
                     {copied ? (
-                      <CheckCircle className="h-3.5 w-3.5 text-chart-2" />
+                      <CheckCircle className="h-3.5 w-3.5 flex-shrink-0" />
                     ) : (
-                      <Copy className="h-3.5 w-3.5" />
+                      <Copy className="h-3.5 w-3.5 flex-shrink-0" />
                     )}
                     {copied ? "Copied!" : "Copy Code"}
                   </button>
+
+                  {/* Deactivate — red outlined, fills solid red on hover */}
                   {campaign.status === "active" && (
                     <button
                       onClick={handleDeactivate}
-                      className="flex-1 flex items-center justify-center gap-1.5 bg-destructive/10 text-destructive rounded-lg py-1.5 text-xs font-medium hover:bg-destructive/20 transition-colors border border-destructive/20"
+                      className="flex-1 flex items-center justify-center gap-1.5 rounded-lg py-1.5 text-xs font-medium border border-destructive/40 text-destructive bg-background hover:bg-destructive hover:text-white hover:border-destructive transition-all duration-150 active:scale-[0.98]"
                     >
-                      <XCircle className="h-3.5 w-3.5" />
+                      <XCircle className="h-3.5 w-3.5 flex-shrink-0" />
                       Deactivate
                     </button>
                   )}
                 </div>
               )}
 
-              {/* Mark expired (active only) */}
+              {/* Mark as Expired — ghost danger, fills on hover */}
               {campaign.status === "active" && (
                 <button
                   onClick={() => setShowConfirm(true)}
-                  className="w-full flex items-center justify-center gap-1.5 bg-destructive/10 text-destructive rounded-lg py-1.5 text-xs font-medium hover:bg-destructive/20 transition-colors border border-destructive/20 mb-2"
+                  className="w-full flex items-center justify-center gap-1.5 rounded-lg py-1.5 text-xs font-medium border border-destructive/30 text-destructive bg-background hover:bg-destructive hover:text-white hover:border-destructive transition-all duration-150 active:scale-[0.98] mb-2"
                 >
-                  <Trash2 className="h-3.5 w-3.5" />
+                  <Trash2 className="h-3.5 w-3.5 flex-shrink-0" />
                   Mark as Expired
                 </button>
               )}
 
-              {/* Activate (inactive) */}
+              {/* Activate (inactive) — solid primary, darker on hover */}
               {campaign.status === "inactive" && (
                 <button
                   onClick={handleActivate}
-                  className="w-full flex items-center justify-center gap-1.5 bg-primary text-primary-foreground rounded-lg py-1.5 text-xs font-semibold hover:bg-primary/90 transition-colors mb-2"
+                  className="w-full flex items-center justify-center gap-1.5 bg-primary text-primary-foreground rounded-lg py-1.5 text-xs font-semibold hover:bg-primary/80 active:bg-primary/70 transition-all duration-150 shadow-sm active:scale-[0.98] mb-2"
                 >
-                  <Eye className="h-3.5 w-3.5" />
+                  <Eye className="h-3.5 w-3.5 flex-shrink-0" />
                   Activate Campaign
                 </button>
               )}
 
-              {/* Approve (pending, admin-only) */}
+              {/* Approve (pending, admin-only) — solid primary */}
               {campaign.status === "pending" && isAdmin && (
                 <button
                   onClick={handleActivate}
-                  className="w-full flex items-center justify-center gap-1.5 bg-primary text-primary-foreground rounded-lg py-1.5 text-xs font-semibold hover:bg-primary/90 transition-colors mb-2"
+                  className="w-full flex items-center justify-center gap-1.5 bg-primary text-primary-foreground rounded-lg py-1.5 text-xs font-semibold hover:bg-primary/80 active:bg-primary/70 transition-all duration-150 shadow-sm active:scale-[0.98] mb-2"
                 >
-                  <CheckCircle className="h-3.5 w-3.5" />
+                  <CheckCircle className="h-3.5 w-3.5 flex-shrink-0" />
                   Approve Campaign
                 </button>
               )}
+
+              {/* Pending notice for non-admins */}
               {campaign.status === "pending" && !isAdmin && (
-                <div className="flex items-center gap-1.5 bg-primary/5 border border-primary/15 rounded-lg px-3 py-2 mb-2">
+                <div className="flex items-start gap-2 bg-primary/5 border border-primary/20 rounded-lg px-3 py-2.5 mb-2">
+                  <Activity className="h-3.5 w-3.5 text-primary flex-shrink-0 mt-0.5" />
                   <span className="text-[10px] text-muted-foreground leading-snug">
                     Awaiting admin approval. Only partner admins can activate this campaign.
                   </span>
                 </div>
               )}
 
-              {/* Poster downloads */}
+              {/* Poster downloads — outlined, fills solid on hover */}
               {posterDataUrl && (
-                <div className="flex gap-2 mb-3">
+                <div className="flex gap-2 mb-2">
                   <button
                     onClick={() => downloadPosterAsPng(posterDataUrl, campaign.name)}
-                    className="flex-1 flex items-center justify-center gap-1 bg-muted text-foreground rounded-lg py-1.5 text-[10px] font-medium hover:bg-muted/80 transition-colors border border-border"
+                    className="flex-1 flex items-center justify-center gap-1 rounded-lg py-1.5 text-[10px] font-semibold border border-border bg-background text-muted-foreground hover:bg-foreground hover:text-background hover:border-foreground transition-all duration-150 active:scale-[0.98]"
                   >
-                    <Download className="h-3 w-3" /> PNG
+                    <Download className="h-3 w-3 flex-shrink-0" /> PNG
                   </button>
                   <button
                     onClick={() => downloadPosterAsPdf(posterDataUrl, campaign.name)}
-                    className="flex-1 flex items-center justify-center gap-1 bg-muted text-foreground rounded-lg py-1.5 text-[10px] font-medium hover:bg-muted/80 transition-colors border border-border"
+                    className="flex-1 flex items-center justify-center gap-1 rounded-lg py-1.5 text-[10px] font-semibold border border-border bg-background text-muted-foreground hover:bg-foreground hover:text-background hover:border-foreground transition-all duration-150 active:scale-[0.98]"
                   >
-                    <FileText className="h-3 w-3" /> PDF
+                    <FileText className="h-3 w-3 flex-shrink-0" /> PDF
                   </button>
                 </div>
               )}
 
-              {/* View Assets */}
+              {/* View Assets — outlined, fills solid on hover */}
               <button
                 onClick={() => setShowAssets(true)}
-                className="w-full flex items-center justify-center gap-1.5 bg-muted text-foreground rounded-lg py-1.5 text-xs font-medium hover:bg-muted/80 transition-colors border border-border mb-3"
+                className="w-full flex items-center justify-center gap-1.5 rounded-lg py-1.5 text-xs font-medium border border-border bg-background text-muted-foreground hover:bg-foreground hover:text-background hover:border-foreground transition-all duration-150 active:scale-[0.98] mb-3"
               >
-                <Eye className="h-3.5 w-3.5" />
+                <Eye className="h-3.5 w-3.5 flex-shrink-0" />
                 View Assets
               </button>
 
               {/* QR Code section (active only) */}
               {campaign.status === "active" && (
-                <div className="bg-background rounded-lg border border-border p-3 text-center">
+                <div className="bg-muted/40 rounded-lg border border-border p-3 text-center">
                   <p className="text-[11px] font-semibold text-foreground mb-2">Scan QR Code</p>
-                  <div className="w-[90px] h-[90px] mx-auto mb-2 border border-border rounded-md overflow-hidden flex items-center justify-center bg-white">
+                  <div className="w-[88px] h-[88px] mx-auto mb-2 border border-border rounded-md overflow-hidden flex items-center justify-center bg-white">
                     {qrDataUrl ? (
                       <img src={qrDataUrl} alt="QR code" className="w-full h-full object-cover" />
                     ) : (
                       <Skeleton className="w-full h-full" />
                     )}
                   </div>
-                  <p className="text-[11px] text-muted-foreground mb-2">
-                    Promocode: <span className="font-semibold text-foreground">{campaign.promo_code}</span>
+                  <p className="text-[11px] text-muted-foreground mb-3">
+                    Promocode:{" "}
+                    <span className="font-semibold text-foreground">{campaign.promo_code}</span>
                   </p>
                   <div className="flex justify-center gap-5">
                     {[
-                      {
-                        icon: <Share2 className="h-3.5 w-3.5" />,
-                        label: "Share",
-                        onClick: handleShareWhatsApp,
-                      },
-                      {
-                        icon: <Copy className="h-3.5 w-3.5" />,
-                        label: "Copy",
-                        onClick: handleCopy,
-                      },
+                      { icon: <Share2 className="h-3.5 w-3.5" />, label: "Share", onClick: handleShareWhatsApp },
+                      { icon: <Copy className="h-3.5 w-3.5" />,   label: "Copy",  onClick: handleCopy },
                     ].map((b) => (
                       <button
                         key={b.label}
                         onClick={b.onClick}
-                        className="flex flex-col items-center gap-1"
+                        className="flex flex-col items-center gap-1.5 group"
                       >
-                        <div className="w-7 h-7 rounded-full bg-foreground flex items-center justify-center text-background hover:opacity-80 transition-opacity">
+                        <div className="w-8 h-8 rounded-full bg-foreground text-background flex items-center justify-center transition-all duration-150 group-hover:bg-primary group-hover:scale-110 active:scale-95">
                           {b.icon}
                         </div>
-                        <span className="text-[9px] text-muted-foreground">{b.label}</span>
+                        <span className="text-[9px] text-muted-foreground group-hover:text-primary transition-colors">
+                          {b.label}
+                        </span>
                       </button>
                     ))}
                   </div>

@@ -13,6 +13,7 @@ import { Skeleton } from "../ui/skeleton";
 import { useConvexQuery } from "../../hooks/useConvexQuery";
 import { generateQRCode } from "../../services/qrCodeService";
 import { generateCampaignPosterDataUrl } from "../../utils/posterUtils";
+import { uploadToCloudinary } from "../../services/cloudinaryUpload";
 import type { CampaignSuccessData } from "./CampaignSuccessModal";
 
 interface WizardState {
@@ -44,6 +45,8 @@ export default function CreateCampaignWizard({
   onSuccess,
 }: CreateCampaignWizardProps) {
   const createCampaign = useMutation(api.campaign.createCampaign);
+  const saveAsset      = useMutation(api.assets.saveAsset);
+  const createChannel  = useMutation(api.channel.createChannel);
 
   const rawPrograms = useQuery(api.program.listPrograms);
   const rawChannels = useQuery(api.channel.getChannelsByPartner, { partnerId });
@@ -68,6 +71,10 @@ export default function CreateCampaignWizard({
   const [isSaving, setIsSaving] = useState(false);
   const [phase, setPhase] = useState<"idle" | "creating" | "poster">("idle");
   const [error, setError] = useState<string | null>(null);
+
+  // Inline channel creation (shown when no channels exist yet)
+  const [channelForm, setChannelForm] = useState({ name: "", description: "" });
+  const [creatingChannel, setCreatingChannel] = useState(false);
 
   // Load subchannels for selected channel
   const rawSubchannels = useQuery(
@@ -109,6 +116,26 @@ export default function CreateCampaignWizard({
       duration_end: selectedProgram.end_date,
     };
   }, [state.program_id, state.target_signups, programs]);
+
+  const handleCreateChannel = async () => {
+    if (!channelForm.name.trim()) return;
+    setCreatingChannel(true);
+    try {
+      const code = channelForm.name.trim().toUpperCase().replace(/\s+/g, "_").slice(0, 12);
+      await createChannel({
+        partnerId,
+        name: channelForm.name.trim(),
+        code,
+        description: channelForm.description.trim() || channelForm.name.trim(),
+      });
+      setChannelForm({ name: "", description: "" });
+      // rawChannels will reactively update — the useEffect auto-selects the new channel
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to create channel");
+    } finally {
+      setCreatingChannel(false);
+    }
+  };
 
   const resetWizard = () => {
     setState({
@@ -155,13 +182,14 @@ export default function CreateCampaignWizard({
         duration_end: calculations.duration_end,
       });
 
-      const { promoCode } = result as { campaignId: string; promoCode: string };
+      const { campaignId, promoCode } = result as { campaignId: string; promoCode: string };
 
       // Generate poster client-side
       setPhase("poster");
       let posterDataUrl: string | null = null;
+      let qrDataUrl: string | null = null;
       try {
-        const qrDataUrl = await generateQRCode("https://sqooli.com", { width: 300, errorCorrectionLevel: "H" });
+        qrDataUrl = await generateQRCode("https://sqooli.com", { width: 300, errorCorrectionLevel: "H" });
         posterDataUrl = await generateCampaignPosterDataUrl({
           campaignName: state.name,
           programName: selectedProgram?.name ?? "",
@@ -180,6 +208,22 @@ export default function CreateCampaignWizard({
         programName: selectedProgram?.name ?? "",
         posterDataUrl,
       });
+
+      // Background: persist assets so the detail view loads them from cache next time
+      if (campaignId) {
+        const cid = campaignId as import("../../../convex/_generated/dataModel").Id<"campaigns">;
+        if (qrDataUrl) {
+          saveAsset({ campaign_id: cid, type: "qr_code", content: qrDataUrl }).catch(() => {});
+        }
+        if (posterDataUrl) {
+          uploadToCloudinary(posterDataUrl, {
+            folder: "sqooli/campaign-posters",
+            publicId: `poster_${campaignId}`,
+          })
+            .then((cloudUrl) => saveAsset({ campaign_id: cid, type: "flyer", url: cloudUrl }))
+            .catch(() => {});
+        }
+      }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : String(err));
       setPhase("idle");
@@ -247,14 +291,51 @@ export default function CreateCampaignWizard({
           </div>
 
           {/* Channel + Sub-channel */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="channel" className="text-sm font-medium text-muted-foreground">
-                Channel
-              </Label>
-              {channelsLoading ? (
-                <Skeleton className="h-10 w-full rounded-lg" />
-              ) : (
+          {channelsLoading ? (
+            <Skeleton className="h-10 w-full rounded-lg" />
+          ) : channels && channels.length === 0 ? (
+            /* ── No channels yet: inline quick-create ── */
+            <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 space-y-3">
+              <div>
+                <p className="text-sm font-semibold text-foreground">Create a Channel First</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Campaigns need a channel to track where your audience comes from. Set one up quickly below.
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs font-medium text-foreground">Channel Name</Label>
+                <Input
+                  value={channelForm.name}
+                  onChange={(e) => setChannelForm((f) => ({ ...f, name: e.target.value }))}
+                  placeholder="e.g. WhatsApp, Radio, Facebook"
+                  className="h-9 text-sm"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs font-medium text-foreground">
+                  Description <span className="text-muted-foreground font-normal">(optional)</span>
+                </Label>
+                <Input
+                  value={channelForm.description}
+                  onChange={(e) => setChannelForm((f) => ({ ...f, description: e.target.value }))}
+                  placeholder="What is this channel for?"
+                  className="h-9 text-sm"
+                />
+              </div>
+              <button
+                onClick={handleCreateChannel}
+                disabled={!channelForm.name.trim() || creatingChannel}
+                className="w-full h-9 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-colors disabled:opacity-50"
+              >
+                {creatingChannel ? "Creating..." : "Create Channel & Continue"}
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="channel" className="text-sm font-medium text-muted-foreground">
+                  Channel
+                </Label>
                 <select
                   id="channel"
                   value={state.channel_id}
@@ -270,27 +351,27 @@ export default function CreateCampaignWizard({
                     <option key={c._id} value={c._id}>{c.name}</option>
                   ))}
                 </select>
-              )}
-            </div>
+              </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="subchannel" className="text-sm font-medium text-muted-foreground">
-                Sub-channel <span className="text-xs font-normal">(optional)</span>
-              </Label>
-              <select
-                id="subchannel"
-                value={state.subchannel_id}
-                onChange={(e) => setState((s) => ({ ...s, subchannel_id: e.target.value as Id<"subchannels"> }))}
-                className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm"
-                disabled={!state.channel_id || !rawSubchannels?.length}
-              >
-                <option value="">Select...</option>
-                {(rawSubchannels ?? []).map((sub) => (
-                  <option key={sub._id} value={sub._id}>{sub.name}</option>
-                ))}
-              </select>
+              <div className="space-y-2">
+                <Label htmlFor="subchannel" className="text-sm font-medium text-muted-foreground">
+                  Sub-channel <span className="text-xs font-normal">(optional)</span>
+                </Label>
+                <select
+                  id="subchannel"
+                  value={state.subchannel_id}
+                  onChange={(e) => setState((s) => ({ ...s, subchannel_id: e.target.value as Id<"subchannels"> }))}
+                  className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm"
+                  disabled={!state.channel_id || !rawSubchannels?.length}
+                >
+                  <option value="">Select...</option>
+                  {(rawSubchannels ?? []).map((sub) => (
+                    <option key={sub._id} value={sub._id}>{sub.name}</option>
+                  ))}
+                </select>
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Target Signups */}
           <div className="space-y-2">

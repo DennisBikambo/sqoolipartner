@@ -274,7 +274,7 @@ export default function CampaignSection() {
                   {t.label}
                   {campaigns && (
                     <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
-                      activeTab === t.key ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
+                      activeTab === t.key ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
                     }`}>
                       {campaigns.filter((c) => c.status === t.key).length}
                     </span>
@@ -327,15 +327,25 @@ export default function CampaignSection() {
                       const isActivating = activatingId === campaign._id;
                       const isDeactivating = deactivatingId === campaign._id;
 
+                      const statusDot: Record<string, string> = {
+                        active:   "bg-emerald-500",
+                        inactive: "bg-muted-foreground/40",
+                        expired:  "bg-amber-500",
+                        pending:  "bg-primary",
+                      };
+
                       return (
                         <div
                           key={campaign._id}
-                          className="flex items-center px-4 py-3 border-b border-border/40 hover:bg-muted/20 transition-colors min-w-[700px]"
+                          className="flex items-center px-4 py-3 border-b border-border/40 hover:bg-muted/30 transition-colors min-w-[700px] group"
                         >
                           {/* Campaign info */}
-                          <div className="w-48 pr-2">
-                            <p className="text-[10px] text-muted-foreground font-mono">{campaign.promo_code ?? "—"}</p>
-                            <p className="text-sm font-semibold text-foreground leading-snug truncate">{campaign.name}</p>
+                          <div className="w-48 pr-2 flex items-start gap-2">
+                            <span className={`mt-1.5 w-1.5 h-1.5 rounded-full flex-shrink-0 ${statusDot[campaign.status] ?? "bg-muted-foreground/40"}`} />
+                            <div className="min-w-0">
+                              <p className="text-[10px] text-muted-foreground font-mono">{campaign.promo_code ?? "—"}</p>
+                              <p className="text-sm font-semibold text-foreground leading-snug truncate">{campaign.name}</p>
+                            </div>
                           </div>
 
                           {/* Program */}
@@ -377,8 +387,9 @@ export default function CampaignSection() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-7 w-7 text-primary hover:text-primary hover:bg-primary/10"
+                              className="h-7 w-7 rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
                               onClick={() => { setSelectedCampaign(campaign); setIsDetailOpen(true); }}
+                              title="View details"
                             >
                               <Eye className="h-3.5 w-3.5" />
                             </Button>
@@ -387,7 +398,7 @@ export default function CampaignSection() {
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                className="h-7 text-xs text-muted-foreground hover:text-destructive px-2"
+                                className="h-7 text-xs px-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
                                 disabled={isDeactivating}
                                 onClick={() => handleDeactivate(campaign)}
                               >
@@ -399,7 +410,7 @@ export default function CampaignSection() {
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                className="h-7 text-xs text-primary hover:text-primary px-2"
+                                className="h-7 text-xs px-2 text-muted-foreground hover:bg-primary hover:text-primary-foreground transition-colors"
                                 disabled={isActivating}
                                 onClick={() => handleActivate(campaign)}
                               >
@@ -411,7 +422,7 @@ export default function CampaignSection() {
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                className="h-7 text-xs text-primary hover:text-primary px-2"
+                                className="h-7 text-xs px-2 text-muted-foreground hover:bg-emerald-600 hover:text-white transition-colors"
                                 disabled={isActivating}
                                 onClick={() => handleActivate(campaign)}
                               >

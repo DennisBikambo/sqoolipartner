@@ -193,11 +193,24 @@ export const activateCampaign = mutation({
     partner_id: v.id("partners"),
   },
   handler: async (ctx, args) => {
+    const campaign = await ctx.db.get(args.id);
+    if (!campaign) throw new Error("Campaign not found");
+
+    // Approving a pending campaign requires an admin role
+    if (campaign.status === "pending") {
+      const actor = await ctx.db.get(args.user_id);
+      if (!actor) throw new Error("User not found");
+      const adminRoles = ["super_admin", "partner_admin"];
+      if (!adminRoles.includes(actor.role)) {
+        throw new Error("Only partner admins can approve pending campaigns");
+      }
+    }
+
     await ctx.db.patch(args.id, { status: "active" });
     await ctx.runMutation(api.audit.createAuditLog, {
       user_id: args.user_id,
       partner_id: args.partner_id,
-      action: "campaign_activated",
+      action: campaign.status === "pending" ? "campaign_approved" : "campaign_activated",
       entity_type: "campaign",
       entity_id: args.id,
     });

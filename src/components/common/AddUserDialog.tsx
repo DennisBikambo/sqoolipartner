@@ -9,7 +9,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../../components/ui/select';
-import { Badge } from '../../components/ui/badge';
 import type { Id } from '../../../convex/_generated/dataModel';
 import { useAuth } from '../../hooks/useAuth';
 import { UserCredentialsDialog } from './UserCredentialsDialog';
@@ -30,11 +29,6 @@ type Role =
   | 'super_agent'
   | 'master_agent'
   | 'merchant_admin';
-
-const CATEGORY_LABELS: Record<string, string> = {
-  users: 'Users', campaigns: 'Campaigns', wallet: 'Wallet',
-  dashboard: 'Dashboard', settings: 'Settings', programs: 'Programs', all_access: 'All Access',
-};
 
 // ── Kenya Flag SVG ─────────────────────────────────────────────────────────────
 const KenyaFlag = () => (
@@ -73,12 +67,6 @@ export default function AddUserDialog({ open, onOpenChange, partnerIdOverride }:
   const createUser = useMutation(api.user.createUser);
 
   const matchedRole = roles?.find(r => r.name === role);
-  const permsByCategory = (matchedRole?.permissions ?? []).reduce((acc, p) => {
-    if (!p) return acc;
-    if (!acc[p.category]) acc[p.category] = [];
-    acc[p.category].push(p);
-    return acc;
-  }, {} as Record<string, Array<{ _id: Id<'permissions'>; name: string; category: string }>>);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -280,28 +268,6 @@ export default function AddUserDialog({ open, onOpenChange, partnerIdOverride }:
               </div>
             </div>
 
-            {/* Permissions preview */}
-            {matchedRole && Object.keys(permsByCategory).length > 0 ? (
-              <div className="mt-4 rounded-xl border border-border bg-muted/30 p-3 space-y-2">
-                <p className="text-[10px] font-bold text-foreground uppercase tracking-wide">Permissions</p>
-                {Object.entries(permsByCategory).map(([cat, perms]) => (
-                  <div key={cat}>
-                    <p className="text-[10px] text-muted-foreground mb-1.5">{CATEGORY_LABELS[cat] ?? cat}</p>
-                    <div className="flex flex-wrap gap-1">
-                      {perms.map(p => (
-                        <Badge key={p._id} variant="secondary" className="text-[10px] py-0 px-1.5">
-                          {p.name}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : matchedRole ? (
-              <p className="text-[11px] text-muted-foreground italic mt-3">No permissions configured for this role.</p>
-            ) : roles && roles.length > 0 ? (
-              <p className="text-[11px] text-muted-foreground italic mt-3">No role template found for "{role}"</p>
-            ) : null}
           </div>
 
           {/* Footer */}

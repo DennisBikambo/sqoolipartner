@@ -239,8 +239,9 @@ function InfoSection({
           <button
             onClick={onActivate}
             style={{
-              width: "100%", background: "#ef4444", color: "#fff", border: "none",
-              borderRadius: "10px", padding: "9px 0", fontSize: "12px", fontWeight: 600, cursor: "pointer",
+              alignSelf: "flex-start",
+              background: "#ef4444", color: "#fff", border: "none",
+              borderRadius: "10px", padding: "9px 18px", fontSize: "12px", fontWeight: 600, cursor: "pointer",
             }}
           >
             Activate Wallet
@@ -316,9 +317,10 @@ export default function Wallet({
   const isActive = displayWallet != null && displayWallet.is_setup_complete === true;
 
   // ── Skeleton ──────────────────────────────────────────────────────────────
-  // Show skeleton until we have a displayWallet (real doc or cached doc).
+  // Show skeleton only while the query is still in-flight (wallet === undefined).
+  // wallet === null means "loaded, no wallet exists" → fall through to show the activate card.
 
-  if (authLoading || !partner || displayWallet === undefined) {
+  if (authLoading || !partner || wallet === undefined) {
     if (variant === "vertical") {
       return (
         <div style={{ borderRadius: "20px", overflow: "hidden", boxShadow: "0 4px 20px rgba(94,122,224,0.25)" }}>
