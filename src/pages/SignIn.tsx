@@ -8,6 +8,7 @@ import type { LoginFormData, LoginValidationErrors } from '../types/auth.types';
 const validateLoginData = (data: LoginFormData): LoginValidationErrors => {
   const errors: LoginValidationErrors = {};
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  
   if (!data.email.trim()) {
     errors.email = 'Email is required';
   } else if (!emailRegex.test(data.email)) {
