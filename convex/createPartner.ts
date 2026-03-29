@@ -62,16 +62,29 @@ export const createPartnerOrganization = action({
     // Generate password and create Better Auth account for the admin user
     const adminPassword = generateRandomPassword(12);
     const auth = createAuth(ctx as any);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const baResult = await (auth.api.signUpEmail as any)({
-      body: {
-        email: args.admin_email,
-        password: adminPassword,
-        name: args.admin_name,
-      },
-    });
 
-    const better_auth_id: string = baResult?.user?.id ?? "";
+    let better_auth_id: string;
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const baResult = await (auth.api.signUpEmail as any)({
+        body: {
+          email: args.admin_email,
+          password: adminPassword,
+          name: args.admin_name,
+        },
+      });
+      better_auth_id = baResult?.user?.id ?? "";
+      if (!better_auth_id) {
+        throw new Error("Better Auth did not return a user ID");
+      }
+    } catch (err) {
+      // Roll back the partner record so the admin can retry cleanly
+      await ctx.runMutation(internal.createPartnerHelpers.deletePartner, {
+        partner_id: result.partnerId,
+      });
+      const msg = err instanceof Error ? err.message : String(err);
+      throw new Error(`Failed to create admin account: ${msg}`);
+    }
 
     // Insert the admin user record linked to Better Auth
     const userId = await ctx.runMutation(

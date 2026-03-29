@@ -5,6 +5,10 @@ import { toast } from 'sonner';
 import QRCode from 'qrcode';
 import { authClient } from '../lib/auth-client';
 import { DashboardLayout } from '../components/layout/DashboardLayout';
+import { useMutation } from 'convex/react';
+import { api } from '../../convex/_generated/api';
+import { useAuth } from '../hooks/useAuth';
+import { isConvexUser } from '../types/auth.types';
 
 type Step = 'password' | 'scan' | 'confirm' | 'backup';
 
@@ -21,6 +25,8 @@ export default function Setup2FA() {
   const navigate = useNavigate();
   const location = useLocation();
   const fromOnboarding = new URLSearchParams(location.search).get('from') === 'onboarding';
+  const { user, partner } = useAuth();
+  const completeOnboarding = useMutation(api.partner.completeOnboarding);
 
   const [step, setStep] = useState<Step>('password');
   const [password, setPassword] = useState('');
@@ -124,9 +130,16 @@ export default function Setup2FA() {
     toast.success('Setup key copied');
   };
 
-  const handleDone = () => {
+  const handleDone = async () => {
     toast.success('Two-factor authentication enabled!');
-    navigate(fromOnboarding ? '/onboarding' : '/dashboard');
+    if (fromOnboarding && partner?._id && user && isConvexUser(user)) {
+      try {
+        await completeOnboarding({ partnerId: partner._id, userId: user._id });
+      } catch {
+        // ignore — ProtectedRoute will still redirect correctly
+      }
+    }
+    navigate('/dashboard');
   };
 
   return (

@@ -58,6 +58,13 @@ export const createPartnerAndGetPermissions = internalMutation({
   },
 });
 
+export const deletePartner = internalMutation({
+  args: { partner_id: v.id("partners") },
+  handler: async (ctx, args) => {
+    await ctx.db.delete(args.partner_id);
+  },
+});
+
 export const insertPartnerAdminUser = internalMutation({
   args: {
     partner_id: v.id("partners"),

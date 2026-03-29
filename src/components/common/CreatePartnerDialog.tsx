@@ -6,6 +6,8 @@ import {
   Dialog,
   DialogContent,
   DialogClose,
+  DialogTitle,
+  DialogDescription,
 } from '../ui/dialog';
 import { Label } from '../ui/label';
 import { Input } from '../ui/input';
@@ -178,12 +180,12 @@ export default function CreatePartnerDialog({ open, onOpenChange }: CreatePartne
                 <Building2 className="h-5 w-5 text-primary-foreground" />
               </div>
               <div>
-                <h2 className="text-base font-bold text-primary-foreground leading-none">
+                <DialogTitle className="text-base font-bold text-primary-foreground leading-none">
                   Register Partner Organization
-                </h2>
-                <p className="text-xs text-primary-foreground/70 mt-0.5">
+                </DialogTitle>
+                <DialogDescription className="text-xs text-primary-foreground/70 mt-0.5">
                   Creates a complete partner account with login credentials
-                </p>
+                </DialogDescription>
               </div>
             </div>
             <DialogClose className="absolute top-4 right-4 p-1.5 rounded-md opacity-70 hover:opacity-100 transition-opacity text-primary-foreground [&_svg]:size-4">
