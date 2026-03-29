@@ -1,5 +1,5 @@
 import type { ReactNode, ReactElement } from "react";
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
@@ -13,13 +13,24 @@ export function ProtectedRoute({ children }: ProtectedRouteProps): ReactElement 
   const { user, loading, isFirstLogin } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const redirectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (!loading) {
-      // 1️⃣ Not logged in
+      // 1️⃣ Not logged in — debounce the redirect to tolerate transient null
+      //    sessions during 2FA session recreation (old session deleted, new created).
       if (!user) {
-        navigate('/signIn');
+        if (redirectTimerRef.current) return; // timer already pending
+        redirectTimerRef.current = setTimeout(() => {
+          redirectTimerRef.current = null;
+          navigate('/signIn');
+        }, 800);
         return;
+      }
+      // User is back — cancel any pending redirect
+      if (redirectTimerRef.current) {
+        clearTimeout(redirectTimerRef.current);
+        redirectTimerRef.current = null;
       }
 
       const isPartnerAdmin = user && isConvexUser(user) && user.role === 'partner_admin';
@@ -42,6 +53,12 @@ export function ProtectedRoute({ children }: ProtectedRouteProps): ReactElement 
         return;
       }
     }
+    return () => {
+      if (redirectTimerRef.current) {
+        clearTimeout(redirectTimerRef.current);
+        redirectTimerRef.current = null;
+      }
+    };
   }, [user, loading, isFirstLogin, navigate, location.pathname]);
 
   if (loading) {

@@ -106,6 +106,10 @@ export default function Setup2FA() {
         digitRefs.current[0]?.focus();
         return;
       }
+      // verifyTotp during setup recreates the session (deletes old, creates new).
+      // Explicitly fetch the new session to stabilise auth state before the
+      // ProtectedRoute can observe a transient null and redirect to /signIn.
+      await authClient.getSession({ query: { disableCookieCache: true } }).catch(() => {});
       setStep('backup');
     } catch {
       toast.error('Verification failed. Please try again.');

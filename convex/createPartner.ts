@@ -82,8 +82,12 @@ export const createPartnerOrganization = action({
       await ctx.runMutation(internal.createPartnerHelpers.deletePartner, {
         partner_id: result.partnerId,
       });
-      const msg = err instanceof Error ? err.message : String(err);
-      throw new Error(`Failed to create admin account: ${msg}`);
+      const raw = err instanceof Error ? err.message : String(err);
+      // Surface a clean, user-facing message for known Better Auth errors
+      if (raw.toLowerCase().includes("user already exists") || raw.toLowerCase().includes("email already")) {
+        throw new Error(`The email "${args.admin_email}" is already registered. Please use a different email address for the admin user.`);
+      }
+      throw new Error(`Could not create the admin account. Please try again or contact support if the issue persists.`);
     }
 
     // Insert the admin user record linked to Better Auth

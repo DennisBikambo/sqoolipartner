@@ -15,7 +15,9 @@ export const authClient = createAuthClient({
   baseURL: import.meta.env.VITE_CONVEX_SITE_URL as string,
   plugins: [
     convexClient(),
-    crossDomainClient(),
+    // disableCache prevents background /get-session calls from wiping stored cookies
+    // (including the 2FA state cookie) when there is no active session yet.
+    crossDomainClient({ disableCache: true }),
     twoFactorClient(),
   ],
 });
