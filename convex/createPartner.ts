@@ -112,6 +112,13 @@ export const createPartnerOrganization = action({
       loginUrl: process.env.SITE_URL ?? "https://sqooli.org",
     });
 
+    await ctx.runMutation(internal.systemLogs.logEvent, {
+      level: "info", source: "backend",
+      event_name: "partner.createPartnerOrganization",
+      status: "success",
+      details: JSON.stringify({ partner_id: result.partnerId, partner_name: args.partner_name, admin_email: args.admin_email }),
+    });
+
     return {
       success: true,
       message: "Partner organization created successfully",
@@ -254,6 +261,13 @@ export const updatePartner = mutation({
 
     await ctx.db.patch(partner_id, patchData);
 
+    await ctx.runMutation(internal.systemLogs.logEvent, {
+      level: "info", source: "backend",
+      event_name: "partner.updatePartner",
+      status: "success",
+      details: JSON.stringify({ partner_id, fields: Object.keys(patchData) }),
+    });
+
     return {
       success: true,
       message: "Partner updated successfully",
@@ -288,6 +302,13 @@ export const togglePartnerStatus = mutation({
         ctx.db.patch(user._id, { is_active: args.activate })
       )
     );
+
+    await ctx.runMutation(internal.systemLogs.logEvent, {
+      level: args.activate ? "info" : "warn", source: "backend",
+      event_name: "partner.togglePartnerStatus",
+      status: args.activate ? "success" : "warn",
+      details: JSON.stringify({ partner_id: args.partner_id, activate: args.activate, users_affected: users.length }),
+    });
 
     return {
       success: true,

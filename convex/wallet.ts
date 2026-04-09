@@ -2,6 +2,7 @@
 import {query} from "./_generated/server"
 import {v} from "convex/values"
 import { mutation } from "./_generated/server";
+import { internal } from "./_generated/api";
 
 
 
@@ -28,7 +29,8 @@ export const createWallet = mutation({
   handler: async (ctx, args) => {
     const now = new Date().toISOString();
     
-    return await ctx.db.insert("wallets", {
+    const start = Date.now();
+    const walletId = await ctx.db.insert("wallets", {
       account_number: args.account_number,
       partner_id: args.partner_id,
       user_id: args.user_id,
@@ -43,6 +45,15 @@ export const createWallet = mutation({
       created_at: now,
       is_setup_complete: true,
     });
+    await ctx.runMutation(internal.systemLogs.logEvent, {
+      user_id: String(args.user_id),
+      level: "info", source: "backend",
+      event_name: "wallet.createWallet",
+      status: "success",
+      duration_ms: Date.now() - start,
+      details: JSON.stringify({ walletId, partner_id: args.partner_id, method: args.withdrawal_method }),
+    });
+    return walletId;
   },
 });
 
@@ -95,10 +106,44 @@ export const updateWalletBalance = mutation({
     const newBalance = (wallet.balance || 0) + args.amount_to_add;
     const newLifetime = (wallet.lifetime_earnings || 0) + args.amount_to_add;
 
+    const start = Date.now();
+
+    // Anomaly: balance going negative
+    if (newBalance < 0) {
+      await ctx.runMutation(internal.systemLogs.logEvent, {
+        user_id: String(args.partner_id),
+        level: "error", source: "backend",
+        event_name: "anomaly.walletBalanceNegative",
+        status: "error",
+        message: `Wallet balance going negative: KES ${newBalance} after adjusting by KES ${args.amount_to_add}`,
+        details: JSON.stringify({ partner_id: args.partner_id, prev_balance: wallet.balance, adjustment: args.amount_to_add, new_balance: newBalance }),
+      });
+    }
+
+    // Anomaly: lifetime earnings less than balance
+    if (newLifetime < newBalance) {
+      await ctx.runMutation(internal.systemLogs.logEvent, {
+        user_id: String(args.partner_id),
+        level: "error", source: "backend",
+        event_name: "anomaly.lifetimeEarningsMismatch",
+        status: "error",
+        message: `Lifetime earnings KES ${newLifetime} < balance KES ${newBalance} — data inconsistency`,
+        details: JSON.stringify({ partner_id: args.partner_id, lifetime: newLifetime, balance: newBalance }),
+      });
+    }
+
     await ctx.db.patch(wallet._id, {
       balance: newBalance,
       lifetime_earnings: newLifetime,
       updated_at: new Date().toISOString(),
+    });
+    await ctx.runMutation(internal.systemLogs.logEvent, {
+      user_id: String(args.partner_id),
+      level: "info", source: "backend",
+      event_name: "wallet.updateWalletBalance",
+      status: "success",
+      duration_ms: Date.now() - start,
+      details: JSON.stringify({ partner_id: args.partner_id, amount_added: args.amount_to_add, new_balance: newBalance }),
     });
 
     return { success: true, new_balance: newBalance };
@@ -129,7 +174,7 @@ export const updateWallet = mutation({
   },
   handler: async (ctx, args) => {
     const wallet = await ctx.db.get(args.wallet_id);
-    
+
     if (!wallet) {
       throw new Error("Wallet not found");
     }
@@ -148,6 +193,14 @@ export const updateWallet = mutation({
     }
 
     await ctx.db.patch(args.wallet_id, updateData);
+
+    await ctx.runMutation(internal.systemLogs.logEvent, {
+      user_id: String(wallet.user_id),
+      level: "info", source: "backend",
+      event_name: "wallet.updateWallet",
+      status: "success",
+      details: JSON.stringify({ wallet_id: args.wallet_id, partner_id: wallet.partner_id, method: args.withdrawal_method }),
+    });
 
     return { success: true, message: "Wallet updated successfully" };
   },

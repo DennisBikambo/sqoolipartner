@@ -1,6 +1,7 @@
 // convex/withdrawalLimits.ts
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+import { internal } from "./_generated/api";
 
 /**
  * CREATE WITHDRAWAL LIMIT 
@@ -18,10 +19,17 @@ export const createLimit = mutation({
   handler: async (ctx, args) => {
     const now = new Date().toISOString();
 
-    return await ctx.db.insert("withdrawal_limits", {
+    const id = await ctx.db.insert("withdrawal_limits", {
       ...args,
       updated_at: now,
     });
+    await ctx.runMutation(internal.systemLogs.logEvent, {
+      level: "info", source: "backend",
+      event_name: "withdrawalLimits.createLimit",
+      status: "success",
+      details: JSON.stringify({ id, partner_id: args.partner_id, min: args.min_withdrawal_amount, max: args.max_withdrawal_amount }),
+    });
+    return id;
   },
 });
 
@@ -44,10 +52,17 @@ export const updateLimit = mutation({
     const limit = await ctx.db.get(id);
     if (!limit) throw new Error("Withdrawal limit not found");
 
-    return await ctx.db.patch(id, {
+    const result = await ctx.db.patch(id, {
       ...patches,
       updated_at: new Date().toISOString(),
     });
+    await ctx.runMutation(internal.systemLogs.logEvent, {
+      level: "info", source: "backend",
+      event_name: "withdrawalLimits.updateLimit",
+      status: "success",
+      details: JSON.stringify({ id, fields: Object.keys(patches) }),
+    });
+    return result;
   },
 });
 

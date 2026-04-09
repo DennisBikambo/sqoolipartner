@@ -151,22 +151,6 @@ export default defineSchema({
     .index("by_promo_code", ["promo_code"]),
 
   /**
-   * PROMO CODES TABLE
-   * ------------------------
-   * Stores multiple promo codes per campaign (e.g., different codes for different radio stations)
-   */
-  promo_codes: defineTable({
-    campaign_id: v.id("campaigns"),
-    code: v.string(), // e.g., "RADIOAFRICA2025"
-    label: v.string(), // e.g., "Radio Africa"
-    description: v.optional(v.string()),
-    is_active: v.boolean(),
-    created_at: v.string(),
-  })
-    .index("by_campaign_id", ["campaign_id"])
-    .index("by_code", ["code"]),
-
-  /**
    * PROGRAM ENROLLMENTS TABLE
    * ------------------------
    * Logs every user’s redemption or enrollment via a campaign.
@@ -456,6 +440,24 @@ withdrawal_limits: defineTable({
     status: v.union(v.literal("pending"), v.literal("reviewed")),
     created_at: v.string(),
   }),
+
+  system_logs: defineTable({
+    user_id:     v.optional(v.string()),   // string not v.id("users") — allows pre-auth logs
+    user_email:  v.optional(v.string()),   // denormalized for display without joins
+    level:       v.union(v.literal("info"), v.literal("warn"), v.literal("error")),
+    source:      v.union(v.literal("backend"), v.literal("frontend"), v.literal("http")),
+    event_name:  v.string(),
+    message:     v.optional(v.string()),
+    details:     v.optional(v.string()),   // JSON string
+    duration_ms: v.optional(v.number()),   // backend only
+    status:      v.union(v.literal("success"), v.literal("error"), v.literal("warn")),
+    created_at:  v.number(),               // Date.now() milliseconds
+  })
+    .index("by_created_at", ["created_at"])
+    .index("by_level", ["level"])
+    .index("by_source", ["source"])
+    .index("by_status", ["status"])
+    .index("by_user_id", ["user_id"]),
 
 });
 

@@ -1,6 +1,7 @@
 // convex/role.ts
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+import { internal } from "./_generated/api";
 
 /**
  * ➕ Create a new role
@@ -42,6 +43,13 @@ export const createRole = mutation({
       is_system_role: args.is_system_role ?? false,
       is_active: true,
       created_at: new Date().toISOString(),
+    });
+
+    await ctx.runMutation(internal.systemLogs.logEvent, {
+      level: "info", source: "backend",
+      event_name: "role.createRole",
+      status: "success",
+      details: JSON.stringify({ roleId, name: args.name, permission_count: args.permission_ids.length }),
     });
 
     return {
@@ -179,6 +187,13 @@ export const updateRole = mutation({
     patchData.updated_at = new Date().toISOString();
     await ctx.db.patch(role_id, patchData);
 
+    await ctx.runMutation(internal.systemLogs.logEvent, {
+      level: "info", source: "backend",
+      event_name: "role.updateRole",
+      status: "success",
+      details: JSON.stringify({ role_id, name: existingRole.name, fields: Object.keys(patchData) }),
+    });
+
     return {
       message: "Role updated successfully",
       updatedFields: patchData,
@@ -215,6 +230,13 @@ export const deleteRole = mutation({
 
     await ctx.db.delete(args.role_id);
 
+    await ctx.runMutation(internal.systemLogs.logEvent, {
+      level: "warn", source: "backend",
+      event_name: "role.deleteRole",
+      status: "warn",
+      details: JSON.stringify({ role_id: args.role_id, name: role.name }),
+    });
+
     return {
       message: "Role deleted successfully",
     };
@@ -234,6 +256,12 @@ export const deactivateRole = mutation({
       updated_at: new Date().toISOString(),
       deactivation_reason: args.reason,
     });
+    await ctx.runMutation(internal.systemLogs.logEvent, {
+      level: "warn", source: "backend",
+      event_name: "role.deactivateRole",
+      status: "warn",
+      details: JSON.stringify({ role_id: args.role_id, name: role.name, reason: args.reason }),
+    });
     return { message: "Role deactivated" };
   },
 });
@@ -249,6 +277,12 @@ export const activateRole = mutation({
     await ctx.db.patch(args.role_id, {
       is_active: true,
       updated_at: new Date().toISOString(),
+    });
+    await ctx.runMutation(internal.systemLogs.logEvent, {
+      level: "info", source: "backend",
+      event_name: "role.activateRole",
+      status: "success",
+      details: JSON.stringify({ role_id: args.role_id, name: role.name }),
     });
     return { message: "Role activated" };
   },
@@ -286,6 +320,13 @@ export const assignPermissionsToRole = mutation({
     await ctx.db.patch(args.role_id, {
       permission_ids: args.permission_ids,
       updated_at: new Date().toISOString(),
+    });
+
+    await ctx.runMutation(internal.systemLogs.logEvent, {
+      level: "info", source: "backend",
+      event_name: "role.assignPermissionsToRole",
+      status: "success",
+      details: JSON.stringify({ role_id: args.role_id, name: role.name, permission_count: args.permission_ids.length }),
     });
 
     return {

@@ -1,6 +1,7 @@
 // convex/partner.ts
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+import { internal } from "./_generated/api";
 
 /**
  * ✅ READ all partners
@@ -49,6 +50,13 @@ export const completeOnboarding = mutation({
   handler: async (ctx, args) => {
     await ctx.db.patch(args.partnerId, { is_first_login: false });
     await ctx.db.patch(args.userId, { is_first_login: false });
+    await ctx.runMutation(internal.systemLogs.logEvent, {
+      user_id: String(args.userId),
+      level: "info", source: "backend",
+      event_name: "partner.completeOnboarding",
+      status: "success",
+      details: JSON.stringify({ partner_id: args.partnerId, user_id: args.userId }),
+    });
   },
 });
 
@@ -77,6 +85,12 @@ export const updatePartnerProfile = mutation({
   handler: async (ctx, args) => {
     if (args.social_media === undefined) return { success: true };
     await ctx.db.patch(args.partner_id, { social_media: args.social_media });
+    await ctx.runMutation(internal.systemLogs.logEvent, {
+      level: "info", source: "backend",
+      event_name: "partner.updatePartnerProfile",
+      status: "success",
+      details: JSON.stringify({ partner_id: args.partner_id, updated_fields: Object.keys(args.social_media ?? {}) }),
+    });
     return { success: true };
   },
 });

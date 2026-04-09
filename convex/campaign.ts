@@ -1,7 +1,7 @@
 // convex/campaign.ts
 import { mutation, query, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
-import { api } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 
 function generatePromoCode(base: string): string {
   const bytes = new Uint8Array(2);
@@ -73,6 +73,7 @@ export const createCampaign = mutation({
     // Use partner's default WhatsApp number or system default
     const whatsapp_number = partner.phone || "+254104003003";
 
+    const t0 = Date.now();
     const campaignId = await ctx.db.insert("campaigns", {
       name: args.name,
       description: args.description,
@@ -111,6 +112,15 @@ export const createCampaign = mutation({
         details: JSON.stringify({ name: args.name, promo_code: promoCode, status: "pending" }),
       });
     }
+
+    await ctx.runMutation(internal.systemLogs.logEvent, {
+      user_id: args.user_id ? String(args.user_id) : undefined,
+      level: "info", source: "backend",
+      event_name: "campaign.createCampaign",
+      status: "success",
+      duration_ms: Date.now() - t0,
+      details: JSON.stringify({ campaignId, promoCode, name: args.name }),
+    });
 
     return { campaignId, promoCode };
   },
@@ -183,7 +193,14 @@ export const updateCampaignStatus = mutation({
     ),
   },
   handler: async (ctx, args) => {
+    const prev = await ctx.db.get(args.id);
     await ctx.db.patch(args.id, { status: args.status });
+    await ctx.runMutation(internal.systemLogs.logEvent, {
+      level: "info", source: "backend",
+      event_name: "campaign.updateCampaignStatus",
+      status: "success",
+      details: JSON.stringify({ id: args.id, prev_status: prev?.status, new_status: args.status }),
+    });
     return { success: true };
   },
 });
@@ -208,6 +225,7 @@ export const activateCampaign = mutation({
       }
     }
 
+    const start = Date.now();
     await ctx.db.patch(args.id, { status: "active" });
     await ctx.runMutation(api.audit.createAuditLog, {
       user_id: args.user_id,
@@ -215,6 +233,14 @@ export const activateCampaign = mutation({
       action: campaign.status === "pending" ? "campaign_approved" : "campaign_activated",
       entity_type: "campaign",
       entity_id: args.id,
+    });
+    await ctx.runMutation(internal.systemLogs.logEvent, {
+      user_id: String(args.user_id),
+      level: "info", source: "backend",
+      event_name: "campaign.activateCampaign",
+      status: "success",
+      duration_ms: Date.now() - start,
+      details: JSON.stringify({ campaignId: args.id, previousStatus: campaign.status }),
     });
     return { success: true };
   },
@@ -228,6 +254,7 @@ export const deactivateCampaign = mutation({
     reason: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    const start = Date.now();
     await ctx.db.patch(args.id, { status: "inactive" });
     await ctx.runMutation(api.audit.createAuditLog, {
       user_id: args.user_id,
@@ -236,6 +263,14 @@ export const deactivateCampaign = mutation({
       entity_type: "campaign",
       entity_id: args.id,
       details: args.reason ? JSON.stringify({ reason: args.reason }) : undefined,
+    });
+    await ctx.runMutation(internal.systemLogs.logEvent, {
+      user_id: String(args.user_id),
+      level: "warn", source: "backend",
+      event_name: "campaign.deactivateCampaign",
+      status: "warn",
+      duration_ms: Date.now() - start,
+      details: JSON.stringify({ campaignId: args.id, reason: args.reason }),
     });
     return { success: true };
   },
@@ -259,7 +294,14 @@ export const migrateDraftToPending = internalMutation({
 export const deleteCampaign = mutation({
   args: { id: v.id("campaigns") },
   handler: async (ctx, args) => {
+    const campaign = await ctx.db.get(args.id);
     await ctx.db.delete(args.id);
+    await ctx.runMutation(internal.systemLogs.logEvent, {
+      level: "warn", source: "backend",
+      event_name: "campaign.deleteCampaign",
+      status: "warn",
+      details: JSON.stringify({ id: args.id, name: campaign?.name, promo_code: campaign?.promo_code }),
+    });
     return { success: true };
   },
 });

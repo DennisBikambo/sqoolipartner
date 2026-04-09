@@ -1,27 +1,31 @@
 
-import { 
-  Home, 
-  Megaphone, 
-  Wallet, 
-  Users, 
+import {
+  Home,
+  Megaphone,
+  Wallet,
+  Users,
   Settings,
   Menu,
   X,
   LayoutGrid,
   Lock,
+  Terminal,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useState, useMemo } from 'react';
 import { usePermissions } from '../../hooks/usePermission';
+import { useQuery } from 'convex/react';
+import { api } from '../../../convex/_generated/api';
 import { toast } from 'sonner';
 
 interface NavItem {
   id: string;
   label: string;
   icon: React.ElementType;
-  requiredPermission?: string; 
+  requiredPermission?: string;
   requiredCategory?: string;
-  excludeForRoles?: string[]; // New: roles that should NOT see this item
+  excludeForRoles?: string[];
+  alwaysUnlocked?: boolean; // bypasses permission check — for developer-only items
 }
 
 interface AppSidebarProps {
@@ -61,11 +65,17 @@ const navigationItems: NavItem[] = [
     icon: Users,
     requiredCategory: 'users',
   },
-  { 
-    id: 'settings', 
-    label: 'Settings', 
+  {
+    id: 'settings',
+    label: 'Settings',
     icon: Settings,
     requiredCategory: 'settings',
+  },
+  {
+    id: 'devmonitor',
+    label: 'Dev',
+    icon: Terminal,
+    alwaysUnlocked: true,
   },
 ];
 
@@ -75,6 +85,7 @@ export function AppSidebar({
 }: AppSidebarProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { hasPermission, hasCategory, permissions, loading, isSuperAdmin, userRole } = usePermissions();
+  const isDev = useQuery(api.createDevAccount.isDevUser, {});
 
   const handleSelect = (id: string, isLocked: boolean) => {
     if (isLocked) {
@@ -87,6 +98,8 @@ export function AppSidebar({
 
   const checkAccess = (item: NavItem): boolean => {
     if (loading) return false;
+
+    if (item.alwaysUnlocked) return true;
 
     // Super admin always has access (for items they can see)
     if (isSuperAdmin()) return true;
@@ -102,15 +115,13 @@ export function AppSidebar({
   // Filter navigation items based on user role
   const visibleNavigationItems = useMemo(() => {
     if (loading) return [];
-    
+
     return navigationItems.filter(item => {
-      // If item has excludeForRoles and current user's role is in that list, hide it
-      if (item.excludeForRoles && userRole && item.excludeForRoles.includes(userRole)) {
-        return false;
-      }
+      if (item.id === 'devmonitor') return isDev === true;
+      if (item.excludeForRoles && userRole && item.excludeForRoles.includes(userRole)) return false;
       return true;
     });
-  }, [loading, userRole]);
+  }, [loading, userRole, isDev]);
 
   return (
     <>

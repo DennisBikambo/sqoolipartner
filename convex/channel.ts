@@ -1,6 +1,7 @@
 // convex/channel.ts
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+import { internal } from "./_generated/api";
 
 // ── CHANNELS ──────────────────────────────────────────────────────────────────
 
@@ -16,6 +17,7 @@ export const createChannel = mutation({
     created_by: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    const start = Date.now();
     const channelId = await ctx.db.insert("channels", {
       partnerId: args.partnerId,
       name: args.name,
@@ -24,6 +26,13 @@ export const createChannel = mutation({
       is_active: true,
       created_at: new Date().toISOString(),
       created_by: args.created_by,
+    });
+    await ctx.runMutation(internal.systemLogs.logEvent, {
+      level: "info", source: "backend",
+      event_name: "channel.createChannel",
+      status: "success",
+      duration_ms: Date.now() - start,
+      details: JSON.stringify({ channelId, partnerId: args.partnerId, name: args.name, code: args.code }),
     });
     return channelId;
   },
@@ -94,6 +103,12 @@ export const updateChannel = mutation({
     if (updates.description !== undefined) patch.description = updates.description;
     if (updates.created_by !== undefined) patch.created_by = updates.created_by;
     await ctx.db.patch(id, patch);
+    await ctx.runMutation(internal.systemLogs.logEvent, {
+      level: "info", source: "backend",
+      event_name: "channel.updateChannel",
+      status: "success",
+      details: JSON.stringify({ id, updates: patch }),
+    });
     return { success: true };
   },
 });
@@ -107,6 +122,12 @@ export const deactivateChannel = mutation({
     const channel = await ctx.db.get(args.id);
     if (!channel) throw new Error("Channel not found");
     await ctx.db.patch(args.id, { is_active: false, deactivation_reason: args.reason });
+    await ctx.runMutation(internal.systemLogs.logEvent, {
+      level: "warn", source: "backend",
+      event_name: "channel.deactivateChannel",
+      status: "warn",
+      details: JSON.stringify({ id: args.id, name: channel.name, reason: args.reason }),
+    });
     return { success: true };
   },
 });
@@ -120,6 +141,12 @@ export const activateChannel = mutation({
     const channel = await ctx.db.get(args.id);
     if (!channel) throw new Error("Channel not found");
     await ctx.db.patch(args.id, { is_active: true });
+    await ctx.runMutation(internal.systemLogs.logEvent, {
+      level: "info", source: "backend",
+      event_name: "channel.activateChannel",
+      status: "success",
+      details: JSON.stringify({ id: args.id, name: channel.name }),
+    });
     return { success: true };
   },
 });
@@ -130,7 +157,14 @@ export const activateChannel = mutation({
 export const deleteChannel = mutation({
   args: { id: v.id("channels") },
   handler: async (ctx, args) => {
+    const channel = await ctx.db.get(args.id);
     await ctx.db.delete(args.id);
+    await ctx.runMutation(internal.systemLogs.logEvent, {
+      level: "warn", source: "backend",
+      event_name: "channel.deleteChannel",
+      status: "warn",
+      details: JSON.stringify({ id: args.id, name: channel?.name }),
+    });
     return { success: true };
   },
 });
@@ -149,6 +183,7 @@ export const createSubchannel = mutation({
     description: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    const start = Date.now();
     const id = await ctx.db.insert("subchannels", {
       channel_id: args.channel_id,
       partner_id: args.partner_id,
@@ -157,6 +192,13 @@ export const createSubchannel = mutation({
       description: args.description,
       is_active: true,
       created_at: new Date().toISOString(),
+    });
+    await ctx.runMutation(internal.systemLogs.logEvent, {
+      level: "info", source: "backend",
+      event_name: "channel.createSubchannel",
+      status: "success",
+      duration_ms: Date.now() - start,
+      details: JSON.stringify({ id, channel_id: args.channel_id, partner_id: args.partner_id, name: args.name }),
     });
     return id;
   },
@@ -202,6 +244,12 @@ export const updateSubchannel = mutation({
     if (updates.prefix_code !== undefined) patch.prefix_code = updates.prefix_code;
     if (updates.description !== undefined) patch.description = updates.description;
     await ctx.db.patch(id, patch);
+    await ctx.runMutation(internal.systemLogs.logEvent, {
+      level: "info", source: "backend",
+      event_name: "channel.updateSubchannel",
+      status: "success",
+      details: JSON.stringify({ id, updates: patch }),
+    });
     return { success: true };
   },
 });
@@ -213,6 +261,12 @@ export const deactivateSubchannel = mutation({
   args: { id: v.id("subchannels"), reason: v.optional(v.string()) },
   handler: async (ctx, args) => {
     await ctx.db.patch(args.id, { is_active: false, deactivation_reason: args.reason });
+    await ctx.runMutation(internal.systemLogs.logEvent, {
+      level: "warn", source: "backend",
+      event_name: "channel.deactivateSubchannel",
+      status: "warn",
+      details: JSON.stringify({ id: args.id, reason: args.reason }),
+    });
     return { success: true };
   },
 });
@@ -224,6 +278,12 @@ export const activateSubchannel = mutation({
   args: { id: v.id("subchannels") },
   handler: async (ctx, args) => {
     await ctx.db.patch(args.id, { is_active: true });
+    await ctx.runMutation(internal.systemLogs.logEvent, {
+      level: "info", source: "backend",
+      event_name: "channel.activateSubchannel",
+      status: "success",
+      details: JSON.stringify({ id: args.id }),
+    });
     return { success: true };
   },
 });
@@ -235,6 +295,12 @@ export const deleteSubchannel = mutation({
   args: { id: v.id("subchannels") },
   handler: async (ctx, args) => {
     await ctx.db.delete(args.id);
+    await ctx.runMutation(internal.systemLogs.logEvent, {
+      level: "warn", source: "backend",
+      event_name: "channel.deleteSubchannel",
+      status: "warn",
+      details: JSON.stringify({ id: args.id }),
+    });
     return { success: true };
   },
 });

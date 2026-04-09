@@ -29,8 +29,14 @@ export const createAuth = (ctx: GenericCtx<DataModel>) =>
     },
     plugins: [
       convex({ authConfig }),
-      crossDomain({ siteUrl: process.env.SITE_URL ?? "http://localhost:5173" }),
+      // twoFactor MUST come before crossDomain so its `after` hook runs first.
+      // The twoFactor after hook sets the 2FA state cookie (and removes the
+      // session cookie) during sign-in. crossDomain's after hook then converts
+      // whatever is in Set-Cookie → Set-Better-Auth-Cookie for the client to store.
+      // If crossDomain ran first the 2FA cookie would never reach the client,
+      // causing "INVALID_TWO_FACTOR_COOKIE" on every verification attempt.
       twoFactor({ issuer: "Sqooli" }),
+      crossDomain({ siteUrl: process.env.SITE_URL ?? "http://localhost:5173" }),
     ],
   });
 

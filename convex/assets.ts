@@ -1,5 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+import { internal } from "./_generated/api";
 
 export const getAssetsByCampaign = query({
   args: { campaign_id: v.id("campaigns") },
@@ -40,15 +41,28 @@ export const saveAsset = mutation({
         content: args.content,
         generated_at: Date.now(),
       });
+      await ctx.runMutation(internal.systemLogs.logEvent, {
+        level: "info", source: "backend",
+        event_name: "assets.saveAsset",
+        status: "success",
+        details: JSON.stringify({ asset_id: existing._id, campaign_id: args.campaign_id, type: args.type, action: "updated" }),
+      });
       return existing._id;
     }
 
-    return await ctx.db.insert("assets", {
+    const id = await ctx.db.insert("assets", {
       campaign_id: args.campaign_id,
       type: args.type,
       url: args.url,
       content: args.content,
       generated_at: Date.now(),
     });
+    await ctx.runMutation(internal.systemLogs.logEvent, {
+      level: "info", source: "backend",
+      event_name: "assets.saveAsset",
+      status: "success",
+      details: JSON.stringify({ asset_id: id, campaign_id: args.campaign_id, type: args.type, action: "created" }),
+    });
+    return id;
   },
 });

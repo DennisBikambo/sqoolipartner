@@ -1,5 +1,6 @@
-import { query,mutation } from "./_generated/server";
+import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
+import { internal } from "./_generated/api";
 
 
 
@@ -24,7 +25,15 @@ export const createEnrollment = mutation({
     ),
   },
   handler: async (ctx, args) => {
-    return await ctx.db.insert("program_enrollments", args);
+    const id = await ctx.db.insert("program_enrollments", args);
+    await ctx.runMutation(internal.systemLogs.logEvent, {
+      user_id: String(args.user_id),
+      level: "info", source: "backend",
+      event_name: "enrollments.createEnrollment",
+      status: "success",
+      details: JSON.stringify({ id, program_id: args.program_id, campaign_id: args.campaign_id, status: args.status }),
+    });
+    return id;
   },
 });
 

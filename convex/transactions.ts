@@ -1,5 +1,6 @@
-import {mutation,query} from "./_generated/server"
+import { mutation, query } from "./_generated/server"
 import { v } from "convex/values"
+import { internal } from "./_generated/api"
 
 
 
@@ -16,10 +17,17 @@ export const createTransaction = mutation({
     },
     handler:async (ctx,args) =>{
         const now = new Date().toISOString()
-        return await ctx.db.insert('transactions',{
+        const id = await ctx.db.insert('transactions',{
             ...args,
             created_at:now,
         })
+        await ctx.runMutation(internal.systemLogs.logEvent, {
+          level: "info", source: "backend",
+          event_name: "transactions.createTransaction",
+          status: "success",
+          details: JSON.stringify({ id, mpesa_code: args.mpesa_code, amount: args.amount, campaign_code: args.campaign_code }),
+        });
+        return id;
     }
 })
 
@@ -53,6 +61,37 @@ export const updateTransaction = mutation({
     }),
   },
   handler: async (ctx, { id, fields }) => {
+    const prev = await ctx.db.get(id);
+
+    // Anomaly: amount being changed on an existing transaction
+    if (fields.amount !== undefined && prev?.amount !== undefined && fields.amount !== prev.amount) {
+      await ctx.runMutation(internal.systemLogs.logEvent, {
+        level: "error", source: "backend",
+        event_name: "anomaly.transactionAmountModified",
+        status: "error",
+        message: `Transaction amount changed from KES ${prev.amount} to KES ${fields.amount}`,
+        details: JSON.stringify({ transaction_id: id, prev_amount: prev.amount, new_amount: fields.amount, mpesa_code: prev?.mpesa_code }),
+      });
+    }
+
+    // Anomaly: status going from Success back to Failed
+    if (fields.status === "Failed" && prev?.status === "Success") {
+      await ctx.runMutation(internal.systemLogs.logEvent, {
+        level: "error", source: "backend",
+        event_name: "anomaly.transactionStatusReversed",
+        status: "error",
+        message: `Transaction status reversed from Success to Failed`,
+        details: JSON.stringify({ transaction_id: id, mpesa_code: prev?.mpesa_code, amount: prev?.amount }),
+      });
+    }
+
+    await ctx.runMutation(internal.systemLogs.logEvent, {
+      level: "info", source: "backend",
+      event_name: "transactions.updateTransaction",
+      status: "success",
+      details: JSON.stringify({ transaction_id: id, fields, prev_status: prev?.status }),
+    });
+
     return await ctx.db.patch(id, { ...fields, verified_at: fields.verified_at ?? new Date().toISOString() });
   },
 });
@@ -60,7 +99,14 @@ export const updateTransaction = mutation({
 export const deleteTransaction = mutation({
   args: { id: v.id("transactions") },
   handler: async (ctx, args) => {
+    const tx = await ctx.db.get(args.id);
     await ctx.db.delete(args.id);
+    await ctx.runMutation(internal.systemLogs.logEvent, {
+      level: "warn", source: "backend",
+      event_name: "transactions.deleteTransaction",
+      status: "warn",
+      details: JSON.stringify({ id: args.id, mpesa_code: tx?.mpesa_code, amount: tx?.amount, status: tx?.status }),
+    });
   },
 });
 

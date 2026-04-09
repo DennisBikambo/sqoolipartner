@@ -176,6 +176,14 @@ export const updateUser = mutation({
     patchData.updated_at = new Date().toISOString();
     await ctx.db.patch(user_id, patchData);
 
+    await ctx.runMutation(internal.systemLogs.logEvent, {
+      user_id: String(user_id),
+      level: "info", source: "backend",
+      event_name: "user.updateUser",
+      status: "success",
+      details: JSON.stringify({ user_id, fields: Object.keys(patchData).filter(k => k !== "password_hash") }),
+    });
+
     return { message: "User updated successfully", updatedFields: patchData };
   },
 });
@@ -190,6 +198,14 @@ export const deleteUser = mutation({
     if (!existing) throw new Error("User not found");
 
     await ctx.db.delete(args.user_id);
+
+    await ctx.runMutation(internal.systemLogs.logEvent, {
+      level: "warn", source: "backend",
+      event_name: "user.deleteUser",
+      status: "warn",
+      details: JSON.stringify({ user_id: args.user_id, email: existing.email, role: existing.role }),
+    });
+
     return { message: "User deleted successfully" };
   },
 });

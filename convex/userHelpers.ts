@@ -4,7 +4,7 @@
  */
 import { internalMutation, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
-import { api } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 
 export const getUserByEmailInternal = internalQuery({
   args: { email: v.string() },
@@ -58,6 +58,15 @@ export const insertUserRecord = internalMutation({
       type: "success",
       title: "User created successfully",
       message: `User with email ${args.email} has been created successfully`,
+    });
+
+    await ctx.runMutation(internal.systemLogs.logEvent, {
+      user_id: String(userId),
+      user_email: args.email,
+      level: "info", source: "backend",
+      event_name: "user.insertUserRecord",
+      status: "success",
+      details: JSON.stringify({ userId, email: args.email, role: args.role, partner_id: args.partner_id }),
     });
 
     return { userId };

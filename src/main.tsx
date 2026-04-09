@@ -11,6 +11,7 @@ import { Toaster } from "./components/ui/sonner";
 import { Provider } from "react-redux";
 import { store } from "./store";
 import { authClient } from "./lib/auth-client";
+import { SystemLoggerProvider } from "./components/common/SystemLoggerProvider";
 
 const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL as string, {
   // Pause queries until Better Auth has resolved the auth state
@@ -24,6 +25,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
         <ThemeProvider>
           <ConvexBetterAuthProvider client={convex} authClient={authClient}>
             <PermissionProvider>
+              <SystemLoggerProvider />
               <App />
               <Toaster />
             </PermissionProvider>

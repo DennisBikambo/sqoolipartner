@@ -11,6 +11,7 @@ import SettingsSection from "../sections/SettingsSection";
 import { usePermissions } from "../hooks/usePermission";
 import LockedSection from "../sections/LockedSection";
 import PermissionRefreshBanner from "../components/common/PermissionRefresherBanner";
+import DevMonitorSection from "../sections/DevMonitorSection";
 
 
 export default function DashboardPage() {
@@ -69,6 +70,8 @@ export default function DashboardPage() {
     settings: canAccess("settings")
       ? <SettingsSection />
       : <LockedSection sectionName="Settings" />,
+
+    devmonitor: <DevMonitorSection />,
   };
 
   return (

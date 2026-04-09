@@ -1,7 +1,7 @@
 // convex/withdrawals.ts
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
-import { api } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 
 /**
  * Generate unique withdrawal reference
@@ -292,8 +292,21 @@ export const createWithdrawal = mutation({
 
     const reference_number = generateReference();
 
+    // Anomaly: balance after withdrawal going negative
+    const balanceAfter = wallet.balance - amount;
+    if (balanceAfter < 0) {
+      await ctx.runMutation(internal.systemLogs.logEvent, {
+        user_id: String(args.user_id),
+        level: "error", source: "backend",
+        event_name: "anomaly.withdrawalExceedsBalance",
+        status: "error",
+        message: `Withdrawal of KES ${amount} exceeds wallet balance KES ${wallet.balance} — balance would go to KES ${balanceAfter}`,
+        details: JSON.stringify({ wallet_id, partner_id, amount, balance: wallet.balance, balance_after: balanceAfter }),
+      });
+    }
+
     await ctx.db.patch(wallet_id, {
-      balance: wallet.balance - amount,
+      balance: balanceAfter,
       pending_balance: wallet.pending_balance + amount,
       updated_at: now,
     });
@@ -329,6 +342,14 @@ export const createWithdrawal = mutation({
       type: "success",
       title: "Withdrawal Request",
       message: "Your withdrawal request has been submitted",
+    });
+
+    await ctx.runMutation(internal.systemLogs.logEvent, {
+      user_id: String(args.user_id),
+      level: "info", source: "backend",
+      event_name: "withdrawals.createWithdrawal",
+      status: "success",
+      details: JSON.stringify({ withdrawalId, amount, reference_number, method: args.withdrawal_method }),
     });
 
     // TODO: re-add withdrawal notification email
@@ -497,14 +518,10 @@ export const approveWithdrawal = mutation({
       throw new Error("Wallet not found");
     }
 
-    // Check if wallet has sufficient balance
-    if (wallet.balance < withdrawal.amount) {
-      throw new Error("Insufficient balance in wallet");
-    }
-
-    // Update wallet: deduct from balance
+    // balance was already deducted when the withdrawal was created (createWithdrawal).
+    // Here we just clear pending_balance — the money has now physically left.
     await ctx.db.patch(withdrawal.wallet_id, {
-      balance: wallet.balance - withdrawal.amount,
+      pending_balance: Math.max(0, (wallet.pending_balance ?? 0) - withdrawal.amount),
       updated_at: new Date().toISOString(),
     });
 
@@ -514,6 +531,13 @@ export const approveWithdrawal = mutation({
       mpesa_receipt: args.mpesa_receipt,
       processed_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
+    });
+
+    await ctx.runMutation(internal.systemLogs.logEvent, {
+      level: "info", source: "backend",
+      event_name: "withdrawals.approveWithdrawal",
+      status: "success",
+      details: JSON.stringify({ withdrawal_id: args.withdrawal_id, amount: withdrawal.amount, mpesa_receipt: args.mpesa_receipt }),
     });
 
     return { success: true };
@@ -533,8 +557,8 @@ export const rejectWithdrawal = mutation({
       throw new Error("Withdrawal not found");
     }
 
-    if (withdrawal.status !== "pending") {
-      throw new Error("Withdrawal is not pending");
+    if (withdrawal.status !== "pending" && withdrawal.status !== "processing") {
+      throw new Error("Withdrawal cannot be rejected in its current state");
     }
 
     // Get the wallet
@@ -556,6 +580,13 @@ export const rejectWithdrawal = mutation({
       failed_reason: args.reason,
       processed_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
+    });
+
+    await ctx.runMutation(internal.systemLogs.logEvent, {
+      level: "warn", source: "backend",
+      event_name: "withdrawals.rejectWithdrawal",
+      status: "warn",
+      details: JSON.stringify({ withdrawal_id: args.withdrawal_id, amount: withdrawal.amount, reason: args.reason }),
     });
 
     return { success: true };
