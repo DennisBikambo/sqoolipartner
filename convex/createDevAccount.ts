@@ -111,6 +111,35 @@ export const getDevAccount = query({
   },
 });
 
+/**
+ * Deletes the dev account so it can be recreated. Run via CLI:
+ *   npx convex run createDevAccount:deleteDevAccount
+ */
+export const deleteDevAccount = action({
+  args: {},
+  handler: async (ctx) => {
+    const devEmail = process.env.DEV_EMAIL;
+    if (!devEmail) throw new Error("DEV_EMAIL env var is not set.");
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const self = internal as any;
+    const user = await ctx.runQuery(self.createDevAccount.getDevUserByEmail, { email: devEmail });
+    if (!user) return { success: false, message: "No dev account found." };
+
+    // Remove from users table
+    await ctx.runMutation(self.createDevAccount.deleteDevUserById, { id: user._id });
+
+    // Remove from Better Auth
+    if (user.better_auth_id) {
+      const auth = createAuth(ctx as unknown as Parameters<typeof createAuth>[0]);
+      await (auth.api.deleteUser as any)({
+        body: { userId: user.better_auth_id },
+      }).catch(() => null);
+    }
+
+    return { success: true, message: `Dev account deleted: ${devEmail}` };
+  },
+});
+
 // ── Internal helpers ──────────────────────────────────────────────────────────
 
 export const getDevUserByEmail = internalQuery({
@@ -158,6 +187,11 @@ export const createSystemPartner = internalMutation({
 export const getSystemPartnerById = internalQuery({
   args: { id: v.id("partners") },
   handler: async (ctx, args) => ctx.db.get(args.id),
+});
+
+export const deleteDevUserById = internalMutation({
+  args: { id: v.id("users") },
+  handler: async (ctx, args) => ctx.db.delete(args.id),
 });
 
 export const insertDevUser = internalMutation({

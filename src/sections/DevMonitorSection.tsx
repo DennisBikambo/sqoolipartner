@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useAuth } from "../hooks/useAuth";
@@ -118,7 +118,7 @@ export default function DevMonitorSection() {
   const [autoScroll, setAutoScroll] = useState(true);
   const topRef = useRef<HTMLDivElement>(null);
 
-  const fromTs = Date.now() - TIME_RANGES[rangeIdx].ms;
+  const fromTs = useMemo(() => Date.now() - TIME_RANGES[rangeIdx].ms, [rangeIdx]);
 
   const logs = useQuery(api.systemLogs.getSystemLogs, {
     limit: 300,
